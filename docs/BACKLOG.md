@@ -2,40 +2,37 @@
 
 ## P1 — Desktop Foundation
 
-**State: implementation complete; automated verification passes; manual Windows acceptance pending.** P2 requires P1 acceptance and explicit approval. No later-phase implementation has started.
+Implemented in `e2e4ecb`. **Windows manual acceptance remains pending, confirmed by the user during P2.** P1's 62 regression tests pass. The reported paused screenshot was a retained image, not an ongoing scheduler; `ee3fc00` now clears it when pausing. No other blocking implementation defect is known from automated checks. This does not substitute for physical Windows acceptance.
 
-| Checkpoint          | Dependencies                          | Completion criteria                                                                                                                      | State                                                                               |
-| ------------------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| Project foundation  | Node 24, npm, Git                     | Strict Electron/React/TypeScript project, reproducible lockfile, architecture/testing/backlog docs                                       | Complete                                                                            |
-| Desktop overlay     | Foundation, Electron window/tray APIs | EveryHint branding, frameless drag/resize, dark UI, settings, compact/expanded view, always-on-top and persisted bounds                  | Implemented; automated UI checks pass; physical drag/resize review pending          |
-| Session and consent | Shared contracts                      | IDLE on launch; READY/ACTIVE/PAUSED/STOPPED/ERROR; consent enforced; stop revokes consent                                                | Complete; unit and real IPC checks pass                                             |
-| Screen snapshots    | Session controller, desktopCapturer   | Explicit source selection, local snapshots, low-frequency interval, diagnostics, native error handling, own-preview recursion prevention | Implemented; native boundary unit tests pass; real-source manual checks pending     |
-| Privacy controls    | Session, tray, shortcuts              | Visible actual capture state; pause/stop cleanup while hidden; no uploads/storage/automatic restart                                      | Implemented; lifecycle/IPC/restart tests pass; active tray/focus tests pending      |
-| Global hotkeys      | Electron globalShortcut               | Required defaults, conflict reporting, future binding interface, shutdown cleanup                                                        | Logic tests pass; all three registered in Windows smoke; OS keypress checks pending |
-| Future interfaces   | Shared contracts                      | Audio/transcription/context/response/AI contracts without operational later-phase features                                               | Complete                                                                            |
-| Verification        | All P1 checkpoints                    | Typecheck, lint, tests, production build, Electron smoke; documented manual results; clean Git commit                                    | Automated complete; manual acceptance pending                                       |
+## P2 — Live Audio Capture
 
-Automated baseline: **62 unit tests across six files**, **21 real Electron smoke assertions**, TypeScript/lint/build passing. Smoke performs no native desktop capture. See [Testing](TESTING.md) for exact coverage and manual steps.
+**Implementation complete; automated verification passes; hardware/real-call acceptance pending.** The user explicitly authorised P2 in the current request despite the outstanding P1 manual checklist. P3 is not authorised.
 
-P1 capture limitations are explicit in [Architecture](ARCHITECTURE.md): low-resolution native thumbnails, transient enumeration of a source kind, no cancellation of an already issued native snapshot, and whole-screen preview only while paused. Windows may place the tray icon in its overflow area; users should pin it for continuously visible status.
+| Checkpoint                | Dependencies                                       | Completion criteria                                                                                    | State                                                             |
+| ------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
+| P1 pause correction       | Existing session/screen service                    | No retained screenshot on pause or stop; late frames rejected                                          | Complete; P1 regression suite passes                              |
+| Independent consent/state | Existing session/IPC                               | All seven combinations; disabled sources stay disabled; exact booleans and participant acknowledgement | Complete; automated                                               |
+| Microphone                | Browser media APIs, Windows permissions            | Default/selected device, metadata selection, mute, errors and disconnection handling                   | Implemented; mocked/synthetic verification; hardware pending      |
+| System playback           | Electron supported Windows loopback                | Speakers unmuted; managed companion video; no screen-analysis coupling                                 | Implemented; grant/lifecycle tests; real Windows playback pending |
+| Capture isolation         | Sandbox, contextBridge, isolated in-memory session | Exact worker/sender permissions, no camera or overlay media grants, duplicate-operation prevention     | Complete; automated                                               |
+| Diagnostics               | Web Audio / AudioWorklet                           | Separate source names/status/meters, zero levels on pause/stop, mute/error visibility                  | Complete; real Electron with synthetic media                      |
+| Resource lifecycle        | Session/worker orchestration                       | Dispose tracks/nodes/contexts/timers/buffers; pending startup, shutdown, lock/sleep handling           | Complete; automated; OS/driver release acceptance pending         |
+| Future PCM contract       | Shared audio types                                 | Source/time/rate/channels/float PCM/stream lifetime, bounded memory; no transcription                  | Complete                                                          |
+| Verification and delivery | All checkpoints                                    | Typecheck, lint, all tests, production build, Electron smoke, docs and clean commit                    | Automated complete; manual checks pending                         |
 
-## Subsequent milestones — deferred
+Baseline: **102 unit tests in 11 files**, **47 Electron smoke assertions**, strict TypeScript/lint/build passing. Smoke uses synthetic media and does not verify hardware or native playback. CPU and Windows memory performance are not certified. Documented bounds cover application PCM caches, not total Chromium/OS memory.
 
-| Milestone                       | Dependencies                                                     | Completion criteria                                                                                                                                  |
-| ------------------------------- | ---------------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------- |
-| P2 — Audio Capture              | P1 accepted and approved; supported Windows loopback APIs        | Independently authorised microphone/system audio, visible indicators, complete track disposal, source and conferencing-app compatibility tests       |
-| P3 — Local Speech Transcription | P2 accepted; whisper.cpp runtime/model strategy                  | Local streaming partial/final transcripts, bounded in-memory conversation context, pause/stop cleanup and performance tests                          |
-| P4 — AI Provider Integration    | Earlier phases accepted; current official SDK/auth documentation | Codex and Claude adapters, supported subscription auth, provider switching, abortable streaming, usage controls; evaluate optional automatic routing |
-| P5 — Context Intelligence       | Reliable capture/transcription and approved AI providers         | Meaningful screen-change detection, duplicate suppression, adaptive capture, spoken question detection and bounded conversation memory               |
-| P6 — Optimisation and Release   | P1–P5 accepted; release requirements                             | Performance budget, security review, Windows installer, signing/update decisions, hardware/OS compatibility matrix and final verification            |
+Known Windows limits: loopback is a playback mix rather than per-application isolation; DRM/exclusive routing/drivers can restrict it; hardware/app mute states may only appear as silence; device-change notifications are imperfect. Use the [manual checklist](TESTING.md) and [capture boundaries](ARCHITECTURE.md). Consider native WASAPI only if supported Electron loopback fails documented MVP needs after real testing.
 
-## Dependency baseline
+## Later milestones — deferred
 
-Dependencies were resolved from the npm stable tags and pinned in `package.json` / `package-lock.json` for this milestone on 2026-10-27.
+| Milestone                       | Dependencies                                                       | Completion criteria                                                                                          |
+| ------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
+| P3 — Local Speech Transcription | Accepted P2, explicit approval, whisper.cpp runtime/model strategy | Local partial/final transcripts, bounded context, audio conversion/model/lifecycle tests                     |
+| P4 — AI Provider Integration    | Earlier phases accepted, current official SDK/auth support         | Codex/Claude adapters, supported subscription auth, abortable streaming, manual switching and usage controls |
+| P5 — Context Intelligence       | Reliable capture/transcription, approved AI providers              | Meaningful screen changes, duplicate suppression, adaptive capture, spoken questions and bounded memory      |
+| P6 — Optimisation and Release   | Accepted earlier phases, release requirements                      | Hardware performance/security review, Windows installer/signing, compatibility matrix and final verification |
 
-- Runtime UI: React / React DOM 19.3.1.
-- Desktop/build: Electron 45.0.0, electron-vite 6.0.0, Vite 8.3.5 (locked transitive dependency), React Vite plugin 6.1.2, TypeScript 6.0.3.
-- Verification: Vitest 5.0.5, ESLint 10.13.0, typescript-eslint 8.72.1, Playwright Core 1.64.1 (uses installed Electron; no browser download).
-- No UI component/animation framework, cloud service SDK, audio library or model files in P1.
+## Dependencies
 
-Dependency upgrades should repeat the P1 automated checks and the affected manual checks. Installer creation and provider/audio dependencies remain out of scope.
+P2 adds **no npm dependency or native module**. Version is 0.2.0. Existing pinned baseline remains React 19.3.1, Electron 45.0.0, electron-vite 6.0.0, Vite 8.3.5, TypeScript 6.0.3, Vitest 5.0.5, ESLint 10.13.0 and Playwright Core 1.64.1. Node 24 LTS is used for development. Whisper.cpp, AI SDKs, credentials and external services remain absent.

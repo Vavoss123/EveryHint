@@ -1,9 +1,17 @@
 import { contextBridge, ipcRenderer } from "electron";
-import type { AppSnapshot, EveryHintBridge } from "../shared/contracts";
+import type {
+  AppSnapshot,
+  AudioMeterEvent,
+  EveryHintBridge,
+} from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
   getSnapshot: () => ipcRenderer.invoke("everyhint:get"),
   listSources: (consent) => ipcRenderer.invoke("everyhint:sources", consent),
+  listMicrophones: (consent) =>
+    ipcRenderer.invoke("everyhint:microphones", consent),
+  setMicrophoneMuted: (muted) =>
+    ipcRenderer.invoke("everyhint:microphone-mute", muted),
   prepare: (input) => ipcRenderer.invoke("everyhint:prepare", input),
   session: (action) => ipcRenderer.invoke("everyhint:session", action),
   saveSettings: (settings) =>
@@ -17,6 +25,16 @@ const bridge: EveryHintBridge = {
     ipcRenderer.on("everyhint:snapshot", wrapped);
     return () => {
       ipcRenderer.removeListener("everyhint:snapshot", wrapped);
+    };
+  },
+  onAudioMeters: (listener) => {
+    const wrapped = (
+      _event: Electron.IpcRendererEvent,
+      value: AudioMeterEvent,
+    ): void => listener(value);
+    ipcRenderer.on("everyhint:audio-meters", wrapped);
+    return () => {
+      ipcRenderer.removeListener("everyhint:audio-meters", wrapped);
     };
   },
 };

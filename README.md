@@ -2,11 +2,11 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 delivers a real Electron overlay, consent-based screen snapshots, privacy controls, system tray integration, settings and global shortcuts. Audio, transcription and AI are visibly unavailable until their later milestones. No provider account or API credits are needed for P1.
+EveryHint is a Windows-first, local-first desktop assistant. P1 provides the floating overlay, screen snapshots, tray, hotkeys and settings. P2 adds independently authorised microphone and Windows playback capture, device selection, mute and live audio diagnostics. Transcription and AI remain future features. No account, API credits or paid service is needed.
 
 ## Install and run
 
-Use Windows 10/11 x64 or ARM64, Node.js **24 LTS**, and npm. From PowerShell:
+Use Windows 10/11 x64 or ARM64 with Node.js **24 LTS** and npm:
 
 ```powershell
 cd C:\Users\Victor\Projects\EveryHint
@@ -14,43 +14,45 @@ npm ci
 npm run dev
 ```
 
-Electron downloads its matching native binary on first launch; dependency installation and that first download need internet access. P1 application capture never uploads screenshots. Development serves assets only from a local Vite server.
-
-To build and run the production application:
+To run the compiled application:
 
 ```powershell
 npm run build
 npm start
 ```
 
-This launches the compiled application through Electron. An installer, code signing and distributable packaging belong to P6.
+Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Windows installers and signing belong to P6.
 
-## Use EveryHint
+## Capture a session
 
-1. Choose **Prepare session**. Enable **Screen or application window** and acknowledge your authorisation and any required participant consent.
-2. Choose a screen or window from the source list, then choose **Prepare session**. Source selection enumerates names without requesting screenshot thumbnails.
-3. Press **Start capture**. EveryHint takes local snapshots, initially every three seconds. Open **Capture diagnostics** to see the frame count.
-4. Pause to inspect a whole-screen screenshot. Selected external application windows support live previews. EveryHint's windows cannot be selected, and whole-screen previews stay hidden during active capture to prevent recursive screenshots.
-5. **Pause** stops scheduled capture and retains the latest frame and session consent in memory. **Resume** uses that authorised source. **Stop** clears the frame and revokes consent; another session requires preparation.
+1. Choose **Prepare session**. Explicitly enable Screen, Microphone, System audio, or any combination. All sources start disabled on every application launch.
+2. Acknowledge authorisation, participant consent and applicable meeting rules. System audio can contain other people's voices and unrelated applications.
+3. If Screen is selected, choose a screen or external window. If Microphone is selected, use Windows default or **Refresh microphones** and select an input. Metadata enumeration does not start a recording. Device names may depend on Windows permissions.
+4. Choose **Prepare selected sources**, then **Start capture**. Each source shows its actual status, including starting and capturing.
+5. Scroll to **Live audio** to inspect independent levels, device names and mute/error status. **Mute microphone** affects EveryHint's input only; its mute setting survives pause/resume. Silent input is labelled silent, because hardware or other apps' mute states are not always exposed to EveryHint.
+6. **Pause** releases capture resources, clears screenshots and audio buffers, and zeroes the meters. **Resume** creates new sources using the existing consent and device choices, with permissions checked again. **Stop** additionally revokes consent and clears source selection.
 
-Closing the overlay hides it to the tray. **Hiding does not stop capture.** The tray icon is coral while active, amber while paused, and purple when capture is off (orange indicates an error). Its tooltip and menu show the actual state. Use **Quit EveryHint** in the tray or settings to exit. If the tray cannot be created, hiding is disabled.
+EveryHint windows cannot be selected for screen capture. External application windows have live screenshot previews. Whole-screen preview images stay hidden to prevent recursive screenshots; frame counts remain available. **Paused screenshots are now cleared**, replacing P1's retained-preview behaviour.
+
+The X hides the overlay to the tray. **Hiding does not stop capture.** The tray tooltip/menu report each source, even while hidden. Coral indicates Active Mode, amber paused, purple off, and orange error. Pin EveryHint's tray icon from Windows' overflow area for persistent visibility. If the tray is unavailable, hiding is disabled and minimisation stops capture. Use **Quit EveryHint** to exit and release all sources.
 
 | Shortcut           | Action                                   |
 | ------------------ | ---------------------------------------- |
 | `Ctrl+Alt+Space`   | Show / hide EveryHint                    |
-| `Ctrl+Alt+P`       | Pause / resume an authorised session     |
+| `Ctrl+Alt+P`       | Pause / resume the authorised session    |
 | `Ctrl+Alt+Shift+X` | Stop all capture, including while hidden |
 
-Shortcut conflicts appear in settings and as warnings; overlay and tray controls remain available. Custom bindings have a controller interface but no P1 customisation UI.
+Shortcut conflicts appear as warnings. Overlay and tray controls remain available.
 
-## Privacy and scope
+## Privacy and Windows limits
 
-- Every launch starts **IDLE**. Consent, source selection and screenshots are never restored from disk.
-- Screen snapshots stay in memory. Stop, capture failure, shutdown, screen lock and system suspend revoke consent and clear retained frames.
-- No microphone access, system audio, transcription, AI requests, authentication, credentials, analytics or screenshot files in P1.
-- Only window appearance, capture interval and window bounds are saved in `settings.json` under Electron's EveryHint user-data directory (normally `%APPDATA%\EveryHint`).
-- P1 uses `desktopCapturer` native thumbnails as low-frequency snapshots, capped at approximately 960 × 540. There is no persistent camera, microphone or screen `MediaStream` to stop. Pausing/stopping disposes the scheduler and invalidates results already in flight.
-- Electron's thumbnail API works by source kind, so it can create temporary thumbnails of other windows or displays of that kind inside the native enumeration. Only the chosen image is retained or delivered to the overlay. See the capture boundaries in [Architecture](docs/ARCHITECTURE.md).
+- No raw audio files, screenshots, conversations, consent, device choices or credentials are persisted. Only window preferences, snapshot interval and bounds are stored, normally under `%APPDATA%\EveryHint\settings.json`.
+- Audio stays in a dedicated sandboxed context. Local PCM buffers are bounded to two seconds, 32 packets and 768,000 bytes per source. Only status and low-rate audio levels reach the overlay; no audio or images go to providers.
+- Windows system audio uses Electron's supported unmuted loopback option. It captures supported playback mix, rather than selecting one application's audio. Discord, Teams, Zoom and browsers depend on their output routing, Windows permissions and content restrictions; real-call compatibility is unverified.
+- Chromium requires an accompanying display track for loopback. EveryHint releases it immediately without reading its images or starting screen analysis. Speakers continue playing.
+- Device disconnection, observed playback changes, permission revocation and capture errors stop the session and require fresh preparation. Windows/driver mute and routing behaviour varies; restart the session after changing output devices even if Windows does not report a change.
+- A headset reduces acoustic duplication. Microphone echo cancellation/noise suppression are requested, with no guarantee of removing audio already mixed by Windows or other apps. EveryHint plays no capture-monitoring sounds.
+- Screen snapshots retain P1's native thumbnail limitations, described in [Architecture](docs/ARCHITECTURE.md).
 
 ## Verify
 
@@ -59,6 +61,6 @@ npm run check
 npm run smoke
 ```
 
-`check` runs strict TypeScript checking, lint, unit tests and a production build. Run it before `smoke`, which launches the compiled Electron app with a temporary profile, checks the real UI and IPC, and saves an **application-only** screenshot to `artifacts/everyhint-overlay.png`. Smoke tests never capture the desktop or enumerate its sources.
+`check` runs strict TypeScript, lint, all unit tests and the production build. `smoke` launches compiled Electron with a temporary profile and synthetic media; it does **not** capture a microphone, Windows playback or the desktop. App-only diagnostic screenshots are written to ignored `artifacts/`.
 
-P1 is implemented and automated checks pass. Real screen capture, global shortcut use with another application focused, tray presentation and the remaining physical Windows checks still require manual acceptance. See [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). P2 has not started.
+The automated baseline is **102 unit tests and 47 Electron smoke assertions**. P1 manual checks are still pending, as confirmed by the user. Hardware microphones, real Windows loopback and consented calls also require the [manual checklist](docs/TESTING.md). See [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). P3 has not started.

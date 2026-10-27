@@ -34,8 +34,8 @@ describe("capture sessions", () => {
     {},
     { ...consent, screen: false },
     { ...consent, acknowledged: false },
-    { ...consent, microphone: true },
-    { ...consent, systemAudio: true },
+    { ...consent, microphone: "true" },
+    { ...consent, systemAudio: "true" },
     { ...consent, extra: true },
   ])("enforces consent before enumeration or prepare: %j", async (input) => {
     const { session, capture } = setup();
@@ -102,7 +102,7 @@ describe("capture sessions", () => {
     await vi.advanceTimersByTimeAsync(3000);
     session.stop();
     session.stop();
-    expect(session.value).toEqual({
+    expect(session.value).toMatchObject({
       state: "STOPPED",
       source: null,
       consent: null,

@@ -1,83 +1,86 @@
-# EveryHint architecture — P1
+# EveryHint architecture — P1 + P2
 
 ## Process boundaries
 
 ```mermaid
 flowchart LR
-  UI[React overlay · sandboxed] <-->|narrow contextBridge| IPC[Validated main-process IPC]
-  IPC --> Sessions[CaptureSessionController]
-  Sessions --> Capture[ScreenCaptureService]
-  Capture --> Native[ElectronScreenCapture · desktopCapturer]
-  Sessions --> State[Memory-only session and latest frame]
-  State --> UI
-  State --> Tray[Native status tray]
-  Keys[Global hotkeys] --> Sessions
-  IPC --> Settings[Validated settings and window bounds]
+  UI[React overlay · sandboxed] <-->|typed validated IPC| Main[Main process]
+  Main --> Session[CaptureSessionController]
+  Session --> Screens[ScreenCaptureService · desktopCapturer snapshots]
+  Session --> Host[ElectronAudioCapture]
+  Host <-->|fixed commands and validated status| Worker[Dedicated sandboxed audio document]
+  Worker --> Mic[getUserMedia · selected microphone]
+  Worker --> Loop[getDisplayMedia · Windows loopback]
+  Mic --> Worklets[Separate Web Audio graphs and AudioWorklets]
+  Loop --> Worklets
+  Worklets --> Buffers[Bounded memory-only PCM per source]
+  Worklets --> Meters[Local RMS · low-rate diagnostics]
+  Meters --> Host
+  Main --> Tray[Actual per-source tray state]
 ```
 
-The main process owns the window, native tray, hotkeys, consent, capture scheduler and persistence. React only renders controls, states and local previews. The sandboxed preload exposes a typed, fixed set of methods; it does not expose Electron, Node, arbitrary channels or the IPC event object.
+P1's overlay, window manager, screen adapter, settings and hotkey controller remain intact. Main owns consent and orchestration. Browser media APIs run in `audio.html`, a separate hidden, sandboxed BrowserWindow with an in-memory Electron session. The capture context is dedicated to processing; the visible overlay and tray disclose actual activity. No content-protection or screen-sharing evasion APIs are used.
 
-The application is event driven except for the explicitly requested low-frequency screen sampling. State changes publish monotonically versioned snapshots to the overlay. A stale initial read cannot replace a newer event. No capture timer runs outside ACTIVE. Tray updates occur on state changes rather than on every frame.
+No capture window or media acquisition exists at startup. A temporary audio context can enumerate microphone metadata after explicit microphone consent; it is destroyed when the list is returned. An active session uses one capture window for its authorised audio sources. Duplicate operations are rejected.
 
 ## Modules
 
-| Responsibility             | Implementation                                                                                                               |
-| -------------------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| Desktop window manager     | `src/main/index.ts`: frameless, draggable, resizable, always-on-top option, compact sizing, monitor-aware bounds restoration |
-| Overlay UI                 | `src/renderer/src/main.tsx` and `styles.css`: response placeholder, controls, consent/source picker, diagnostics, settings   |
-| Capture/consent controller | `src/main/session.ts`: authoritative state transitions and per-session consent                                               |
-| Screen scheduler           | `src/main/capture.ts`: serial snapshots, timer disposal, generation-based cancellation                                       |
-| Native screen adapter      | `src/main/electron-capture.ts`: source metadata, own-window filtering, local JPEG snapshots                                  |
-| Hotkeys                    | `src/main/hotkeys.ts`: injectable registry and future binding overrides; status for each registration                        |
-| Application settings       | `src/main/settings.ts`: validated versioned JSON with atomic replacement                                                     |
-| Security                   | `src/main/security.ts` and main IPC/protocol handlers: exact document checks, local asset confinement and CSP                |
-| Shared contracts           | `src/shared/contracts.ts`: IPC, screen, session, settings, future audio/transcription/context/AI interfaces                  |
-| Runtime validation         | `src/shared/validation.ts`: untrusted IPC and disk inputs                                                                    |
-| Preload bridge             | `src/preload/index.ts`: narrow API and removable snapshot listener                                                           |
+| Module                                       | Responsibility                                                                                                                               |
+| -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| `src/main/index.ts`                          | Window/tray/hotkeys, strict overlay IPC, per-session local protocol/CSP/network policy, lock/suspend/shutdown cleanup                        |
+| `src/main/session.ts`                        | Authoritative session, consent, selected devices, per-source states and stale-event rejection                                                |
+| `src/main/capture.ts`, `electron-capture.ts` | Existing serial screen snapshots and own-window exclusion                                                                                    |
+| `src/main/audio-host.ts`                     | Capture-window lifetime, exact worker identity checks, native permissions, Windows display-media grant, startup deadline and forced teardown |
+| `src/main/audio-permissions.ts`              | Testable microphone/display permission rules; deny camera, subframe and unrelated access                                                     |
+| `src/preload/index.ts`, `audio.ts`           | Separate narrow overlay and capture bridges; no unrestricted Node/Electron/IPC access                                                        |
+| `src/renderer/audio/engine.ts`               | Separate MediaStreams, track/device events, Web Audio graphs, local buffers/meters and complete browser-side disposal                        |
+| `src/renderer/audio/worklet.ts`              | Native-rate PCM packet production; zero output, acknowledgement-based backpressure                                                           |
+| `src/shared/audio.ts`, `audio-ipc.ts`        | RMS, bounded buffers/packets, typed worker protocol and runtime report validation                                                            |
+| `src/shared/contracts.ts`, `validation.ts`   | Public IPC, session/source/PCM contracts and strict input validation                                                                         |
+| `src/renderer/src/main.tsx`, `styles.css`    | Source consent/selection, independent meters, mute, diagnostics, original overlay/settings                                                   |
 
-There are no speculative AI adapters or dormant SDK dependencies in P1. The context engine, question detection, audio services and transcription implementation remain backlog items with boundaries defined by the shared contracts.
+## Session and source state
 
-## State machine
+The session retains IDLE, READY, ACTIVE, PAUSED, STOPPED and ERROR. Every launch starts IDLE. Each source has DISABLED, AVAILABLE, STARTING, CAPTURING, PAUSED, STOPPED or ERROR. AVAILABLE means explicitly prepared; OS access is confirmed during acquisition. ACTIVE may contain STARTING audio sources, so the overlay and tray distinguish starting from capturing.
 
-| Current state                 | Allowed control                               | Result                                     |
-| ----------------------------- | --------------------------------------------- | ------------------------------------------ |
-| IDLE / STOPPED / ERROR        | Explicit consent, metadata selection, Prepare | READY                                      |
-| READY                         | Prepare a listed source again                 | READY                                      |
-| READY                         | Start                                         | ACTIVE                                     |
-| ACTIVE                        | Pause                                         | PAUSED                                     |
-| PAUSED                        | Resume with existing session consent          | ACTIVE                                     |
-| Any                           | Stop / exit / lock / suspend                  | STOPPED; consent, source and frame cleared |
-| Capture / enumeration failure | Automatic cleanup                             | ERROR; consent, source and frame cleared   |
+All seven nonempty combinations of Screen/Microphone/System audio are supported. Every consent field must be a real boolean, at least one source must be enabled, and participant acknowledgement must be true. Screens require an enumerated source; nondefault microphones require an enumerated device ID. Audio-only sessions never start the screen scheduler. Disabled sources cannot start through hotkeys, media grants or reports.
 
-Every new controller starts IDLE, even when settings exist. READY never schedules screenshots. Start and Resume require stored, validated consent plus a source from the main-process metadata list. Audio consent cannot be granted in P1. Stop is idempotent. A hotkey cannot start a new session; pause/resume is harmless when no authorised session exists.
+Pause cancels the screen timer, invalidates late events, clears screenshots and destroys the audio capture window. Source consent/device selection and an explicit microphone mute are retained for resume. Resume recreates the browser context and checks permissions. Stop additionally clears consent, selections and buffers; fresh preparation is mandatory. Epochs prevent events from old contexts from updating the current UI.
 
-Renderer reload stops an existing session. Renderer termination or unresponsiveness stops capture and surfaces ERROR. Application shutdown stops capture, unregisters shortcuts, persists window preferences and destroys the tray. Recovery never automatically resumes capture.
+A source failure stops the whole session rather than silently continuing a partial conversation capture. The failed source is ERROR, other selected sources become STOPPED, levels/frame are cleared, and consent is revoked. Windows lock, suspend, overlay reload, renderer crash/unresponsiveness, application shutdown and capture-context failures also stop resources. Nothing resumes after restart, unlock or system wake automatically.
 
-## Capture boundaries
+## Audio acquisition
 
-P1 uses the supported main-process [`desktopCapturer.getSources`](https://www.electronjs.org/docs/latest/api/desktop-capturer) thumbnail API. This avoids a persistent full-frame-rate screen stream and keeps native capture and image encoding outside the UI renderer. Metadata enumeration requests a zero-size thumbnail. Active snapshots request only the selected source kind (`screen` or `window`) at 960 × 540; actual dimensions depend on Electron and the display. Only the selected source image is converted to JPEG and sent to the overlay. Images are never written to disk or passed to a provider.
+Microphone capture uses `getUserMedia` with `video: false` and an explicit device constraint. Windows default and communications aliases are supported. Echo cancellation and noise suppression are requested; automatic gain control is disabled. Native microphone privacy denial, unavailable devices and startup failures are surfaced.
 
-This API enumerates a source kind rather than accepting a per-source thumbnail filter. Other sources of that kind may have short-lived native thumbnails created during the request. They are discarded, never retained as application context, and never sent to the renderer. A later capture transport can replace this adapter if strictly source-exclusive native acquisition or full-resolution capture is needed; this limitation must not be described as exclusive OS-level capture.
+System audio uses Electron's [`setDisplayMediaRequestHandler`](https://www.electronjs.org/docs/latest/api/session#sessetdisplaymediarequesthandlerhandler-opts) with `audio: 'loopback'`, never `loopbackWithMute`. This preserves speaker playback. Only a currently authorised, exact top-level audio worker can receive this grant, once per activation. Camera access is denied. Screen metadata is enumerated without thumbnails to satisfy Chromium's accompanying-video requirement. The returned video track is stopped and removed immediately; it is never attached to a video element/canvas, analysed or sent to the screen service.
 
-The scheduler allows at most one in-flight call, including across pause/resume generations. The next interval starts after the previous request completes. This avoids overlap and prioritises low resource usage over exact wall-clock cadence. Pausing and stopping synchronously cancel the timer and invalidate pending results. Electron has no cancellation API for an already issued thumbnail request: that one-shot native operation may finish after pause/stop, but its output is dropped and cannot revive the session. There are **no persistent MediaStream tracks** in this implementation.
+There is one independent audio graph per source: MediaStream source → AudioWorklet → zero-filled output. No captured sound is replayed to speakers. There is no mixing of microphone and loopback. Browser track `mute`, `unmute`, `ended`, context state and media-device changes are handled. EveryHint's own mute toggles only its microphone track; it survives pause/resume. A silent meter does not claim to know a hardware switch or another application's mute state. See [MediaStreamTrack mute semantics](https://developer.mozilla.org/en-US/docs/Web/API/MediaStreamTrack/mute_event).
 
-EveryHint-owned window IDs are excluded from both selection and capture. Application-window screenshots can be previewed live. Entire-screen screenshots are previewed **only while PAUSED**, and the previous image is removed on resume before the next scheduled snapshot. EveryHint remains visible to normal screen sharing and monitoring; no content-protection or capture-evasion APIs are used.
+Input removal/default-device identity changes and observed output-device changes terminate capture and require explicit preparation. Driver and Windows routing notifications are imperfect: a session should be restarted after manual output changes even if no event arrives. There is no unsupported promise to exclude specific apps or remove acoustic/Windows-monitoring duplicates.
 
-Source disappearance, blank/minimised thumbnails, OS permission failures and native errors terminate the session with a visible error. Source IDs are session scoped. Window minimisation behaviour and conferencing applications' protected content vary by OS and need manual verification.
+## PCM, buffering and diagnostics
 
-## Security and persistence
+`AudioFrame` defines source ID, stream UUID, sequence, timestamp (epoch milliseconds), sample rate, channel count, `f32-interleaved` samples and lifecycle (`started`, `data`, `stopped`). P2 produces data frames and uses new stream IDs plus context lifetime to delimit each activation; lifecycle marker values are reserved for future consumers. No transcription consumer exists yet.
 
-- `contextIsolation: true`, `nodeIntegration: false`, `sandbox: true`, `webSecurity: true`, no webviews or new windows.
-- IPC checks the exact owning WebContents, its top-level frame, the trusted document URL and validated arguments. No generic IPC transport is exposed.
-- Production uses `everyhint://app/index.html` with assets confined to the compiled renderer directory. Navigation, popups and renderer media permission requests are denied.
-- Production CSP denies connections, inline/eval scripts, frames, media, objects and forms. Network requests outside the application origin are blocked by the Electron session as well. Development permits only the local Vite HTTP/WebSocket origin and inline code/styles required by React refresh.
-- Only `{ version, settings, bounds }` are persisted. Unknown settings keys, invalid types, unsupported versions and unsafe intervals are rejected. Corrupt preferences restore safe defaults with a visible warning. Write failures propagate to the user.
-- The native tray is created before the UI becomes usable; hiding is refused if that indicator is unavailable. Active capture is not tied to overlay visibility.
+AudioWorklets packetise 4096 sample frames, preserving up to two channels and the AudioContext sample rate. There is no 16 kHz resampler, speech model or speech recognition. This format can later be converted to mono 16 kHz PCM for whisper.cpp. Browser-required input-rate conversion is handled by Web Audio. See [AudioWorklet processing](https://developer.mozilla.org/en-US/docs/Web/API/AudioWorkletProcessor/process).
 
-Implementation follows Electron's [security recommendations](https://www.electronjs.org/docs/latest/tutorial/security), [sandbox guidance](https://www.electronjs.org/docs/latest/tutorial/sandbox) and [global shortcut API](https://www.electronjs.org/docs/latest/api/global-shortcut).
+Per-source caches enforce **2 seconds, 32 packets and 768,000 bytes**; old/oversized packets are dropped. Each worklet allows one unacknowledged packet and drops input while waiting, preventing unbounded MessagePort queues. This is bounded diagnostic capture, not a lossless recorder. Muting clears its buffer. Pause/Stop destroy the context and clear both buffers.
 
-## Future phases — contracts only
+RMS is computed locally. The worker reports at 200 ms intervals (5 Hz per source), with immediate structural/mute changes. Main sends small meter events separately from full snapshots, so screen images are not resent with every meter update. Two enabled sources can produce up to ten small overlay meter events per second. CSS smooths meters. Missing packets zero the displayed level after 600 ms.
 
-`AudioCaptureProvider` will deliver local PCM chunks and independently stop each source. `TranscriptionProvider` will emit partial/final transcript events. `ContextEvent` carries screen, transcript and question events; `AssistantResponse` carries streamed provider output. `AIProvider.respond` returns an abortable async iterable.
+Normal engine disposal stops every media track, disconnects nodes, closes worklet ports and AudioContexts, removes listeners, clears timers and releases buffers, including resources whose worklet is still loading. Main always destroys the BrowserWindow on pause/stop/failure, releasing browser-owned media even if JavaScript is unresponsive or acquisition is pending. Late promises cannot restart capture. Startup has a 20-second deadline.
 
-P4 will add Codex (`@openai/codex-sdk`) and Claude (`@anthropic-ai/claude-agent-sdk`) adapters after verifying their official authentication options at that time. Prefer supported subscription authentication; do not assume arbitrary OAuth token reuse or promise universal subscription availability. No authentication, provider SDK installation, AI requests or automatic provider selection is implemented in P1.
+## Screen capture and pause fix
+
+P1 uses [`desktopCapturer.getSources`](https://www.electronjs.org/docs/latest/api/desktop-capturer) native thumbnails, initially every three seconds, at approximately 960 × 540. Only the selected image is retained and delivered to the overlay. Native enumeration can transiently thumbnail other sources of the chosen kind; this is not exclusive per-window OS acquisition. Already issued one-shot native requests cannot be cancelled, but late output is discarded immediately after pause/stop.
+
+The reported P1 paused screenshot was a retained preview: the scheduler was already stopped. Commit `ee3fc00` clears that frame on pause. Application-window previews remain live while ACTIVE. Whole-screen previews stay hidden to prevent recursion and are also cleared when paused/stopped; no paused image is retained. Main-process tests verify the absence of further scheduled captures.
+
+## Security and storage
+
+Both UI and capture contexts use context isolation, sandboxing, disabled Node integration/webviews, denied navigation/popups and confined application assets. Worker IPC validates the exact WebContents, top-level frame and document URL; reports reject unknown fields, excessive sizes, invalid levels and unconsented sources. Worker configuration/activation cannot be invoked by the overlay. User activation for `getDisplayMedia` is granted through one fixed main-process function call following an authorised Start/Resume.
+
+The overlay session denies all media permissions. The separate in-memory audio session grants only the consented source types in the current operation and denies cameras/unrelated permissions. Production network access is blocked by CSP and session request policy. AudioWorklet scripts are permitted only from the capture document's own origin. Development additionally permits the loopback Vite origin. See [Electron security](https://www.electronjs.org/docs/latest/tutorial/security).
+
+Only validated versioned appearance settings, screen interval and bounds are written to disk. Consent, selected devices, screenshots, raw PCM, transcripts and credentials are never persisted. No provider SDK, authentication, native WASAPI module, audio storage/upload, analytics, model download or P3 transcription was introduced.

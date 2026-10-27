@@ -32,7 +32,7 @@ export function assetPath(root: string, requestUrl: string): string {
     throw new Error("Asset path escapes application root.");
   return candidate;
 }
-export function contentSecurityPolicy(devUrl?: string): string {
+export function contentSecurityPolicy(devUrl?: string, audio = false): string {
   const connect = devUrl
     ? `${new URL(devUrl).origin} ${new URL(devUrl).origin.replace("http:", "ws:")}`
     : "'none'";
@@ -48,6 +48,6 @@ export function contentSecurityPolicy(devUrl?: string): string {
     "frame-src 'none'",
     "form-action 'none'",
     "media-src 'none'",
-    "worker-src 'none'",
+    audio ? "worker-src 'self'" : "worker-src 'none'",
   ].join("; ");
 }

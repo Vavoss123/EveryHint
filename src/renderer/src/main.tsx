@@ -7,6 +7,7 @@ import type {
   Result,
   SessionAction,
   Settings,
+  MicrophoneDevice,
 } from "../../shared/contracts";
 import "./styles.css";
 
@@ -53,6 +54,10 @@ function App() {
   const [preparing, setPreparing] = useState(false);
   const [expanded, setExpanded] = useState(true);
   const [screenConsent, setScreenConsent] = useState(false);
+  const [microphoneConsent, setMicrophoneConsent] = useState(false);
+  const [systemConsent, setSystemConsent] = useState(false);
+  const [microphones, setMicrophones] = useState<MicrophoneDevice[]>([]);
+  const [microphoneDeviceId, setMicrophoneDeviceId] = useState("default");
   const [acknowledged, setAcknowledged] = useState(false);
   const [sources, setSources] = useState<CaptureSource[]>([]);
   const [sourceId, setSourceId] = useState("");
@@ -78,9 +83,32 @@ function App() {
       );
     return off;
   }, [accept]);
+  useEffect(
+    () =>
+      window.everyhint.onAudioMeters((event) => {
+        setApp((previous) =>
+          previous &&
+          previous.session.state === "ACTIVE" &&
+          previous.session.epoch === event.epoch
+            ? {
+                ...previous,
+                session: {
+                  ...previous.session,
+                  sources: { ...previous.session.sources, ...event.sources },
+                },
+              }
+            : previous,
+        );
+      }),
+    [],
+  );
   useEffect(() => {
     if (app?.session.state === "STOPPED" || app?.session.state === "ERROR") {
       setScreenConsent(false);
+      setMicrophoneConsent(false);
+      setSystemConsent(false);
+      setMicrophones([]);
+      setMicrophoneDeviceId("default");
       setAcknowledged(false);
       setSources([]);
       setSourceId("");
@@ -115,12 +143,17 @@ function App() {
       );
   };
   function consent(): Consent {
-    if (!screenConsent || !acknowledged)
-      throw new Error("Select Screen and confirm your authorisation first.");
+    if (
+      (!screenConsent && !microphoneConsent && !systemConsent) ||
+      !acknowledged
+    )
+      throw new Error(
+        "Select capture sources and confirm your authorisation first.",
+      );
     return {
-      screen: true,
-      microphone: false,
-      systemAudio: false,
+      screen: screenConsent,
+      microphone: microphoneConsent,
+      systemAudio: systemConsent,
       acknowledged: true,
     };
   }
@@ -137,8 +170,25 @@ function App() {
   }
   function prepare(): void {
     void run(async () => {
-      unwrap(await window.everyhint.prepare({ sourceId, consent: consent() }));
+      unwrap(
+        await window.everyhint.prepare({
+          ...(screenConsent ? { sourceId } : {}),
+          ...(microphoneConsent ? { microphoneDeviceId } : {}),
+          consent: consent(),
+        }),
+      );
       setPreparing(false);
+    });
+  }
+  function refreshMicrophones(): void {
+    void run(async () => {
+      const devices = unwrap(await window.everyhint.listMicrophones(consent()));
+      setMicrophones(devices);
+      if (
+        microphoneDeviceId !== "default" &&
+        !devices.some((device) => device.deviceId === microphoneDeviceId)
+      )
+        setMicrophoneDeviceId("default");
     });
   }
   if (!app)
@@ -157,7 +207,15 @@ function App() {
   const resumable = session.state === "PAUSED";
   const ready = session.state === "READY";
   const status = active
-    ? "Screen capture on"
+    ? Object.entries(session.sources)
+        .filter(([, source]) =>
+          ["CAPTURING", "STARTING"].includes(source.state),
+        )
+        .map(
+          ([id, source]) =>
+            `${id === "systemAudio" ? "System" : id === "microphone" ? "Mic" : "Screen"} ${source.state === "STARTING" ? "starting" : "on"}`,
+        )
+        .join(" · ")
     : resumable
       ? "Paused · capture off"
       : ready
@@ -166,7 +224,7 @@ function App() {
           ? "Capture error"
           : "Capture off";
   const showFrame =
-    !!session.frame && (session.source?.kind === "window" || resumable);
+    active && !!session.frame && session.source?.kind === "window";
 
   return (
     <main className={`app ${settings.compact ? "is-compact" : ""}`}>
@@ -176,7 +234,7 @@ function App() {
             e<span>h</span>
           </div>
           <span>EveryHint</span>
-          <span className="phase">P1</span>
+          <span className="phase">P2</span>
         </div>
         <div className="window-actions">
           <button
@@ -325,8 +383,8 @@ function App() {
               capture continues while Active Mode is on.
             </p>
             <p className="muted">
-              Audio arrives in P2. Local transcription arrives in P3. Codex and
-              Claude arrive in P4.
+              Microphone and Windows system audio stay local. Transcription
+              arrives in P3. Codex and Claude arrive in P4.
             </p>
             <button
               className="secondary full"
@@ -352,8 +410,8 @@ function App() {
               <h1>Prepare a session</h1>
             </div>
             <p className="muted">
-              Choose what EveryHint can see. Nothing is captured until you press
-              Start capture.
+              Choose what EveryHint can see and hear. Nothing is captured until
+              you press Start capture.
             </p>
             <label className="consent-row">
               <input
@@ -370,16 +428,36 @@ function App() {
                 Screen or application window<small>Local snapshots only</small>
               </span>
             </label>
-            <label className="consent-row disabled">
-              <input type="checkbox" disabled />
+            <label className="consent-row">
+              <input
+                type="checkbox"
+                checked={microphoneConsent}
+                onChange={(event) => {
+                  setMicrophoneConsent(event.target.checked);
+                  setMicrophones([]);
+                  setMicrophoneDeviceId("default");
+                }}
+              />
               <span>
-                Microphone<small>Coming in P2</small>
+                Microphone<small>Selected input · local audio levels</small>
               </span>
             </label>
-            <label className="consent-row disabled">
-              <input type="checkbox" disabled />
+            <label
+              className={`consent-row ${app.systemAudioSupported ? "" : "disabled"}`}
+            >
+              <input
+                type="checkbox"
+                checked={systemConsent}
+                disabled={!app.systemAudioSupported}
+                onChange={(event) => setSystemConsent(event.target.checked)}
+              />
               <span>
-                System audio<small>Coming in P2</small>
+                System audio
+                <small>
+                  {app.systemAudioSupported
+                    ? "Windows playback · speakers stay on"
+                    : "Available on Windows only"}
+                </small>
               </span>
             </label>
             <label className="acknowledgement">
@@ -389,51 +467,95 @@ function App() {
                 onChange={(event) => setAcknowledged(event.target.checked)}
               />
               <span>
-                I authorise this screen capture and have any required
+                I authorise the selected capture sources and have any required
                 participant consent. I will follow meeting and application
                 rules.
               </span>
             </label>
-            <button
-              className="secondary full"
-              disabled={!screenConsent || !acknowledged || busy}
-              onClick={chooseSources}
-            >
-              {busy
-                ? "Working…"
-                : sources.length
-                  ? "Refresh sources"
-                  : "Choose a screen or window"}
-            </button>
-            {sources.length > 0 && (
+            {systemConsent && (
+              <p className="warning">
+                System audio can include other people's voices and unrelated
+                applications. Windows loopback briefly requires a display track;
+                EveryHint releases it immediately without analysing its images.
+              </p>
+            )}
+            {microphoneConsent && (
               <>
-                <label className="source-label" htmlFor="source">
-                  Capture source
+                <label className="source-label" htmlFor="microphone">
+                  Microphone device
                 </label>
                 <select
-                  id="source"
-                  value={sourceId}
-                  onChange={(event) => setSourceId(event.target.value)}
+                  id="microphone"
+                  value={microphoneDeviceId}
+                  onChange={(event) =>
+                    setMicrophoneDeviceId(event.target.value)
+                  }
                 >
-                  <option value="">Select a source…</option>
-                  {sources.map((source) => (
-                    <option key={source.id} value={source.id}>
-                      {source.kind === "screen" ? "Screen" : "Window"} ·{" "}
-                      {source.name}
-                    </option>
-                  ))}
+                  <option value="default">Windows default microphone</option>
+                  {microphones
+                    .filter((device) => device.deviceId !== "default")
+                    .map((device) => (
+                      <option value={device.deviceId} key={device.deviceId}>
+                        {device.label}
+                      </option>
+                    ))}
                 </select>
                 <button
-                  className="primary full"
-                  disabled={
-                    !sourceId || !screenConsent || !acknowledged || busy
-                  }
-                  onClick={prepare}
+                  className="secondary full"
+                  disabled={!acknowledged || busy}
+                  onClick={refreshMicrophones}
                 >
-                  Prepare session
+                  Refresh microphones
                 </button>
               </>
             )}
+            {screenConsent && (
+              <>
+                <button
+                  className="secondary full"
+                  disabled={!screenConsent || !acknowledged || busy}
+                  onClick={chooseSources}
+                >
+                  {busy
+                    ? "Working…"
+                    : sources.length
+                      ? "Refresh sources"
+                      : "Choose a screen or window"}
+                </button>
+                {sources.length > 0 && (
+                  <>
+                    <label className="source-label" htmlFor="source">
+                      Capture source
+                    </label>
+                    <select
+                      id="source"
+                      value={sourceId}
+                      onChange={(event) => setSourceId(event.target.value)}
+                    >
+                      <option value="">Select a source…</option>
+                      {sources.map((source) => (
+                        <option key={source.id} value={source.id}>
+                          {source.kind === "screen" ? "Screen" : "Window"} ·{" "}
+                          {source.name}
+                        </option>
+                      ))}
+                    </select>
+                  </>
+                )}
+              </>
+            )}
+            <button
+              className="primary full"
+              disabled={
+                (!screenConsent && !microphoneConsent && !systemConsent) ||
+                (screenConsent && !sourceId) ||
+                !acknowledged ||
+                busy
+              }
+              onClick={prepare}
+            >
+              Prepare selected sources
+            </button>
           </div>
         ) : (
           <>
@@ -495,7 +617,7 @@ function App() {
                   </summary>
                   <p className="muted">
                     {session.source?.kind === "screen"
-                      ? "Pause to inspect the latest screenshot. Whole-screen previews stay hidden during capture to prevent recursive screenshots."
+                      ? "Whole-screen previews stay hidden to prevent recursive screenshots. Pause and Stop clear all screenshots. Use an application window for a live preview."
                       : "Selected application windows can be previewed while capturing. EveryHint windows are excluded."}
                   </p>
                   {showFrame && session.frame ? (
@@ -516,11 +638,85 @@ function App() {
                       {active && !session.frame
                         ? "Waiting for the first snapshot…"
                         : active
-                          ? "Preview available when paused"
+                          ? "Whole-screen preview hidden"
                           : "No screenshot to display"}
                     </div>
                   )}
                 </details>
+                <div
+                  className="audio-diagnostics"
+                  aria-label="Live audio diagnostics"
+                >
+                  <div className="section-heading">
+                    <h2>Live audio</h2>
+                    <span className="eyebrow">LOCAL ONLY</span>
+                  </div>
+                  {(["microphone", "systemAudio"] as const).map((id) => {
+                    const source = session.sources[id];
+                    const level =
+                      source.state === "CAPTURING" && !source.muted
+                        ? source.level
+                        : 0;
+                    return (
+                      <div className="audio-source" key={id}>
+                        <div className="audio-heading">
+                          <strong>
+                            {id === "microphone"
+                              ? "Microphone"
+                              : "System audio"}
+                          </strong>
+                          <span>
+                            {source.state.toLowerCase()}
+                            {source.muted
+                              ? " · muted"
+                              : source.state === "CAPTURING" && level < 0.001
+                                ? " · silent"
+                                : ""}
+                          </span>
+                        </div>
+                        <p title={source.name}>
+                          {source.name}
+                          {source.deviceId && (
+                            <small>Device: {source.deviceId}</small>
+                          )}
+                        </p>
+                        <meter
+                          aria-label={`${id === "microphone" ? "Microphone" : "System audio"} level`}
+                          min={0}
+                          max={1}
+                          value={level}
+                        />
+                        {source.error && (
+                          <p className="error">{source.error}</p>
+                        )}
+                        {id === "microphone" &&
+                          source.state === "CAPTURING" && (
+                            <button
+                              className="secondary"
+                              onClick={() => {
+                                void run(async () =>
+                                  unwrap(
+                                    await window.everyhint.setMicrophoneMuted(
+                                      !source.muted,
+                                    ),
+                                  ),
+                                );
+                              }}
+                            >
+                              {source.muted
+                                ? "Unmute microphone"
+                                : "Mute microphone"}
+                            </button>
+                          )}
+                      </div>
+                    );
+                  })}
+                  <p className="muted">
+                    Silent means no signal is arriving. Another app's mute
+                    button may not mute this input. No audio is saved or
+                    uploaded.
+                  </p>
+                </div>
               </>
             )}
           </>
@@ -576,7 +772,7 @@ function App() {
             {active
               ? "Hiding keeps capture on · Stop works globally"
               : "Capture starts only with your authorisation"}
-            <span className="version">v0.1</span>
+            <span className="version">v0.2</span>
           </div>
         )}
       </footer>

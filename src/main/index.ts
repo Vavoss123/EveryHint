@@ -12,7 +12,7 @@ import {
   session,
   Tray,
 } from "electron";
-import type { IpcMainInvokeEvent } from "electron";
+import type { IpcMainInvokeEvent, Session } from "electron";
 import { readFile } from "node:fs/promises";
 import { mkdirSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
@@ -35,6 +35,7 @@ import {
 } from "./security";
 import { CaptureSessionController } from "./session";
 import { SettingsStore } from "./settings";
+import { ElectronAudioCapture } from "./audio-host";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -59,7 +60,7 @@ const warnings: string[] = [];
 let revision = 0;
 let quitting = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
-let lastTrayState: SessionState | undefined;
+let lastTrayState: string | undefined;
 let expandedHeight = 440;
 const devUrl = developmentUrl(process.env.ELECTRON_RENDERER_URL);
 const documentUrl = devUrl
@@ -79,6 +80,7 @@ function snapshot(): AppSnapshot {
     settings: { ...store.settings },
     hotkeys,
     warnings: [...warnings],
+    systemAudioSupported: process.platform === "win32",
   };
 }
 function icon(state: SessionState): Electron.NativeImage {
@@ -129,16 +131,26 @@ function safely(action: () => void): void {
 }
 function updateTray(): void {
   if (!tray || tray.isDestroyed()) return;
-  const state = controller.value.state;
-  if (state === lastTrayState) return;
-  lastTrayState = state;
+  const value = controller.value;
+  const state = value.state;
+  const summary = Object.entries(value.sources)
+    .map(
+      ([id, source]) =>
+        `${id === "systemAudio" ? "System" : id === "microphone" ? "Mic" : "Screen"} ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
+    )
+    .join(" · ");
+  const key = `${state}:${summary}`;
+  if (key === lastTrayState) return;
+  lastTrayState = key;
   tray.setImage(icon(state));
-  tray.setToolTip(
-    `EveryHint — ${state === "ACTIVE" ? "ACTIVE · Screen capture on" : `${state} · Screen capture off`}`,
-  );
+  tray.setToolTip(`EveryHint · ${state} · ${summary}`.slice(0, 127));
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: `EveryHint · ${state}`, enabled: false },
+      ...Object.entries(value.sources).map(([id, source]) => ({
+        label: `${id === "systemAudio" ? "System audio" : id === "microphone" ? "Microphone" : "Screen"}: ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
+        enabled: false,
+      })),
       { label: "Show EveryHint", click: show },
       {
         label:
@@ -216,26 +228,14 @@ function handle(
   );
 }
 
-async function initialise(): Promise<void> {
-  mkdirSync(app.getPath("userData"), { recursive: true });
-  store = new SettingsStore(
-    join(app.getPath("userData"), "settings.json"),
-    warn,
+function configureSession(target: Session, audio = false): void {
+  const csp = contentSecurityPolicy(devUrl, audio);
+  target.setPermissionRequestHandler((_contents, _permission, callback) =>
+    callback(false),
   );
-  controller = new CaptureSessionController(
-    new ElectronScreenCapture(),
-    () => store.settings.captureIntervalMs,
-    publish,
-  );
-  const csp = contentSecurityPolicy(devUrl);
-  session.defaultSession.setPermissionRequestHandler(
-    (_contents, _permission, callback) => callback(false),
-  );
-  session.defaultSession.setPermissionCheckHandler(() => false);
-  session.defaultSession.setDisplayMediaRequestHandler((_request, callback) =>
-    callback(null),
-  );
-  session.defaultSession.webRequest.onBeforeRequest((details, callback) => {
+  target.setPermissionCheckHandler(() => false);
+  target.setDisplayMediaRequestHandler((_request, callback) => callback(null));
+  target.webRequest.onBeforeRequest((details, callback) => {
     const url = new URL(details.url);
     const local = devUrl
       ? url.origin === new URL(devUrl).origin ||
@@ -243,7 +243,7 @@ async function initialise(): Promise<void> {
       : url.protocol === "everyhint:" && url.hostname === "app";
     callback({ cancel: !local && url.protocol !== "data:" });
   });
-  session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
+  target.webRequest.onHeadersReceived((details, callback) => {
     const headers = { ...details.responseHeaders };
     for (const key of Object.keys(headers))
       if (key.toLowerCase() === "content-security-policy") delete headers[key];
@@ -251,7 +251,7 @@ async function initialise(): Promise<void> {
       responseHeaders: { ...headers, "Content-Security-Policy": [csp] },
     });
   });
-  protocol.handle("everyhint", async (request) => {
+  target.protocol.handle("everyhint", async (request) => {
     try {
       const path = assetPath(join(directory, "../renderer"), request.url);
       const mime: Record<string, string> = {
@@ -271,6 +271,31 @@ async function initialise(): Promise<void> {
       return new Response("EveryHint asset not found", { status: 404 });
     }
   });
+}
+
+async function initialise(): Promise<void> {
+  mkdirSync(app.getPath("userData"), { recursive: true });
+  store = new SettingsStore(
+    join(app.getPath("userData"), "settings.json"),
+    warn,
+  );
+  configureSession(session.defaultSession);
+  const audio = new ElectronAudioCapture(
+    new URL("audio.html", documentUrl).href,
+    join(directory, "../preload/audio.cjs"),
+    configureSession,
+  );
+  controller = new CaptureSessionController(
+    new ElectronScreenCapture(),
+    () => store.settings.captureIntervalMs,
+    publish,
+    audio,
+    (event) => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:audio-meters", event);
+    },
+    process.platform === "win32",
+  );
 
   const saved = store.bounds;
   const area = screen.getDisplayMatching(
@@ -374,6 +399,10 @@ async function initialise(): Promise<void> {
 
   handle("everyhint:get", () => snapshot());
   handle("everyhint:sources", (input) => controller.listSources(input));
+  handle("everyhint:microphones", (input) => controller.listMicrophones(input));
+  handle("everyhint:microphone-mute", (input) =>
+    controller.setMicrophoneMuted(input),
+  );
   handle("everyhint:prepare", (input) => controller.prepare(input));
   handle("everyhint:session", (input) => {
     if (
@@ -381,7 +410,7 @@ async function initialise(): Promise<void> {
       !["start", "pause", "resume", "stop"].includes(input)
     )
       throw new Error("Unknown session action.");
-    controller.action(input as SessionAction);
+    return controller.action(input as SessionAction);
   });
   handle("everyhint:settings", (input) => {
     // Appearance is safe to edit during capture; interval changes apply on next start/resume.

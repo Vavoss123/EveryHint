@@ -20,16 +20,33 @@ export function exactKeys(
 export function parseConsent(value: unknown): Consent {
   const input = record(value);
   exactKeys(input, ["screen", "microphone", "systemAudio", "acknowledged"]);
-  if (input.screen !== true || input.acknowledged !== true)
-    throw new Error("Explicit screen capture consent is required.");
-  if (input.microphone !== false || input.systemAudio !== false)
-    throw new Error("Audio capture is unavailable until P2.");
+  if (
+    input.acknowledged !== true ||
+    ["screen", "microphone", "systemAudio"].some(
+      (key) => typeof input[key] !== "boolean",
+    )
+  )
+    throw new Error(
+      "Explicit source consent and participant acknowledgement are required.",
+    );
+  if (!input.screen && !input.microphone && !input.systemAudio)
+    throw new Error("Enable at least one capture source.");
   return {
-    screen: true,
-    microphone: false,
-    systemAudio: false,
+    screen: input.screen as boolean,
+    microphone: input.microphone as boolean,
+    systemAudio: input.systemAudio as boolean,
     acknowledged: true,
   };
+}
+export function parseDeviceId(value: unknown): string {
+  if (
+    typeof value !== "string" ||
+    value.length < 1 ||
+    value.length > 512 ||
+    Array.from(value).some((character) => character.charCodeAt(0) < 32)
+  )
+    throw new Error("Invalid microphone device.");
+  return value;
 }
 export function parseSettings(value: unknown): Settings {
   const input = record(value);

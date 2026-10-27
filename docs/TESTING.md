@@ -1,74 +1,99 @@
-# EveryHint testing
+# EveryHint testing — P2
 
-## Automated verification
+## Run automated verification
 
-From the project directory with Node 24 LTS installed:
+With Node 24 LTS, from the project directory:
 
 ```powershell
 npm ci
-npm run typecheck
-npm run lint
-npm test
-npm run build
+npm run check
 npm run smoke
 ```
 
-`npm run check` combines the first four checks after installation. `npm run test:watch` runs unit tests interactively.
+Individual commands: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. Run the build before smoke. `npm run test:watch` supports unit development.
 
-Recorded on **2026-10-27**, on the provided Windows environment:
+Recorded on **2026-10-27**, in the provided Windows environment:
 
-| Check                                                 | Result                                                         |
-| ----------------------------------------------------- | -------------------------------------------------------------- |
-| Strict TypeScript                                     | Passed                                                         |
-| ESLint, zero warnings                                 | Passed                                                         |
-| Vitest                                                | 62 passed, 0 failed, six test files                            |
-| Production Electron/Vite build                        | Passed; main, sandboxed preload and renderer emitted to `out/` |
-| Real Electron smoke                                   | 21 assertions passed; all three OS shortcuts registered        |
-| Native desktop capture / physical keypress acceptance | Not performed; requires the manual checklist below             |
+| Check                                                      | Result                                                                                 |
+| ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
+| Strict TypeScript                                          | Passed                                                                                 |
+| ESLint with zero warnings                                  | Passed                                                                                 |
+| Vitest                                                     | **102 passed, 0 failed; 11 files**                                                     |
+| Production build                                           | Passed; main, two sandboxed preloads, overlay, audio document and AudioWorklet emitted |
+| Real Electron smoke                                        | **47 assertions passed**, with synthetic media; all three hotkeys registered           |
+| Hardware microphone / native Windows loopback / real calls | **Not performed**                                                                      |
+| P1 physical Windows acceptance                             | **Not completed**, confirmed by the user                                               |
 
-The first verification pass found one lint issue, which was fixed. The first smoke attempt exposed the test's immediate check of a main-process-controlled setting before its asynchronous acknowledgement; the smoke now waits for the acknowledged state. The final checks above pass. No failures are suppressed.
+During development, tests were updated for newly permitted audio consent and the extended state shape, a lint/type issue was corrected, and the smoke test was changed to poll acknowledged IPC state rather than treating async predicates as settled. Final verification passes; no failing checks are suppressed.
 
-## Test coverage
+## Coverage
 
-| Test file                        | Meaningful behaviours                                                                                                                                                                                    |
-| -------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `tests/session.test.ts`          | IDLE without native access, consent rejection, listed-source enforcement, prepare/start, pause/resume, idempotent stop, consent revocation, failures, source-selection cancellation, immutable snapshots |
-| `tests/capture.test.ts`          | Serial native requests, no overlap across resume, cancellation of timers, late frames/errors ignored, terminal failures                                                                                  |
-| `tests/electron-capture.test.ts` | Mocked native API boundary, metadata-only selection, selected image conversion, own-window exclusion, missing/blank sources, native error propagation                                                    |
-| `tests/hotkeys.test.ts`          | Required callbacks, conflict/exception reporting, future bindings, unregister/disposal                                                                                                                   |
-| `tests/settings.test.ts`         | Types/ranges/unknown fields, safe defaults, persistence without session data, corrupt/versioned files, write failure, bounds validation                                                                  |
-| `tests/security.test.ts`         | Trusted document matching, confined asset paths, production CSP/network restrictions, development origin, source ID validation                                                                           |
+| File                        | Behaviours                                                                                                                                                                                                           |
+| --------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `audio-session.test.ts`     | Seven combinations, consent and enumeration gates, device whitelist, Windows-only support, STARTING vs CAPTURING, pause/resume/stop, preserved mute, stale events, failure cleanup, repeated starts/stops            |
+| `audio-engine.test.ts`      | Separate browser acquisitions/levels, companion video disposal, mute/silence, permission denial, track end, processor/setup errors, device/input/output changes, pending acquisition/module cleanup, repeated cycles |
+| `audio-host.test.ts`        | Exact worker identity/permissions, camera denial, one-time activation/display grant, unmuted loopback choice, bounded startup, duplicate prevention, metadata context disposal and shutdown/stop                     |
+| `audio-permissions.test.ts` | Independent native source permissions, participant acknowledgement, bounded/finite validated IPC reports and raw-PCM rejection                                                                                       |
+| `audio-processing.test.ts`  | RMS correctness, byte/time/count bounds, oversized packet rejection, stereo interleaving and worklet backpressure                                                                                                    |
+| Existing six P1 files       | Consent/state/screen scheduler lifecycle, native screen boundary, late results, hotkeys, settings/persistence and asset/CSP/IPC validation                                                                           |
 
-The smoke script launches the actual compiled Electron application, uses a temporary profile, verifies real contextBridge/IPC, sandbox/no-Node settings, consent UI, disabled audio/providers, native always-on-top and compact sizing, hide-to-tray, stop IPC, preference-only storage and restart into IDLE. It never clicks the source enumeration button, captures a screen, acquires audio, or contacts a provider. It saves only the app's own rendered UI to ignored `artifacts/everyhint-overlay.png`.
+Smoke launches the compiled app with a temporary profile. A test-only Playwright script injects synthetic oscillator MediaStreams into the dedicated audio document. Production code contains no synthetic-media mode. The test uses real AudioContexts, AudioWorklets, IPC, meters and window lifetimes for mic-only, system-only and combined audio. It checks companion video release, exactly one acquisition per enabled source, sandboxing, mute, pause/resume, Stop, active-capture application shutdown and restart into IDLE. Original overlay/window/settings/consent/hotkey registration checks remain.
 
-## Windows manual acceptance checklist
+No real desktop, microphone or playback content is captured. The screen source picker is not invoked. Only application UI screenshots are saved to ignored `artifacts/everyhint-overlay.png` and `artifacts/everyhint-audio.png`. Temporary settings are removed after the test.
 
-Run `npm run dev`, or `npm run build` followed by `npm start`. Use content you are authorised to capture. Keep EveryHint's tray icon visible by pinning it from the Windows tray overflow area. These checks have **not** been claimed as hands-on testing.
+## Performance observations and limits
 
-| #   | Action                                                                                | Expected result                                                                                                             | Result  |
-| --- | ------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ------- |
-| 1   | Launch EveryHint                                                                      | Correct branding/title, dark overlay, capture off / IDLE, no source or frame                                                | Pending |
-| 2   | Drag the title bar, resize from window edges, quit via tray and relaunch              | Controls remain usable; position and size restore on a connected display                                                    | Pending |
-| 3   | Enable/disable Always on top in settings and focus another app                        | Overlay follows the option; it remains interactive                                                                          | Pending |
-| 4   | Focus another application; press `Ctrl+Alt+Space` twice                               | EveryHint hides then returns; current capture state is unchanged                                                            | Pending |
-| 5   | Before authorising, press `Ctrl+Alt+P`; open Prepare                                  | No capture starts; source picker stays disabled until both consent checks are set                                           | Pending |
-| 6   | Authorise Screen and participant consent, list sources                                | Real displays/windows appear; EveryHint windows do not; audio sources remain disabled                                       | Pending |
-| 7   | Select an external window, Prepare, then Start capture                                | READY takes no frames; ACTIVE produces real frames after the interval; diagnostics previews the chosen window               | Pending |
-| 8   | Pause using the UI and `Ctrl+Alt+P`                                                   | State/tray change to PAUSED; frame count stops increasing for at least two intervals; last frame remains inspectable        | Pending |
-| 9   | Resume the authorised paused session                                                  | Capture restarts for that source; the old preview is cleared before a new frame                                             | Pending |
-| 10  | Stop using UI, tray and `Ctrl+Alt+Shift+X` in separate sessions                       | Immediate STOPPED; frame/source/consent cleared; count stays zero; Resume cannot restart it                                 | Pending |
-| 11  | Start a session, hide the overlay, inspect tray then use global Stop                  | Tray remains ACTIVE while hidden; emergency Stop works without showing the overlay and tray becomes STOPPED                 | Pending |
-| 12  | Close the overlay with its X, then reopen from tray; separately Quit and relaunch     | X hides; active state is preserved while hidden; Quit stops; relaunch starts IDLE and requires fresh consent                | Pending |
-| 13  | Capture a display, inspect diagnostics, then pause                                    | Active display preview is hidden; paused screenshot is real and has no nested preview image; resume hides it again          | Pending |
-| 14  | Capture an external window then close/minimise it, or disconnect the selected monitor | Missing/blank source gives a visible error and stops; no new source is silently selected; restoration needs new preparation | Pending |
-| 15  | Exercise permission denial where the OS offers it                                     | Readable capture error; no silent retries or automatic capture recovery                                                     | Pending |
-| 16  | Change interval; pause/resume or start a new session                                  | New interval applies at activation; source is still the consented source                                                    | Pending |
-| 17  | Use compact mode, expand/collapse response panel, open settings                       | Native compact resize works; Pause/Stop remain accessible; response placeholder never imitates an AI answer                 | Pending |
-| 18  | Lock Windows or suspend during capture, then unlock/resume Windows                    | Session is STOPPED; capture does not restart automatically                                                                  | Pending |
-| 19  | Inspect tray states and provider/audio controls                                       | ACTIVE coral, PAUSED amber, off purple, ERROR orange; tooltip/menu accurate; Codex/Claude marked P4 and audio P2            | Pending |
-| 20  | Bind a required shortcut in another app before launching EveryHint                    | Conflict is visible; overlay/tray controls work; no silent claim that the shortcut registered                               | Pending |
-| 21  | Quit and inspect `%APPDATA%\EveryHint\settings.json`                                  | Only preferences/bounds/version, no captured pixels, credentials or consent; no screenshot files created                    | Pending |
+- Tests verify maximum PCM cache size (768,000 bytes), age (2 seconds) and packet count (32) per source, including a 10,000-packet processing case.
+- Worklet backpressure permits one packet in flight; source channels remain separate. Worker diagnostics run at 5 Hz per source. Screen images are excluded from frequent meter events.
+- Repeated start/stop tests assert track/node/context disposal and zero remaining timers. Electron smoke confirms capture-window destruction on pause, Stop and active shutdown.
+- These are software bounds and lifecycle observations. Real Windows CPU, long-duration RSS, battery, device-driver release timing, loopback continuity after companion-video disposal and call compatibility remain unmeasured. No hardware performance result is claimed.
 
-Native one-shot requests cannot be cancelled mid-call. Pause/Stop must halt future scheduling immediately and discard the result of any already issued request. There are no persistent MediaStream tracks in P1. Source-kind enumeration may create other transient native thumbnails; this documented API boundary does not constitute an exclusive per-window capture transport.
+## Windows audio manual acceptance
 
-No Windows installer, signed package, multi-monitor/DPI acceptance, conferencing application compatibility or hardware performance certification is claimed. Those checks remain manual or belong to later milestones.
+Run `npm run dev`, or build then `npm start`. Use content and participants for which capture is authorised. Pin EveryHint's tray icon. All results below are **Pending**.
+
+| #   | Test                                                                                                                 | Expected result                                                                                                               |
+| --- | -------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Connected headset microphone; Refresh microphones and choose it                                                      | Selected input name appears; only that microphone captures                                                                    |
+| 2   | Built-in microphone, if present                                                                                      | Real signal while speaking; Windows privacy denial gives a readable error                                                     |
+| 3   | System audio with ordinary local playback                                                                            | System meter responds; speakers remain audible; no screen-analysis frames appear unless Screen was selected                   |
+| 4   | Consented Discord test call                                                                                          | Participant playback drives system meter where OS/routing permits; no unsupported per-app isolation claim                     |
+| 5   | Consented Teams or Zoom test call, where available                                                                   | Supported playback appears; note any driver/routing/protection limitations                                                    |
+| 6   | Microphone-only session                                                                                              | Screen/system remain disabled; no screen picker or loopback acquisition                                                       |
+| 7   | System-audio-only session                                                                                            | Microphone/screen analysis remain disabled; accompanying display track is released; loopback continues                        |
+| 8   | Microphone + system, then each combination with Screen                                                               | Meters stay independent; Screen snapshots operate only when selected; no duplicate sessions                                   |
+| 9   | Speak with no system playback                                                                                        | Microphone meter responds; system meter remains quiet where microphone monitoring is off                                      |
+| 10  | Another participant speaks while you remain quiet                                                                    | System meter responds; note acoustic pickup/monitoring duplication rather than claiming software deduplication                |
+| 11  | EveryHint mute/unmute, headset hardware switch, Windows/app mute separately                                          | EveryHint mute returns its meter to zero and survives pause/resume; other mutes may show silence without a reliable mute flag |
+| 12  | Pause/resume by UI, tray and `Ctrl+Alt+P` with another app focused                                                   | All sources released/paused; screenshots cleared and meters zero; only authorised sources reacquired; mute preserved          |
+| 13  | Hide overlay and use `Ctrl+Alt+Shift+X`                                                                              | Capture stops immediately; all consent/preview cleared; tray shows stopped; no automatic restart                              |
+| 14  | Unplug the active microphone; revoke access where supported                                                          | Visible source error; all sources released; fresh device selection/preparation required                                       |
+| 15  | Change default Windows playback device and microphone endpoint                                                       | Reported changes stop the session; no silent retargeting; reprepare manually if driver sends no notification                  |
+| 16  | Close overlay with X; separately Quit EveryHint during capture                                                       | X hides and tray still discloses active sources; Quit releases every stream/processing context                                |
+| 17  | Restart, lock/unlock and sleep/wake during capture                                                                   | No automatic capture; restart IDLE; lock/suspend revoke consent and require preparation                                       |
+| 18  | Re-run all P1 checks below                                                                                           | Existing screen/window/settings/hotkey behaviour preserved, with paused screenshots now cleared                               |
+| 19  | Disable Windows desktop microphone access, use an unavailable/exclusively held device, or interrupt startup          | Useful error and complete cleanup; no stuck STARTING state past the startup deadline                                          |
+| 20  | Observe Task Manager and Windows privacy indicators through a long authorised session and repeated pause/stop cycles | No continuing microphone indication or audio processing after stop; record real CPU/RSS before making performance claims      |
+
+Loopback is the supported playback mix, not an arbitrary external application's isolated audio. Protected/exclusive playback, nondefault output routing, remote sessions and drivers can prevent capture. Windows/app mute and device-change notifications vary. A headset and disabled microphone monitoring reduce duplication. EveryHint has no speech recognition or automatic meeting recording in P2.
+
+## Outstanding P1 regression checklist
+
+All physical checks remain pending:
+
+1. Launch with correct EveryHint branding and IDLE/capture off; no automatic consent or frames.
+2. Drag/resize overlay, toggle always-on-top and verify bounds restoration after quitting/relaunching, including monitor/DPI changes.
+3. Show/hide from another app with `Ctrl+Alt+Space`; hiding must preserve actual active state in the tray.
+4. Verify both consent checks and real screen/window metadata selection; EveryHint windows excluded.
+5. Select an external window, prepare without frames, Start and inspect real window screenshots after the configured interval.
+6. Capture a display and verify frame counts; whole-screen preview stays hidden to prevent recursion. **Pause and Stop must clear every image**.
+7. Pause for at least two capture intervals: count stops increasing and no screenshot reappears. Resume only the previously authorised session.
+8. Stop from UI, tray and global shortcut, including while hidden; source/consent/frame cleared and Resume refused.
+9. Close overlay to tray, reopen, then Quit/relaunch: capture never restores automatically.
+10. Close/minimise a selected window or disconnect the selected display; errors stop capture without choosing a replacement source.
+11. Check interval changes apply on the next activation, compact controls remain accessible and response expand/collapse works.
+12. Confirm tray source states, conflict warnings for occupied shortcuts, and disabled P4 provider controls.
+13. Lock/suspend during screen capture: no automatic resume; UI errors/crashes must also release capture.
+14. Inspect preferences and storage: only version/settings/bounds; no raw screen/audio files, credentials, device choices or consent.
+
+Native screen thumbnail requests already in flight cannot be cancelled mid-call; their results must be discarded after pause/stop. Real hardware, call compatibility, installer/signing, long-run performance and physical shortcut interaction are not certified by the automated results above.
