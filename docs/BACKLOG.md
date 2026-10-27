@@ -46,6 +46,8 @@ Remaining acceptance: real microphone and Windows loopback transcription; consen
 
 ## P4 — AI Provider Integration
 
+Distribution scope confirmed: **other people will use the app**. Claude's private SDK-use exception does not apply; subscription login requires Anthropic approval. Before release, replace/validate the local Codex-client login prototype against the applicable official Sign in with ChatGPT registration path. Open-source/local versus paid/hosted deployment eligibility is not yet established; do not assume commercial approval. This is a release dependency, not permission to enable API billing. See the [decision record](DECISIONS/P4-providers.md#confirmed-distribution-scope).
+
 Follow-up: **in-app ChatGPT account controls implemented** (Sign in, Switch account, Cancel, Sign out). Native browser OAuth and OS-keyring storage use an isolated app profile; no credentials are hardcoded or copied from the shared Codex login. Actual browser login acceptance is pending. Claude subscription sign-in still requires Anthropic approval; its unavailable control explains this. Codex inference remains blocked independently of authentication. No paid request was made.
 
 **Restricted implementation delivered; live acceptance remains open.** No paid/live inference was performed. The user explicitly chose to leave Claude live verification pending. The app now checks its own ChatGPT profile; the shared Codex login is not imported. Inference remains blocked because SDK 0.164.0 cannot establish a response-only tool boundary. Do not label this milestone fully accepted or claim a successful live provider integration.

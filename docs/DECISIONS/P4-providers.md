@@ -2,6 +2,34 @@
 
 ## Account sign-in follow-up
 
+### Confirmed distribution scope
+
+The user confirmed on 2026-10-27 that **other people will use EveryHint**. It is
+therefore not treated as a private, self-operated Claude SDK project. Claude
+subscription login stays disabled unless Anthropic expressly approves this app;
+the documented alternative is API authentication, with separate explicit billing
+consent. Distribution is not consent to API charges, and the instruction to make
+no paid requests remains in force. No private-use bypass will be added.
+
+The existing ChatGPT button is a local Codex-client prototype, not a completed
+production Sign in with ChatGPT integration. OpenAI documents a direct registration
+flow for eligible open-source/locally hosted apps, with an app/host identity and
+per-user consent. Paid or remotely hosted apps must follow the partner-interest
+and approval route. The user has not specified pricing/hosting, so no eligibility
+or commercial approval is assumed. Before release, choose and implement the
+applicable official SIWC route; do not treat the Codex client's OAuth identity as
+a commercial app registration. Existing Codex inference restrictions and browser
+acceptance checks remain open.
+
+Sources:
+
+- [Anthropic's third-party subscription sign-in restriction](https://code.claude.com/docs/en/agent-sdk/overview#get-started)
+- [ChatGPT plan usage scope](https://developers.openai.com/siwc/token-sharing-open-source)
+- [Open-source/local registration flow](https://developers.openai.com/siwc/token-sharing-open-source/sign-in)
+- [Commercial client-ID registration](https://developers.openai.com/siwc/request-client-id)
+
+### Implemented local prototype
+
 The user requested account login inside EveryHint. The ChatGPT button now invokes
 the official bundled `codex login` browser flow, with `forced_login_method="chatgpt"`,
 `cli_auth_credentials_store="keyring"` and a dedicated `CODEX_HOME` under the app's
