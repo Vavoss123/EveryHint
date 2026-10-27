@@ -77,7 +77,7 @@ describe("capture sessions", () => {
     await vi.advanceTimersByTimeAsync(3000);
     session.togglePause();
     expect(session.value.state).toBe("PAUSED");
-    expect(session.value.frame).toEqual(frame);
+    expect(session.value.frame).toBeNull();
     await vi.advanceTimersByTimeAsync(12000);
     expect(capture.capture).toHaveBeenCalledTimes(1);
     session.togglePause();

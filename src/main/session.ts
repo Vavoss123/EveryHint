@@ -90,6 +90,7 @@ export class CaptureSessionController {
     }
     if (action === "pause" && this.snapshot.state === "ACTIVE") {
       this.capture.stop();
+      this.snapshot.frame = null;
       this.snapshot.state = "PAUSED";
       this.changed();
       return;
