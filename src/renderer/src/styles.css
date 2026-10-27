@@ -8,6 +8,33 @@
   color-scheme: dark;
   font-size: 13px;
 }
+textarea { font: inherit; resize: vertical; }
+textarea:focus-visible { outline: 2px solid #b5a9ff; outline-offset: 3px; }
+.assistant-panel { padding: 14px; border: 1px solid #34323f; border-radius: 10px; background: #191921; }
+.assistant-panel .provider-row { margin: 0; }
+.provider-status, .ai-response, .context-review { overflow-wrap: anywhere; }
+.ai-question { display: grid; gap: 8px; }
+.ai-question textarea { width: 100%; min-height: 70px; border: 1px solid #454150; border-radius: 7px; padding: 9px; background: #111217; color: #eeeef4; }
+.ai-context { margin: 0; border: 1px solid #34323f; border-radius: 7px; padding: 10px; }
+.ai-context legend { color: #bfb3e8; padding: 0 4px; }
+.ai-choices { display: grid; gap: 8px; }
+.ai-choice { display: flex; align-items: flex-start; gap: 8px; line-height: 1.5; }
+.ai-choice input { flex: 0 0 auto; margin: 3px 0 0; }
+.billing-choice { color: #edc68c; }
+.ai-limits { margin-top: 10px; }
+.ai-limits label { display: flex; justify-content: space-between; gap: 10px; align-items: center; margin-top: 8px; }
+.ai-limits input { width: 105px; background: #111217; color: #eeeef4; border: 1px solid #454150; padding: 5px; }
+.ai-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.assistant-panel button { border-radius: 6px; padding: 7px 10px; }
+.context-review { display: grid; gap: 10px; background: #12131a; border: 1px solid #71628c; border-radius: 7px; padding: 12px; }
+.review-text { font: 11px/1.6 Consolas, monospace; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 240px; overflow: auto; user-select: text; }
+.context-review img { width: 100%; }
+.ai-response { margin-top: 12px; border-top: 1px solid #393442; padding-top: 12px; }
+.answer-text { white-space: pre-wrap; line-height: 1.6; user-select: text; margin: 10px 0; }
+.answer-text pre { max-height: 400px; overflow: auto; background: #0c0d12; border: 1px solid #34313e; border-radius: 6px; padding: 10px; white-space: pre; }
+.text-button { color: #c6b9ff; background: transparent; text-align: left; }
+.assistant-compact { display: flex; gap: 6px; min-height: 26px; }
+.assistant-compact .text-button { overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 * {
   box-sizing: border-box;
 }

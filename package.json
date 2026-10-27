@@ -1,7 +1,7 @@
 {
   "name": "everyhint",
   "productName": "EveryHint",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "description": "EveryHint — Intelligence when you need it.",
   "type": "module",
@@ -22,9 +22,13 @@
     "speech:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-transcriber.ps1",
     "speech:model": "node scripts/install-model.mjs",
     "speech:test": "node --experimental-transform-types scripts/test-inference.mjs",
-    "smoke:speech": "node scripts/smoke-transcription.mjs"
+    "smoke:speech": "node scripts/smoke-transcription.mjs",
+    "test:ai-sdk": "vitest run --config vitest.sdk.config.ts",
+    "smoke:ai": "node scripts/smoke-ai.mjs"
   },
   "dependencies": {
+    "@anthropic-ai/claude-agent-sdk": "0.3.311",
+    "@openai/codex-sdk": "0.164.0",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

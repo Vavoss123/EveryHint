@@ -1,4 +1,100 @@
-# P3 delivery — local live speech transcription
+# P4 delivery — explicit AI provider requests
+
+P4 adds the shared provider architecture, authentication/capability inspection, a real response-only Claude API adapter, manual provider selection, independently selected context, immutable payload review, fresh transfer consent, streaming/cancel/errors, bounded isolated conversations, safe code display/copy, compact status and teardown. Working capture and local transcription services were preserved. Version is **0.4.0**. **P4 is not fully live-accepted:** Codex inference is deliberately blocked and Claude live authentication/inference is unverified. P5 was not started.
+
+## Connection and real-request status
+
+| Provider | Actual status | Inference |
+| --- | --- | --- |
+| Codex | Official bundled CLI **0.164.0** and the Electron adapter detect existing **ChatGPT login**. No auth files/tokens were read by EveryHint. | **Blocked:** SDK **0.164.0** has no supported deny-all built-in-tool boundary. Read-only mode still permits commands; hooks can fail open. No agent was launched and no API fallback used. |
+| Claude | SDK **0.3.311**, bundled CLI **2.1.311**. No `ANTHROPIC_API_KEY` is configured. Subscription login is unsupported in EveryHint without Anthropic approval. | API-only adapter implemented, disabled by default and gated by a session-only billing opt-in. The user explicitly chose **“Leave live verification pending; make no paid requests.”** No live test was run. |
+
+**Actual live AI requests completed: 0. Paid requests: 0.** The installed Claude SDK/CLI was executed against synthetic loopback HTTP fixtures to verify protocol handling and tool blocking. Those fixtures and renderer test events are not AI responses and are never offered as production output. The limitation follows the task's instruction to disable unsupported functionality rather than grant broad permissions; a successful live Codex/Claude integration is not claimed. Official policy and permission sources are linked in [the decision record](DECISIONS/P4-providers.md).
+
+## Architecture and data
+
+The React renderer has no provider network access or credentials. Narrow IPC checks the exact overlay sender, main frame and document before parsing input. Main owns the provider registry, auth/billing gates, capture-session/conversation/request IDs and one active request. Codex's adapter uses only the official local login-status command. Claude's official SDK owns an isolated CLI child with fixed arguments, hidden windows and an allowlisted environment.
+
+Claude uses an empty tool set, wildcard tool denial, `dontAsk`, an always-denying permission callback, no MCP/configuration/agents, disabled hooks/plugins/memory/bundled skills, bare mode and disabled slash commands. Initialization must confirm the expected restrictions and environment API-key source. Actual SDK tests reject injected Bash/Read/Write/MCP calls; no file sentinel is created. No commands, filesystem exploration, package installation or external actions are exposed to answers.
+
+Only **Review → acknowledgement → Ask** can send selected context. A one-time two-minute review freezes the exact serialized question, selected current-session final transcript excerpts, optional image and bounded question/answer history. Each source is independently selected; raw audio is excluded. Text/image budgets and recent duration are configurable. The prompt treats captured data as untrusted reference material. Screenshots stay in memory and use Claude's native base64 image blocks; no screenshot temp file is needed. Duplicate image hashes avoid unchanged resubmission. No OCR, second-provider fallback, automatic trigger or question detection is introduced.
+
+History holds four completed pairs / 12,000 characters, eight displayed bounded responses and a 15-minute idle expiry. Provider/capture switches reset context. Cancel aborts the SDK and closes/kills its process; request/session guards reject late events, including old results arriving after a new request in the same conversation. Requests have a 90-second deadline and 32,000 response-character bound. Clear also removes the draft and pending review. It does not delete provider records or recall transmitted content.
+
+Claude has one turn, 4,096 output tokens and a $1 SDK estimated-budget threshold, which is **not a guaranteed billing cap**. Usage/cost and timing come from SDK/result events; no balance or quota is invented. Model discovery is not performed automatically; actual init supplies the selected model. No application retries or billing fallback run. SDK internal transport behavior is separate.
+
+`persistSession: false` disables Claude conversation logging. Its temporary config/working directory is removed after success/error/cancel; shutdown allows up to five seconds for teardown. SDK caches, OS/crash remnants and remote retention are independent. Normal Codex SDK sessions would persist in `~/.codex/sessions`, but no Codex thread is created while disabled. No credential, captured media, model or conversation was added to Git.
+
+## Verification
+
+| Check | Result |
+| --- | --- |
+| `npm run check` | Passed: strict TypeScript, zero-warning lint, **219 unit/regression tests in 20 files**, production build |
+| `npm run test:ai-sdk` | **6 passed**, installed SDK/CLI with synthetic loopback responses, real-process cancellation and temporary cleanup; no account/provider verification |
+| `npm run smoke` | **47 assertions passed**, synthetic media; all hotkeys registered |
+| `npm run smoke:ai` | **26 assertions passed**; actual IPC/auth inspection, review/billing rejection, code safety/copy, compact/clear controls |
+| `npm run speech:test` | Real tiny.en JFK recognition verified twice through one loaded helper; offline cached model/fixture |
+| `npm run smoke:speech` | **11 assertions passed**, real tiny.en via both synthetic P2 sources |
+| Production artifacts | Main **99.92 kB**, renderer JS **250.69 kB**, CSS **12.10 kB**, separate sandboxed preloads/audio document/worklet; SDK packages remain external |
+| `git diff --check` | Passed |
+
+P1–P3's **157** tests remain in the suite; P4 adds **62** deterministic AI cases. Electron assertions total **84** across the three scripts. Tests cover registry/auth restrictions/API opt-in, source selection/truncation, exact review consent, secure IPC, stream/cancel/deadline/errors/crashes, conversation/capture isolation, cleanup, prohibited tools, duplicates and late results. The actual SDK test discovered unintended bundled skill/plugin loading; documented flags/settings now remove it and runtime init verifies the inventory. Copy uses bounded main-process IPC after Electron's existing browser permission policy correctly denied browser clipboard access. Final checks have no suppressed failures.
+
+Single-sample performance: assistant startup through local auth **665 ms**, text review through UI/main **168 ms**, main RSS **124.4 → 127.6 MB**. These are local synthetic smoke measurements, not real AI latency or whole-app memory. The standalone tiny.en helper loaded in **138 ms**, processed real fixture jobs in **603 / 520 ms**, and used **172.6 MB** / **384–397%** of one logical core. The Electron speech pipeline loaded in **106 ms**, averaged **530 ms** over **11 jobs**, and had **zero queued/dropped jobs/gaps** at the snapshot, with **173.9 MB** helper memory / **384%** CPU. CPU may exceed 100% because four inference threads run. Reports remain in ignored `artifacts/`; combined live-provider/hardware performance remains unmeasured.
+
+## Files
+
+Created:
+
+```text
+docs/DECISIONS/P4-providers.md
+scripts/smoke-ai.mjs
+src/main/ai/claude.ts
+src/main/ai/codex.ts
+src/main/ai/context.ts
+src/main/ai/controller.ts
+src/main/ai/environment.ts
+src/main/ai/errors.ts
+src/renderer/src/AssistantPanel.tsx
+src/shared/ai.ts
+tests/ai-context.test.ts
+tests/ai-controller.test.ts
+tests/ai-providers.test.ts
+tests/claude-sdk.integration.ts
+vitest.sdk.config.ts
+```
+
+Modified:
+
+```text
+README.md
+docs/ARCHITECTURE.md
+docs/BACKLOG.md
+docs/TESTING.md
+docs/DELIVERY.md
+package.json
+package-lock.json
+scripts/smoke.mjs
+src/main/index.ts
+src/preload/index.ts
+src/renderer/src/main.tsx
+src/renderer/src/styles.css
+src/shared/contracts.ts
+```
+
+Only the two requested upstream SDKs were added as direct runtime dependencies. Their platform binaries and required upstream/peer dependencies are locked. No heavyweight Markdown/highlighting package was added. Existing capture/transcription modules and native code were not rewritten. Temporary formatter tooling was used without adding a repository dependency.
+
+## Open acceptance and reproduction
+
+Codex needs a supported fail-closed response-only tool boundary before inference can be enabled. Claude needs a later explicit API-billing authorisation, locally configured API key and a genuine live request; the current user instruction forbids paid tests. No policy exception or credentials were fabricated. Provider/model availability, true remote streaming latency, real authentication expiry/rate/network behavior and real screenshot reasoning remain unverified.
+
+All earlier physical acceptance stays open: real Windows microphone/loopback, consented calls, P1 controls on actual devices, base.en quality, ARM64/older CPUs and a 15-minute conversation. A combined real provider/transcription CPU/RSS/responsiveness run is also pending. The full **20-item P4 manual checklist** and P1–P3 lists are in [TESTING.md](TESTING.md). These are not replaced by mocks or synthetic-media checks.
+
+Run the commands in [TESTING.md](TESTING.md) after `npm ci`; speech checks reuse the already-installed verified helper/model/fixture and require no further download. Start the app with `npm run dev` or `npm start` after building. Claude remains disabled until a later explicit in-app opt-in and API-key setup. Inspect the delivery commit with `git log -1 --oneline` and `git status --short`; intended commit message is `feat: integrate EveryHint AI providers`, without co-author trailers. No push/deployment was requested. P5 is not started.
+
+---
+
+# Historical P3 delivery — local live speech transcription
 
 P3 connects the existing independent microphone/system PCM streams to one CPU whisper.cpp helper, with validated transport, mono/16 kHz conversion, energy-based speech segmentation, bounded fair scheduling, provisional/final transcript replacement, overlap deduplication, ordered source-labelled text and a rolling memory-only transcript store. Models/settings/diagnostics are available in the overlay, including compact mode. Capture controls, all seven source combinations and P1/P2 privacy indicators remain.
 

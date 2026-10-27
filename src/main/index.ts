@@ -1,5 +1,6 @@
 import {
   app,
+  clipboard,
   BrowserWindow,
   dialog,
   globalShortcut,
@@ -38,6 +39,9 @@ import { SettingsStore } from "./settings";
 import { ElectronAudioCapture } from "./audio-host";
 import { SpeechInstallation } from "./transcription/models";
 import { TranscriptionController } from "./transcription/controller";
+import { AssistantController } from "./ai/controller";
+import { CodexProvider } from "./ai/codex";
+import { ClaudeProvider } from "./ai/claude";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -57,6 +61,7 @@ let tray: Tray | undefined;
 let store: SettingsStore;
 let controller: CaptureSessionController;
 let speech: TranscriptionController | undefined;
+let assistant: AssistantController | undefined;
 let shortcuts: HotkeyController;
 let hotkeys: HotkeyStatus[] = [];
 const warnings: string[] = [];
@@ -176,6 +181,7 @@ function updateTray(): void {
 }
 function publish(): void {
   if (speech && controller) speech.captureChanged(controller.value);
+  if (assistant && controller) assistant.captureChanged(controller.value);
   revision++;
   updateTray();
   if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
@@ -320,6 +326,15 @@ async function initialise(): Promise<void> {
     process.platform === "win32",
   );
 
+  assistant = new AssistantController(
+    [new CodexProvider(), new ClaudeProvider()],
+    () => ({ capture: controller.value, events: speech?.value.events ?? [] }),
+    (value) => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:assistant", value);
+    },
+  );
+
   const saved = store.bounds;
   const area = screen.getDisplayMatching(
     saved ?? { x: 0, y: 0, width: 460, height: 440 },
@@ -370,14 +385,17 @@ async function initialise(): Promise<void> {
     event.preventDefault(),
   );
   window.webContents.on("did-start-loading", () => {
+    assistant?.clear();
     if (controller.value.state !== "IDLE") controller.stop();
   });
-  window.webContents.on("render-process-gone", (_event, details) =>
+  window.webContents.on("render-process-gone", (_event, details) => {
+    assistant?.clear();
     controller.fail(
       `EveryHint's interface stopped (${details.reason}). Capture has been stopped. Restart EveryHint.`,
-    ),
-  );
+    );
+  });
   window.webContents.on("unresponsive", () => {
+    assistant?.clear();
     controller.fail("EveryHint is unresponsive. Capture has been stopped.");
   });
   window.on("resize", queueBounds);
@@ -421,11 +439,31 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  handle("everyhint:ai-get", () => assistant!.value);
+  handle("everyhint:ai-inspect", () => assistant!.inspect());
+  handle("everyhint:ai-select", (input) => assistant!.select(input));
+  handle("everyhint:ai-billing", (input) => assistant!.billing(input));
+  handle("everyhint:ai-review", (input) => assistant!.prepare(input));
+  handle("everyhint:ai-ask", (input) => assistant!.ask(input));
+  handle("everyhint:ai-copy", (input) => {
+    if (typeof input !== "string" || input.length === 0 || input.length > 32000)
+      throw new Error("Invalid response text.");
+    clipboard.writeText(input);
+  });
+  handle("everyhint:ai-action", (input) => {
+    if (input === "cancel") return assistant!.cancel();
+    if (input === "clear") return assistant!.clear();
+    if (input === "discard-review") return assistant!.discardReview();
+    throw new Error("Unknown assistant action.");
+  });
   handle("everyhint:transcription-get", () => speech!.value);
   handle("everyhint:transcription-action", (input) => {
     if (input === "enable") return speech!.enable();
     if (input === "pause") return speech!.pause();
-    if (input === "clear") return speech!.clear();
+    if (input === "clear") {
+      assistant!.discardReview();
+      return speech!.clear();
+    }
     if (input === "inspect") return installation.inspect();
     throw new Error("Unknown transcription action.");
   });
@@ -462,10 +500,23 @@ async function initialise(): Promise<void> {
     else if (input === "quit") app.quit();
     else throw new Error("Unknown window action.");
   });
-  powerMonitor.on("suspend", () => controller.stop());
-  powerMonitor.on("lock-screen", () => controller.stop());
+  powerMonitor.on("suspend", () => {
+    assistant?.clear();
+    controller.stop();
+  });
+  powerMonitor.on("lock-screen", () => {
+    assistant?.clear();
+    controller.stop();
+  });
   await window.loadURL(documentUrl);
   show();
+  void assistant
+    .inspect()
+    .catch(() =>
+      warn(
+        "Could not inspect local provider authentication. Use Check connection to retry.",
+      ),
+    );
   void installation
     .inspect()
     .catch((error: unknown) =>
@@ -484,7 +535,9 @@ else {
       app.quit();
     });
 }
-app.on("before-quit", () => {
+app.on("before-quit", (event) => {
+  if (quitting) return;
+  event.preventDefault();
   quitting = true;
   controller?.stop();
   speech?.dispose();
@@ -492,6 +545,20 @@ app.on("before-quit", () => {
   if (saveTimer) clearTimeout(saveTimer);
   if (store) persistBounds();
   tray?.destroy();
+  // Allow SDK teardown and temporary-directory removal to finish before exiting.
+  void Promise.race([
+    assistant?.dispose() ?? Promise.resolve(),
+    new Promise<void>((done) => {
+      const timer = setTimeout(done, 5000);
+      timer.unref();
+    }),
+  ])
+    .catch(() =>
+      console.error(
+        "Assistant cleanup did not complete. Check temporary EveryHint AI directories.",
+      ),
+    )
+    .finally(() => app.quit());
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());
 app.on("window-all-closed", () => app.quit());

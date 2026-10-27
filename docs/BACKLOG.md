@@ -44,14 +44,31 @@ Current P3 baseline: **157 unit tests across 17 files**, **47 core + 11 speech E
 
 Remaining acceptance: real microphone and Windows loopback transcription; consented calls; base.en quality/switching; ARM64/older CPU builds; a 15-minute conversation with CPU/RSS/stability measurements. Current energy VAD can react to noise, chunked inference can revise words, overload deliberately drops queued audio, and overlap deduplication is approximate. Keep all P1/P2 physical checks open. See [Testing](TESTING.md).
 
+## P4 — AI Provider Integration
+
+**Restricted implementation delivered; live acceptance remains open.** No paid/live inference was performed. The user explicitly chose to leave Claude live verification pending. Existing Codex ChatGPT login is detected, but inference is blocked because SDK 0.164.0 cannot establish a response-only tool boundary. Do not label this milestone fully accepted or claim a successful live provider integration.
+
+| Checkpoint | State |
+| --- | --- |
+| Official SDK/auth research and billing policy | Documented with primary sources in `DECISIONS/P4-providers.md` |
+| Shared provider contracts, registry and narrow IPC | Implemented; validated inputs and real untrusted-renderer rejection tested |
+| Codex subscription/API login detection | Official local CLI; ChatGPT login verified on this machine |
+| Codex text/image inference | **Disabled** pending supported fail-closed tool restrictions; no API fallback |
+| Claude API-only adapter | Implemented; disabled by default; session-only billing opt-in; no subscription reuse |
+| Claude streaming/images/cancel/errors | Unit and actual SDK loopback verification; **live API authentication/answer unverified** |
+| Tool restrictions | Actual installed Claude SDK rejects generated Bash/Read/Write/MCP calls against loopback fixtures |
+| Explicit context selection/review/Ask | Immutable bounded review, separate sources, fresh transfer acknowledgement, no raw audio |
+| Conversations and UI | Provider/capture isolation, bounded memory, expiry, cancel/clear, safe code display/copy and compact status |
+| P1–P3 software regression | Retained; see TESTING.md for current results |
+| Live/manual acceptance | Open: Codex permission capability; authorised Claude API test; real devices/screens/calls and combined long-run performance |
+
 ## Later milestones — deferred
 
 | Milestone                     | Dependencies                                               | Completion criteria                                                                                          |
 | ----------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
-| P4 — AI Provider Integration  | Earlier phases accepted, current official SDK/auth support | Codex/Claude adapters, supported subscription auth, abortable streaming, manual switching and usage controls |
 | P5 — Context Intelligence     | Reliable capture/transcription, approved AI providers      | Meaningful screen changes, duplicate suppression, adaptive capture, spoken questions and bounded memory      |
 | P6 — Optimisation and Release | Accepted earlier phases, release requirements              | Hardware performance/security review, Windows installer/signing, compatibility matrix and final verification |
 
 ## Dependencies
 
-Version is **0.3.0**. P3 adds no npm package. The native helper links official whisper.cpp **v1.9.5**, pinned to `d1be6fde11ac6e0407606b4e42fe72d34add8037`; source/model/runtime files remain outside Git. Existing React/Electron/Vite/TypeScript/Vitest/ESLint/Playwright versions are unchanged. Node 24 LTS and Visual Studio C++/CMake support development. AI SDKs, credentials and external inference services remain absent.
+Version is **0.4.0**. P4 adds pinned `@openai/codex-sdk` **0.164.0** and `@anthropic-ai/claude-agent-sdk` **0.3.311**, including their upstream dependencies/platform binaries. No credentials were added. The native helper remains official whisper.cpp **v1.9.5**, pinned to `d1be6fde11ac6e0407606b4e42fe72d34add8037`; source/model/runtime files remain outside Git. Existing React/Electron/Vite/TypeScript/Vitest/ESLint/Playwright versions are unchanged. Node 24 LTS and Visual Studio C++/CMake support development. P5 is not started.

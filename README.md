@@ -2,7 +2,7 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local live English transcription through whisper.cpp. AI remains a future feature. No account, API credits or paid service is needed.
+EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4 adds explicit, reviewed AI requests and a restricted Claude API adapter. **Codex inference is disabled because the current SDK cannot enforce response-only permissions. Claude live verification remains pending; the user requested no paid tests.** Capture and transcription need no paid service.
 
 ## Install and run
 
@@ -23,6 +23,19 @@ npm start
 
 Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Windows installers and signing belong to P6.
 
+## Ask an assistant (P4)
+
+1. Choose Codex or Claude. **Check connection** inspects local authentication only; it never requests an answer. Codex reuses the official CLI's existing ChatGPT login status without reading tokens. Its current SDK has no supported deny-all tool control, so EveryHint blocks inference even when signed in. Read-only filesystems alone still allow commands. No OpenAI API fallback is used.
+2. Claude is **disabled by default** and supports only a separately billed Anthropic API key. If you choose to use it later, set `ANTHROPIC_API_KEY` in the environment that starts EveryHint, then enable the labelled API-billing checkbox for that app session. Do not commit or paste credentials into questions. A detected key is not proof of successful authentication. Claude subscription/OAuth login is unsupported in this distributable app without Anthropic approval.
+3. Enter a question. Optionally select recent final microphone text, system-audio text, the latest authorised screenshot, and previous question/answer text independently. Context limits are editable. No raw audio is sent; no OCR or other-provider fallback runs.
+4. Choose **Review selected context**. This freezes the exact selected text and image in memory for two minutes. Inspect the text and optional image. For full-screen capture, pause capture to inspect the frozen image without recursive screenshots. Editing the draft/choices invalidates its review. Stop clears a pending review.
+5. Acknowledge the remote transfer for that specific review and choose **Ask**. Only this action can start inference. Claude streams text, reports available usage/cost estimates and supports cancellation. All tools, commands, skills, plugins and MCP integrations are disabled. Code is displayed as selectable text. **Copy response** writes plain text after an explicit click.
+6. **Cancel** aborts SDK execution; late events cannot replace newer answers. **Clear conversation** cancels and clears local history/review/draft. Switching providers starts a new conversation and resets draft choices. Clear does not delete provider-side records or recall transmitted data. Compact mode shows answer/status and cancellation; expand to compose.
+
+History keeps at most four completed question/answer pairs and 12,000 characters; displayed responses keep eight bounded entries. Conversation memory expires after 15 minutes of inactivity. Previous transcript excerpts and images are not stored in follow-up history, and unchanged images are not automatically resubmitted. Request deadline: 90 seconds. Responses: 32,000 characters maximum. Claude limits output to 4,096 tokens, one model turn and a $1 **estimated** SDK budget; this is not a guaranteed billing cap. Set account-side spend controls if using the API. Provider/model availability and live latency remain unverified.
+
+SDKs: Codex **0.164.0** / bundled CLI **0.164.0**, Claude Agent SDK **0.3.311** / bundled CLI **2.1.311**. Claude runs in bare mode with isolated temporary settings and `persistSession: false`. SDK caches, OS remnants and remote retention are independent of EveryHint's memory. The normal Codex SDK persists sessions under `~/.codex/sessions`; EveryHint never starts a Codex session while blocked. See the [authentication and security decision](docs/DECISIONS/P4-providers.md) for official sources and restrictions.
+
 ## Set up local speech transcription
 
 Install Visual Studio 2022/2026 C++ Build Tools with the Windows SDK and CMake (3.24+), plus Git. Then explicitly build the CPU helper and install the default model:
@@ -39,6 +52,8 @@ Files live under `%LOCALAPPDATA%\EveryHint\speech`: `runtime/`, `models/`, `buil
 After capture has started, choose **Enable transcription**. It cannot activate audio itself. The live panel shows source labels, audio timestamps, provisional replacements and final text. Models load once per enabled run. Partial results are chunk-based inference, not token streaming. The system source can contain several people; EveryHint does not identify speakers.
 
 **Pause transcription** leaves authorised capture running. Pausing/stopping capture cancels inference too. After capture resumes, explicitly resume transcription. **Clear transcript** cancels pending work and removes text, then leaves transcription paused until re-enabled. Final text otherwise remains in memory until cleared, expired or a new capture session is prepared. Settings control model, sensitivity, silence, segment length, overlap and retention. Settings changes pause transcription. Compact mode shows the latest line/status.
+
+Clear transcript also discards any pending AI context review. AI answers and data already sent to a provider are separate: use Clear conversation to clear local AI history. Pausing capture clears the live frame but deliberately preserves a screenshot you explicitly froze in an AI review, allowing inspection; Stop discards that review too.
 
 Once the helper and a verified model are installed, transcription runs offline. A missing/invalid model or worker failure produces a visible error; no remote service is used as a fallback.
 
@@ -66,7 +81,7 @@ Shortcut conflicts appear as warnings. Overlay and tray controls remain availabl
 ## Privacy and Windows limits
 
 - No raw captured audio, screenshots, conversations, consent, device choices or credentials are persisted. Window preferences, interval and bounds live under `%APPDATA%\EveryHint`; speech configuration and installed public model files live under local application data.
-- P2 PCM caches remain bounded to two seconds, 32 packets and 768,000 bytes per source. Explicitly enabled transcription forwards validated PCM locally to main and one native helper. Separate segmentation buffers cap speech at 10–15 seconds; at most four recognition jobs wait. Transcript retention is bounded by age, line count and 50,000 characters. No content goes to providers.
+- P2 PCM caches remain bounded to two seconds, 32 packets and 768,000 bytes per source. Explicitly enabled transcription forwards validated PCM locally to main and one native helper. Separate segmentation buffers cap speech at 10–15 seconds; at most four recognition jobs wait. Transcript retention is bounded by age, line count and 50,000 characters. Provider transfer requires a separate reviewed request and acknowledgement; raw audio stays local.
 - Windows system audio uses Electron's supported unmuted loopback option. It captures supported playback mix, rather than selecting one application's audio. Discord, Teams, Zoom and browsers depend on their output routing, Windows permissions and content restrictions; real-call compatibility is unverified.
 - Chromium requires an accompanying display track for loopback. EveryHint releases it immediately without reading its images or starting screen analysis. Speakers continue playing.
 - Device disconnection, observed playback changes, permission revocation and capture errors stop the session and require fresh preparation. Windows/driver mute and routing behaviour varies; restart the session after changing output devices even if Windows does not report a change.
@@ -77,11 +92,13 @@ Shortcut conflicts appear as warnings. Overlay and tray controls remain availabl
 
 ```powershell
 npm run check
+npm run test:ai-sdk
 npm run smoke
+npm run smoke:ai
 npm run speech:test -- --install-fixture
 npm run smoke:speech
 ```
 
 `check` runs strict TypeScript, lint, unit tests and production build. `smoke` uses synthetic media and needs no speech runtime. The additional speech checks need the installed tiny.en model/helper. `speech:test -- --install-fixture` explicitly downloads a checksum-verified public upstream speech fixture once; subsequent tests are offline. `smoke:speech` sends that fixture through both synthetic P2 sources, real PCM conversion and real whisper.cpp inference. No hardware audio or desktop capture is performed. Known-fixture reports and app-only screenshots are written to ignored `artifacts/`.
 
-The P3 baseline is **157 unit tests**, **47 core Electron smoke assertions**, **11 speech smoke assertions**, successful native/production builds and actual tiny.en recognition. P1/P2 hardware and P3 real-device/15-minute acceptance remain pending. See [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). P4/P5 have not started.
+The P3 baseline was 157 unit tests. P4 verification and remaining limitations are recorded in [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). Run `npm run test:ai-sdk` for actual SDK execution against synthetic loopback fixtures and `npm run smoke:ai` for Electron assistant checks; neither is a live provider test or a paid request. P1/P2 hardware and P3 real-device/15-minute acceptance remain pending. P4 live acceptance is open; P5 has not started.

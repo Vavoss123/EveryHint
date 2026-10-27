@@ -1,4 +1,85 @@
-# EveryHint testing — P3 (P1/P2 acceptance retained)
+# EveryHint testing — P4 (P1–P3 acceptance retained)
+
+## P4 results and limits — 2026-10-27
+
+| Check | Result |
+| --- | --- |
+| Strict TypeScript / zero-warning ESLint | Passed |
+| Unit/regression tests | **219 passed in 20 files**; includes all 157 P1–P3 tests and 62 AI cases |
+| Actual Claude SDK/CLI against synthetic loopback HTTP | **6 passed**; streaming, real-process cancellation/temp cleanup, plus rejected Bash, Read, Write and MCP tool calls |
+| Production build | Passed; main 99.92 kB, main renderer JS 250.69 kB and CSS 12.10 kB; SDKs remain external |
+| Core Electron smoke | **47 assertions passed**, synthetic audio, all three hotkeys registered |
+| Assistant Electron smoke | **26 assertions passed**, including actual sender validation, reviewed consent, code escaping/copy and compact controls |
+| Speech Electron smoke | **11 assertions passed**, real tiny.en through both synthetic P2 sources |
+| Standalone real tiny.en fixture inference | Passed twice through one loaded helper; expected JFK phrase checked |
+| Codex local authentication | Bundled official CLI **0.164.0** and the actual Electron adapter report **ChatGPT login** |
+| Codex live answer | **Not performed; inference blocked** because SDK 0.164.0 cannot establish a deny-all tool boundary |
+| Claude live authentication/answer | **Not performed**; no API key configured and user explicitly declined paid tests |
+| Hardware / 15-minute / live remote performance | **Pending**; no acceptance claimed |
+
+There were **zero live provider inference requests and zero paid requests**. SDK loopback tests execute the installed SDK/CLI with synthetic credentials against `127.0.0.1`; replies are fixtures, not AI answers. The renderer-stream fixture in `smoke:ai` is explicitly test-only and is never enabled in production. No successful live provider integration is claimed.
+
+Run after installing dependencies:
+
+```powershell
+npm run check
+npm run test:ai-sdk
+npm run smoke
+npm run smoke:ai
+npm run speech:test
+npm run smoke:speech
+```
+
+The first command builds the app; build before Electron smoke. SDK loopback tests need the installed platform CLI binaries and no provider account/key. AI smoke strips API credentials from its app environment and starts no media capture. It inspects only official local Codex login status, tests denied requests, and writes fixture text through the explicit copy control. Reports/screenshots remain under ignored `artifacts/`.
+
+### P4 coverage mapping
+
+| Requested checks | Evidence |
+| --- | --- |
+| 1–7 registry, Codex/Claude auth, unsupported subscription, billing, selection, validation | `ai-providers.test.ts`, `ai-controller.test.ts`, real malformed/untrusted-window IPC in `smoke:ai` |
+| 8–12 text, separate transcripts/images, transfer consent, secure IPC | `ai-context.test.ts`, controller snapshot mutation/consent tests, Electron review and sender rejection |
+| 13–19 stream/cancel/deadline/auth expiry/rate/network/crash | Controller event/error cases, Claude adapter cleanup tests, actual SDK loopback streaming; real network/account failures remain manual |
+| 20–24 follow-up/provider/capture isolation, truncation, temporary cleanup | Controller history/expiry/stale-event tests, context budgets, adapter directory-removal tests; images stay in memory and create no image files |
+| 25 forbidden tools | Denying callback tests, init rejection, stopped model tool-use events, **actual SDK** empty tool schema and rejected Bash/Read/Write/MCP calls; no sentinel written |
+| 26–27 duplicates and late responses | Reservation before auth await, consumed review UUID, cancel while auth pending, newer-conversation and same-conversation stale-response tests |
+| 28 P1–P3 regression | Existing unit suite, 47 core + 11 speech Electron assertions and actual tiny.en jobs rerun |
+
+The SDK test initially exposed bundled skill/plugin loading despite empty settings sources. Bare mode, disabled bundled skills/plugins and disabled slash commands corrected it; runtime init now confirms empty inventories. Electron testing also caught denied browser clipboard permission; copying now uses bounded validated IPC without relaxing renderer permissions. No failing check is suppressed.
+
+### P4 performance observations
+
+One local assistant smoke run: startup through local auth inspection **665 ms**; synthetic text review through UI/main **168 ms**; main-process RSS **125.1 MB** before review and **127.6 MB** after. These are single samples, not percentiles or total application memory. No remote inference timing is available. Each actual response exposes time to first text and total time when an authorised live request is eventually performed.
+
+The unchanged tiny.en helper loaded in **138 ms** in the standalone run; its two real fixture jobs took **603 ms / 520 ms**, using about **172.6 MB** working set and **384–397%** of one logical CPU (four inference threads). The Electron speech pipeline loaded in **106 ms**, averaged **530 ms** across **11** jobs, had **zero queued/dropped jobs and gaps** at the snapshot, and used **173.9 MB** / **384%** helper CPU. These are synthetic known-speech workloads. Real provider streaming concurrent with a 15-minute hardware conversation remains unmeasured.
+
+Reproducible local reports: `artifacts/ai-smoke.json`, `artifacts/inference.json`, `artifacts/speech-smoke.json`; UI images: `artifacts/everyhint-ai.png`, `artifacts/everyhint-overlay.png`, `artifacts/everyhint-transcription.png`. No model, audio, credential or conversation is committed.
+
+### P4 Windows manual acceptance — all open
+
+1. Launch on the target Windows device; check overlay, tray and hotkeys.
+2. Confirm the displayed Codex authentication method matches official `codex login status`.
+3. Confirm current Codex inference remains blocked with a visible reason and no API fallback; real text acceptance requires a future supported tool boundary.
+4. Once a safe Codex adapter is available, verify genuine streaming and timing; do not substitute fixtures.
+5. Verify a genuine follow-up retains only the reviewed bounded context.
+6. Authorise an external-window screenshot; inspect the exact frozen image before sending to a permitted provider.
+7. Select recent real microphone transcripts independently.
+8. Select recent real Windows system-audio transcripts independently.
+9. Inspect text/image/limits, edit the draft and confirm review/transfer acknowledgement reset.
+10. Cancel a slow real request and ensure execution stops and no late output appears.
+11. Verify Claude reports disabled, missing key, key detected or request failure accurately; never uses subscription login.
+12. **Only after a later explicit API-billing authorisation**, configure a key locally and verify a real Claude answer; currently deferred by the user.
+13. Switch providers and confirm draft/context reset; no remote request starts.
+14. Confirm responses and history cannot cross provider or capture-session boundaries.
+15. Clear conversation, expire idle history and restart; verify local data/opt-in do not restore. Clear is not remote deletion.
+16. Exercise real authentication expiry, quota/rate-limit, disconnect and provider process failure; no fallback or app retry.
+17. Inspect provider usage/billing; confirm only explicit authorised Asks incur usage. Estimated SDK budget is not a hard bill cap.
+18. Verify pause/resume/stop during composing, reviewing and streaming; full-screen frozen review is an explicit pause exception to live-frame clearing; Stop discards it.
+19. Verify Whisper on real microphone/loopback continues correctly, including clear/mute/device changes.
+20. Measure overlay responsiveness, combined CPU/RSS and cleanup during a 15-minute authorised conversation plus real streaming.
+
+P1/P2 physical acceptance, real calls, base.en, ARM64/older CPUs and P3 long-run checks below remain open. P5 has not started.
+
+## Historical P3 verification (retained)
 
 ## Run automated verification
 
@@ -143,13 +224,13 @@ All physical checks remain pending:
 3. Show/hide from another app with `Ctrl+Alt+Space`; hiding must preserve actual active state in the tray.
 4. Verify both consent checks and real screen/window metadata selection; EveryHint windows excluded.
 5. Select an external window, prepare without frames, Start and inspect real window screenshots after the configured interval.
-6. Capture a display and verify frame counts; whole-screen preview stays hidden to prevent recursion. **Pause and Stop must clear every image**.
+6. Capture a display and verify frame counts; whole-screen preview stays hidden to prevent recursion. **Pause and Stop must clear live frames**. P4's explicitly frozen review image may remain while paused for inspection; Stop must discard that review too.
 7. Pause for at least two capture intervals: count stops increasing and no screenshot reappears. Resume only the previously authorised session.
 8. Stop from UI, tray and global shortcut, including while hidden; source/consent/frame cleared and Resume refused.
 9. Close overlay to tray, reopen, then Quit/relaunch: capture never restores automatically.
 10. Close/minimise a selected window or disconnect the selected display; errors stop capture without choosing a replacement source.
-11. Check interval changes apply on the next activation, compact controls remain accessible and response expand/collapse works.
-12. Confirm tray source states, conflict warnings for occupied shortcuts, and disabled P4 provider controls.
+11. Check interval changes apply on the next activation and compact/expanded capture and assistant controls remain accessible.
+12. Confirm tray source states, conflict warnings for occupied shortcuts, and P4 provider capability/billing restrictions.
 13. Lock/suspend during screen capture: no automatic resume; UI errors/crashes must also release capture.
 14. Inspect preferences and storage: only version/settings/bounds; no raw screen/audio files, credentials, device choices or consent.
 

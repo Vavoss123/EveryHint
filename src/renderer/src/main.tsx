@@ -11,12 +11,19 @@ import type {
 } from "../../shared/contracts";
 import "./styles.css";
 import { TranscriptionPanel } from "./TranscriptionPanel";
+import { AssistantPanel } from "./AssistantPanel";
 
 function Icon({
   name,
 }: {
   name:
-    "settings" | "close" | "expand" | "spark" | "screen" | "back" | "compact";
+    | "settings"
+    | "close"
+    | "expand"
+    | "spark"
+    | "screen"
+    | "back"
+    | "compact";
 }) {
   const paths = {
     settings:
@@ -53,7 +60,6 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [preparing, setPreparing] = useState(false);
-  const [expanded, setExpanded] = useState(true);
   const [screenConsent, setScreenConsent] = useState(false);
   const [microphoneConsent, setMicrophoneConsent] = useState(false);
   const [systemConsent, setSystemConsent] = useState(false);
@@ -235,7 +241,7 @@ function App() {
             e<span>h</span>
           </div>
           <span>EveryHint</span>
-          <span className="phase">P3</span>
+          <span className="phase">P4</span>
         </div>
         <div className="window-actions">
           <button
@@ -280,7 +286,7 @@ function App() {
         <span className="status-dot" />
         <span>{status}</span>
         <span className="status-detail">
-          {active ? "ACTIVE MODE" : "LOCAL ONLY"}
+          {active ? "ACTIVE MODE" : "CAPTURE OFF"}
         </span>
       </div>
 
@@ -386,7 +392,7 @@ function App() {
             </p>
             <p className="muted">
               Microphone, Windows audio and speech transcription stay local.
-              Codex and Claude arrive in P4.
+              Assistant requests require reviewed context and an explicit Ask.
             </p>
             <button
               className="secondary full"
@@ -571,40 +577,11 @@ function App() {
                 )
               }
             />
-            {!settings.compact && (
-              <div className={`response-panel ${expanded ? "expanded" : ""}`}>
-                <div className="response-heading">
-                  <span className="eyebrow">YOUR ASSISTANT</span>
-                  <button
-                    className="icon-button"
-                    aria-label={
-                      expanded
-                        ? "Collapse response panel"
-                        : "Expand response panel"
-                    }
-                    onClick={() => setExpanded(!expanded)}
-                  >
-                    <Icon name="expand" />
-                  </button>
-                </div>
-                {expanded && (
-                  <div className="empty-response">
-                    <div className="spark">
-                      <Icon name="spark" />
-                    </div>
-                    <h1>Intelligence when you need it.</h1>
-                    <p>
-                      Your desktop foundation is ready.
-                      <br />
-                      AI responses are coming in P4.
-                    </p>
-                    <span className="local-badge">
-                      On your device. In your control.
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
+            <AssistantPanel
+              compact={settings.compact}
+              hideImage={active && session.source?.kind === "screen"}
+              expand={() => save({ compact: false })}
+            />
             {session.source && (
               <div className="source-summary">
                 <Icon name="screen" />
@@ -614,14 +591,6 @@ function App() {
             )}
             {!settings.compact && (
               <>
-                <div className="provider-row">
-                  <span>AI provider</span>
-                  <select aria-label="AI provider" disabled>
-                    <option>Codex / Claude · Coming in P4</option>
-                    <option>Claude · Coming in P4</option>
-                    <option>Automatic · Coming in P4</option>
-                  </select>
-                </div>
                 <details className="diagnostics">
                   <summary>
                     Capture diagnostics{" "}
@@ -661,7 +630,7 @@ function App() {
                 >
                   <div className="section-heading">
                     <h2>Live audio</h2>
-                    <span className="eyebrow">LOCAL ONLY</span>
+                    <span className="eyebrow">LOCAL PREVIEW</span>
                   </div>
                   {(["microphone", "systemAudio"] as const).map((id) => {
                     const source = session.sources[id];
@@ -784,7 +753,7 @@ function App() {
             {active
               ? "Hiding keeps capture on · Stop works globally"
               : "Capture starts only with your authorisation"}
-            <span className="version">v0.3</span>
+            <span className="version">v0.4</span>
           </div>
         )}
       </footer>

@@ -115,8 +115,8 @@ try {
   );
   check(rejected.node === "undefined", "renderer has no Node access");
   check(
-    await page.getByLabel("AI provider").isDisabled(),
-    "AI providers are visibly disabled",
+    await page.getByLabel("AI provider").isEnabled(),
+    "AI provider selection is available without starting a request",
   );
   await mkdir(join(project, "artifacts"), { recursive: true });
   await page.screenshot({

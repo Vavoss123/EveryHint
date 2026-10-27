@@ -6,6 +6,26 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  getAssistant: () => ipcRenderer.invoke("everyhint:ai-get"),
+  inspectProviders: () => ipcRenderer.invoke("everyhint:ai-inspect"),
+  selectProvider: (provider) =>
+    ipcRenderer.invoke("everyhint:ai-select", provider),
+  setClaudeApiBilling: (enabled) =>
+    ipcRenderer.invoke("everyhint:ai-billing", enabled),
+  reviewContext: (input) => ipcRenderer.invoke("everyhint:ai-review", input),
+  ask: (input) => ipcRenderer.invoke("everyhint:ai-ask", input),
+  copyResponse: (text) => ipcRenderer.invoke("everyhint:ai-copy", text),
+  assistant: (action) => ipcRenderer.invoke("everyhint:ai-action", action),
+  onAssistant: (listener) => {
+    const wrapped = (
+      _event: Electron.IpcRendererEvent,
+      value: import("../shared/ai").AssistantSnapshot,
+    ): void => listener(value);
+    ipcRenderer.on("everyhint:assistant", wrapped);
+    return () => {
+      ipcRenderer.removeListener("everyhint:assistant", wrapped);
+    };
+  },
   getTranscription: () => ipcRenderer.invoke("everyhint:transcription-get"),
   transcription: (action) =>
     ipcRenderer.invoke("everyhint:transcription-action", action),

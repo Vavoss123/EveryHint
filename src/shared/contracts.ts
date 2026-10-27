@@ -1,5 +1,10 @@
 export type SessionState =
-  "IDLE" | "READY" | "ACTIVE" | "PAUSED" | "STOPPED" | "ERROR";
+  | "IDLE"
+  | "READY"
+  | "ACTIVE"
+  | "PAUSED"
+  | "STOPPED"
+  | "ERROR";
 export type SourceKind = "screen" | "window";
 export interface CaptureSource {
   id: string;
@@ -98,6 +103,22 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  getAssistant(): Promise<Result<import("./ai").AssistantSnapshot>>;
+  inspectProviders(): Promise<Result<void>>;
+  selectProvider(provider: import("./ai").ProviderId): Promise<Result<void>>;
+  setClaudeApiBilling(enabled: boolean): Promise<Result<void>>;
+  reviewContext(input: import("./ai").ReviewInput): Promise<Result<void>>;
+  ask(input: {
+    reviewId: string;
+    acknowledged: boolean;
+  }): Promise<Result<void>>;
+  copyResponse(text: string): Promise<Result<void>>;
+  assistant(
+    action: "cancel" | "clear" | "discard-review",
+  ): Promise<Result<void>>;
+  onAssistant(
+    listener: (snapshot: import("./ai").AssistantSnapshot) => void,
+  ): () => void;
   getTranscription(): Promise<
     Result<import("./transcription").TranscriptionSnapshot>
   >;
@@ -170,17 +191,4 @@ export type ContextEvent =
   | { type: "screen"; timestamp: number; frame: ScreenFrame }
   | { type: "transcript"; timestamp: number; text: string; final: boolean }
   | { type: "question"; timestamp: number; text: string };
-export interface AssistantResponse {
-  id: string;
-  provider: "codex" | "claude";
-  kind: "text" | "code";
-  content: string;
-  done: boolean;
-}
-export interface AIProvider {
-  readonly id: "codex" | "claude";
-  respond(
-    context: readonly ContextEvent[],
-    signal: AbortSignal,
-  ): AsyncIterable<AssistantResponse>;
-}
+export type { AIProvider, AIRequest, AIResponse } from "./ai";
