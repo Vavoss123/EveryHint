@@ -1,5 +1,33 @@
 # P4 provider and permission decision — 2026-10-27
 
+## Account sign-in follow-up
+
+The user requested account login inside EveryHint. The ChatGPT button now invokes
+the official bundled `codex login` browser flow, with `forced_login_method="chatgpt"`,
+`cli_auth_credentials_store="keyring"` and a dedicated `CODEX_HOME` under the app's
+`userData/chatgpt` directory. The native client owns OAuth, callback validation,
+refresh and credential storage. EveryHint neither implements a password form nor
+reads/copies OAuth tokens. Sign-out targets the same app profile, not the user's
+normal Codex home. The existing shared login is no longer imported into EveryHint.
+This is a local desktop integration; commercial/hosted deployment needs review
+of OpenAI's Sign in with ChatGPT registration/approval requirements.
+
+Login requires explicit button action, has a five-minute deadline and can be
+cancelled. Duplicate operations are rejected, stale callbacks cannot replace a
+newer operation, and process output is discarded. Completion is verified with
+official local login status. Cancelling account operations on provider changes,
+reload, lock/suspend and shutdown prevents a hidden pending callback process.
+This flow does not request a model response or enable API billing. Codex inference
+remains disabled for the separate permission limitation described below.
+
+Anthropic's current Agent SDK overview still requires prior approval for a
+third-party app to offer claude.ai subscription login. The plan support article
+describes how authorised SDK usage is charged; it does not grant EveryHint that
+approval. Claude account sign-in therefore remains visibly unavailable. No
+credentials are hardcoded and no subscription/API-billing workaround is used.
+The user has not completed the new ChatGPT browser flow yet; mocks are not proof
+of a completed OAuth login. The earlier research record below is retained.
+
 Official documentation was checked before implementation. Installed SDKs are
 `@openai/codex-sdk` 0.164.0 and `@anthropic-ai/claude-agent-sdk` 0.3.311.
 

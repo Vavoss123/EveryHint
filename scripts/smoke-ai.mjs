@@ -65,6 +65,28 @@ try {
   );
   const startupMs = performance.now() - startedAt;
   const idleRssBytes = await desktop.evaluate(() => process.memoryUsage().rss);
+  const account = await page.evaluate(() =>
+    window.everyhint.getAccountConnection(),
+  );
+  check(
+    account.ok &&
+      account.value.state === "signed-out" &&
+      initial.providers.find((provider) => provider.id === "codex").auth ===
+        "missing",
+    "EveryHint uses a fresh account profile without reusing the shared Codex login",
+  );
+  check(
+    await page
+      .getByRole("button", { name: "Sign in with ChatGPT", exact: true })
+      .isEnabled(),
+    "official ChatGPT sign-in can be started from the app",
+  );
+  check(
+    await page
+      .getByRole("button", { name: "Sign out of ChatGPT", exact: true })
+      .isDisabled(),
+    "sign-out is unavailable without an app-owned connection",
+  );
   check(
     initial.selected === "codex" &&
       !initial.claudeApiBilling &&
@@ -90,6 +112,10 @@ try {
     ask: await window.everyhint.ask({ reviewId: "forged", acknowledged: true }),
     action: await window.everyhint.assistant("run-command"),
     copy: await window.everyhint.copyResponse({ command: "invalid" }),
+    account: await window.everyhint.account({
+      action: "sign-in",
+      apiKey: "invalid",
+    }),
   }));
   check(
     Object.values(rejected).every((value) => !value.ok),
@@ -109,7 +135,7 @@ try {
       try {
         await win.loadURL("data:text/html,<p>Untrusted test sender</p>");
         return await win.webContents.executeJavaScript(
-          "window.everyhint.getAssistant()",
+          'window.everyhint.account("sign-in")',
         );
       } finally {
         win.destroy();
@@ -122,6 +148,15 @@ try {
     "real IPC rejects a second renderer outside the authorised window",
   );
   await page.getByLabel("AI provider").selectOption("claude");
+  check(
+    await page
+      .getByRole("button", {
+        name: "Sign in with Claude — unavailable",
+        exact: true,
+      })
+      .isDisabled(),
+    "unsupported Claude subscription login is labelled and disabled",
+  );
   await page
     .getByLabel("Your question")
     .fill("Explain this synthetic question.");
@@ -277,11 +312,77 @@ try {
     (await get()).responses.length === 0,
     "clear resets actual local history",
   );
+  // Account UI states are fixtures only: no browser/OAuth operation is launched.
+  const actualAccount = (
+    await page.evaluate(() => window.everyhint.getAccountConnection())
+  ).value;
+  const accountFixture = {
+    ...actualAccount,
+    revision: actualAccount.revision + 100,
+    state: "signing-in",
+    message: "Local sign-in rendering fixture.",
+  };
+  await desktop.evaluate(
+    ({ BrowserWindow }, value) =>
+      BrowserWindow.getAllWindows()[0].webContents.send(
+        "everyhint:account",
+        value,
+      ),
+    accountFixture,
+  );
+  check(
+    await page
+      .getByRole("button", { name: "Cancel sign-in", exact: true })
+      .isEnabled(),
+    "pending sign-in exposes cancellation",
+  );
+  check(
+    await page
+      .getByRole("button", { name: "Sign in with ChatGPT", exact: true })
+      .isDisabled(),
+    "pending sign-in prevents repeated clicks",
+  );
+  await page
+    .getByRole("button", { name: "Cancel sign-in", exact: true })
+    .click();
+  await desktop.evaluate(
+    ({ BrowserWindow }, value) =>
+      BrowserWindow.getAllWindows()[0].webContents.send(
+        "everyhint:account",
+        value,
+      ),
+    {
+      ...accountFixture,
+      revision: accountFixture.revision + 1,
+      state: "signed-in",
+      message: "Local signed-in rendering fixture.",
+    },
+  );
+  check(
+    (await page
+      .getByRole("button", { name: "Switch ChatGPT account", exact: true })
+      .isEnabled()) &&
+      (await page
+        .getByRole("button", { name: "Sign out of ChatGPT", exact: true })
+        .isEnabled()),
+    "signed-in controls expose account switching and sign-out",
+  );
+  await desktop.evaluate(
+    ({ BrowserWindow }, value) =>
+      BrowserWindow.getAllWindows()[0].webContents.send(
+        "everyhint:account",
+        value,
+      ),
+    { ...actualAccount, revision: accountFixture.revision + 2 },
+  );
   check(
     (await page.getByLabel("Your question").inputValue()) === "",
     "clear also removes the question draft",
   );
   await mkdir("artifacts", { recursive: true });
+  await page
+    .getByLabel("ChatGPT account connection", { exact: true })
+    .scrollIntoViewIfNeeded();
   await page.screenshot({ path: "artifacts/everyhint-ai.png" });
   check(errors.length === 0, `no renderer exceptions: ${errors.join(", ")}`);
   await desktop.close();

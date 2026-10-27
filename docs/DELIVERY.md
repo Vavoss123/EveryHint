@@ -1,4 +1,16 @@
-# P4 delivery — explicit AI provider requests
+# Account sign-in follow-up
+
+Added **Sign in with ChatGPT**, **Switch ChatGPT account**, **Cancel sign-in** and **Sign out of ChatGPT** inside EveryHint. The official bundled Codex client opens the browser and owns authentication. It uses a dedicated `userData/chatgpt` profile and mandatory OS-keyring storage, never hardcoded passwords/API keys, token copying, or the user's shared CLI/IDE account. Native status verifies completion. Unfinished login is cancelled on provider switch, reload/crash, lock/suspend or shutdown; duplicate attempts, stale completions and timeouts are guarded.
+
+Claude account sign-in is visibly unavailable: Anthropic still requires approval for third-party apps to offer subscription login. EveryHint has no approval. Existing API billing remains opt-in, and **no paid request was made**. ChatGPT authentication does not unlock Codex inference; its response-only permission limitation remains open. The user must complete the browser login to verify OAuth end to end; this was not replaced with a mocked success claim.
+
+Created: `src/shared/accounts.ts`, `src/main/ai/accounts.ts`, `src/renderer/src/AccountPanel.tsx`, `tests/accounts.test.ts`. Modified: narrow preload/shared contracts, main lifecycle/IPC, Codex status probing, assistant account controls, `scripts/smoke-ai.mjs` and the five project docs plus provider decision record. No dependency was added.
+
+Verification: **234 unit tests / 21 files**, strict TypeScript, zero-warning lint and production build pass. **33 AI Electron assertions** pass, including real isolated-profile status inspection, rejection of untrusted sign-in IPC, available ChatGPT login controls and clearly unavailable Claude login. Core Electron smoke (**47** assertions), speech Electron smoke (**11** assertions with real tiny.en) and installed-Claude-SDK loopback tests (**6**) also pass. Electron assertions total **91**. Account UI transitions use labelled fixtures; browser OAuth completion remains manual. The shared official `codex login status` remains ChatGPT-authenticated after testing. The P4 baseline record follows.
+
+---
+
+# P4 delivery — explicit AI provider requests (baseline)
 
 P4 adds the shared provider architecture, authentication/capability inspection, a real response-only Claude API adapter, manual provider selection, independently selected context, immutable payload review, fresh transfer consent, streaming/cancel/errors, bounded isolated conversations, safe code display/copy, compact status and teardown. Working capture and local transcription services were preserved. Version is **0.4.0**. **P4 is not fully live-accepted:** Codex inference is deliberately blocked and Claude live authentication/inference is unverified. P5 was not started.
 

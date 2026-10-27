@@ -6,6 +6,7 @@ import type {
 } from "../../shared/ai";
 import { DEFAULT_CONTEXT } from "../../shared/ai";
 import type { Result } from "../../shared/contracts";
+import { AccountPanel } from "./AccountPanel";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -172,6 +173,7 @@ export function AssistantPanel({
         <strong>{selected.ready ? "Ready" : "Not connected"}</strong> ·{" "}
         {selected.message}
       </p>
+      <AccountPanel provider={snapshot.selected} />
       <button
         className="secondary"
         disabled={busy || active}

@@ -103,6 +103,13 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  getAccountConnection(): Promise<
+    Result<import("./accounts").AccountConnection>
+  >;
+  account(action: import("./accounts").AccountAction): Promise<Result<void>>;
+  onAccountConnection(
+    listener: (value: import("./accounts").AccountConnection) => void,
+  ): () => void;
   getAssistant(): Promise<Result<import("./ai").AssistantSnapshot>>;
   inspectProviders(): Promise<Result<void>>;
   selectProvider(provider: import("./ai").ProviderId): Promise<Result<void>>;

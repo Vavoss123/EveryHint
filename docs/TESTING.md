@@ -1,5 +1,13 @@
 # EveryHint testing — P4 (P1–P3 acceptance retained)
 
+## Account sign-in follow-up — 2026-10-27
+
+`npm run check` now passes **234 unit tests in 21 files**, including **15 new account-flow cases**, strict TypeScript, zero-warning lint and production build. New tests cover no startup login, fixed native command arguments, isolated credential profile, forced OS-keyring/ChatGPT auth, no API/environment credential inheritance, verified success/sign-out, rejected API auth, duplicate login, stale results, cancellation, timeout, process errors and shutdown.
+
+`smoke:ai` now passes **33 assertions**: the actual installed CLI reports the fresh EveryHint profile signed out, despite an existing shared ChatGPT login; the in-app login button is enabled; Claude subscription sign-in and unauthorised account IPC are rejected; pending/signed-in controls render using labelled fixtures. No browser sign-in or remote inference is automatically started by tests. **The real browser OAuth round trip is still unverified** and requires the user to click Sign in with ChatGPT. The shared `codex login status` still reports ChatGPT login after testing. No paid request was made.
+
+Manual account acceptance: click Sign in with ChatGPT, finish in the official browser, verify the app reports signed in, restart and check persistence, switch accounts, sign out, cancel midway, and check OS-keyring/default-browser/port-conflict failures. Verify the normal Codex/IDE session is unchanged. Logging in must not request an answer or enable API billing; Codex answers remain disabled for the existing permission limitation. Claude sign-in remains unavailable without Anthropic approval. The original P4 results below are historical baseline measurements.
+
 ## P4 results and limits — 2026-10-27
 
 | Check | Result |

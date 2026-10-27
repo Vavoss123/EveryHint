@@ -46,13 +46,15 @@ Remaining acceptance: real microphone and Windows loopback transcription; consen
 
 ## P4 — AI Provider Integration
 
-**Restricted implementation delivered; live acceptance remains open.** No paid/live inference was performed. The user explicitly chose to leave Claude live verification pending. Existing Codex ChatGPT login is detected, but inference is blocked because SDK 0.164.0 cannot establish a response-only tool boundary. Do not label this milestone fully accepted or claim a successful live provider integration.
+Follow-up: **in-app ChatGPT account controls implemented** (Sign in, Switch account, Cancel, Sign out). Native browser OAuth and OS-keyring storage use an isolated app profile; no credentials are hardcoded or copied from the shared Codex login. Actual browser login acceptance is pending. Claude subscription sign-in still requires Anthropic approval; its unavailable control explains this. Codex inference remains blocked independently of authentication. No paid request was made.
+
+**Restricted implementation delivered; live acceptance remains open.** No paid/live inference was performed. The user explicitly chose to leave Claude live verification pending. The app now checks its own ChatGPT profile; the shared Codex login is not imported. Inference remains blocked because SDK 0.164.0 cannot establish a response-only tool boundary. Do not label this milestone fully accepted or claim a successful live provider integration.
 
 | Checkpoint | State |
 | --- | --- |
 | Official SDK/auth research and billing policy | Documented with primary sources in `DECISIONS/P4-providers.md` |
 | Shared provider contracts, registry and narrow IPC | Implemented; validated inputs and real untrusted-renderer rejection tested |
-| Codex subscription/API login detection | Official local CLI; ChatGPT login verified on this machine |
+| Codex subscription/API login detection | Official local CLI; app-specific OS-keyring profile; browser account login awaits user verification |
 | Codex text/image inference | **Disabled** pending supported fail-closed tool restrictions; no API fallback |
 | Claude API-only adapter | Implemented; disabled by default; session-only billing opt-in; no subscription reuse |
 | Claude streaming/images/cancel/errors | Unit and actual SDK loopback verification; **live API authentication/answer unverified** |

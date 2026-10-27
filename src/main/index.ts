@@ -42,6 +42,7 @@ import { TranscriptionController } from "./transcription/controller";
 import { AssistantController } from "./ai/controller";
 import { CodexProvider } from "./ai/codex";
 import { ClaudeProvider } from "./ai/claude";
+import { AccountConnections } from "./ai/accounts";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -62,6 +63,7 @@ let store: SettingsStore;
 let controller: CaptureSessionController;
 let speech: TranscriptionController | undefined;
 let assistant: AssistantController | undefined;
+let accounts: AccountConnections | undefined;
 let shortcuts: HotkeyController;
 let hotkeys: HotkeyStatus[] = [];
 const warnings: string[] = [];
@@ -326,8 +328,15 @@ async function initialise(): Promise<void> {
     process.platform === "win32",
   );
 
+  accounts = new AccountConnections(
+    join(app.getPath("userData"), "chatgpt"),
+    (value) => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:account", value);
+    },
+  );
   assistant = new AssistantController(
-    [new CodexProvider(), new ClaudeProvider()],
+    [new CodexProvider(() => accounts!.status()), new ClaudeProvider()],
     () => ({ capture: controller.value, events: speech?.value.events ?? [] }),
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
@@ -385,16 +394,19 @@ async function initialise(): Promise<void> {
     event.preventDefault(),
   );
   window.webContents.on("did-start-loading", () => {
+    accounts?.cancel();
     assistant?.clear();
     if (controller.value.state !== "IDLE") controller.stop();
   });
   window.webContents.on("render-process-gone", (_event, details) => {
+    accounts?.cancel();
     assistant?.clear();
     controller.fail(
       `EveryHint's interface stopped (${details.reason}). Capture has been stopped. Restart EveryHint.`,
     );
   });
   window.webContents.on("unresponsive", () => {
+    accounts?.cancel();
     assistant?.clear();
     controller.fail("EveryHint is unresponsive. Capture has been stopped.");
   });
@@ -439,9 +451,29 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  handle("everyhint:account-get", () => accounts!.value);
+  handle("everyhint:account-action", async (input) => {
+    if (input !== "sign-in" && input !== "sign-out" && input !== "cancel")
+      throw new Error("Unknown account action.");
+    assistant!.clear();
+    if (input === "cancel") {
+      accounts!.cancel();
+      return;
+    }
+    if (input === "sign-in") await accounts!.signIn();
+    else await accounts!.signOut();
+    if (
+      accounts!.value.state !== "error" &&
+      accounts!.value.state !== "cancelled"
+    )
+      await assistant!.inspect();
+  });
   handle("everyhint:ai-get", () => assistant!.value);
   handle("everyhint:ai-inspect", () => assistant!.inspect());
-  handle("everyhint:ai-select", (input) => assistant!.select(input));
+  handle("everyhint:ai-select", (input) => {
+    assistant!.select(input);
+    accounts?.cancel();
+  });
   handle("everyhint:ai-billing", (input) => assistant!.billing(input));
   handle("everyhint:ai-review", (input) => assistant!.prepare(input));
   handle("everyhint:ai-ask", (input) => assistant!.ask(input));
@@ -501,10 +533,12 @@ async function initialise(): Promise<void> {
     else throw new Error("Unknown window action.");
   });
   powerMonitor.on("suspend", () => {
+    accounts?.cancel();
     assistant?.clear();
     controller.stop();
   });
   powerMonitor.on("lock-screen", () => {
+    accounts?.cancel();
     assistant?.clear();
     controller.stop();
   });
@@ -539,6 +573,7 @@ app.on("before-quit", (event) => {
   if (quitting) return;
   event.preventDefault();
   quitting = true;
+  accounts?.dispose();
   controller?.stop();
   speech?.dispose();
   shortcuts?.dispose();

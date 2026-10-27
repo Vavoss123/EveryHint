@@ -6,6 +6,18 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  getAccountConnection: () => ipcRenderer.invoke("everyhint:account-get"),
+  account: (action) => ipcRenderer.invoke("everyhint:account-action", action),
+  onAccountConnection: (listener) => {
+    const wrapped = (
+      _event: Electron.IpcRendererEvent,
+      value: import("../shared/accounts").AccountConnection,
+    ): void => listener(value);
+    ipcRenderer.on("everyhint:account", wrapped);
+    return () => {
+      ipcRenderer.removeListener("everyhint:account", wrapped);
+    };
+  },
   getAssistant: () => ipcRenderer.invoke("everyhint:ai-get"),
   inspectProviders: () => ipcRenderer.invoke("everyhint:ai-inspect"),
   selectProvider: (provider) =>

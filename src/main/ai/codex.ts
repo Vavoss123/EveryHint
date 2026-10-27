@@ -33,14 +33,25 @@ export function codexExecutable(): string {
     platform === "win32" ? "codex.exe" : "codex",
   );
 }
-export async function localCodexLogin(): Promise<string> {
+export async function localCodexLogin(home?: string): Promise<string> {
   const env = baseEnvironment();
-  if (process.env.CODEX_HOME) env.CODEX_HOME = process.env.CODEX_HOME;
+  if (home) env.CODEX_HOME = home;
+  else if (process.env.CODEX_HOME) env.CODEX_HOME = process.env.CODEX_HOME;
   return new Promise((resolve, reject) => {
     execFile(
       codexExecutable(),
-      ["login", "status"],
-      { env, windowsHide: true, timeout: 5000, maxBuffer: 16384 },
+      [
+        ...(home ? ["-c", 'cli_auth_credentials_store="keyring"'] : []),
+        "login",
+        "status",
+      ],
+      {
+        env,
+        ...(home ? { cwd: home } : {}),
+        windowsHide: true,
+        timeout: 5000,
+        maxBuffer: 16384,
+      },
       (error, stdout, stderr) => {
         const status = `${stdout}\n${stderr}`;
         // Only the official status command is inspected. Never read auth.json or token stores.
@@ -84,7 +95,7 @@ export class CodexProvider implements AIProvider {
       return {
         ...base,
         auth: "missing",
-        message: `Not connected. Sign in with the official codex login command outside EveryHint. ${limitation}`,
+        message: `Not connected. Use Sign in with ChatGPT below. ${limitation}`,
       };
     } catch {
       return {
