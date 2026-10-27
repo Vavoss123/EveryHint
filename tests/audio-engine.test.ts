@@ -92,7 +92,8 @@ function setup() {
   } as unknown as AudioEnvironment;
   const report = vi.fn(),
     failure = vi.fn();
-  const engine = new BrowserAudioCapture(environment, report, failure);
+  const frames = vi.fn();
+  const engine = new BrowserAudioCapture(environment, report, failure, frames);
   return {
     engine,
     environment,
@@ -104,6 +105,7 @@ function setup() {
     video,
     contexts,
     nodes,
+    frames,
   };
 }
 const plan = {
@@ -114,6 +116,31 @@ const plan = {
 describe("browser audio acquisition and disposal", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
+  it("preserves native audio-clock spacing and forwards zero PCM for a muted source", async () => {
+    const test = setup();
+    await test.engine.start({ ...plan, systemAudio: false });
+    const packet = {
+      samples: new Float32Array(4096).fill(0.5),
+      channels: 1,
+      sampleRate: 48000,
+      startTimeSeconds: 0,
+    };
+    test.nodes[0]!.port.onmessage!({ data: packet } as MessageEvent);
+    test.engine.setMicrophoneMuted(true);
+    test.nodes[0]!.port.onmessage!({
+      data: { ...packet, startTimeSeconds: 4096 / 48000 },
+    } as MessageEvent);
+    expect(
+      test.frames.mock.calls[1]![0].timestamp -
+        test.frames.mock.calls[0]![0].timestamp,
+    ).toBeCloseTo((4096 * 1000) / 48000);
+    expect(
+      test.frames.mock.calls[1]![0].samples.every(
+        (sample: number) => sample === 0,
+      ),
+    ).toBe(true);
+    test.engine.stop();
+  });
   it("acquires independent sources, releases companion video, and computes separate levels", async () => {
     const test = setup();
     await test.engine.start(plan);

@@ -12,6 +12,7 @@ const profile = await mkdtemp(join(tmpdir(), "everyhint-smoke-"));
 const env = {
   ...process.env,
   EVERYHINT_TEST_USER_DATA: profile,
+  EVERYHINT_SPEECH_HOME: join(profile, "speech"),
   ELECTRON_ENABLE_SECURITY_WARNINGS: "true",
 };
 delete env.ELECTRON_RUN_AS_NODE;

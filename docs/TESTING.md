@@ -1,4 +1,4 @@
-# EveryHint testing — P2
+# EveryHint testing — P3 (P1/P2 acceptance retained)
 
 ## Run automated verification
 
@@ -8,23 +8,80 @@ With Node 24 LTS, from the project directory:
 npm ci
 npm run check
 npm run smoke
+npm run speech:test
+npm run smoke:speech
 ```
 
-Individual commands: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. Run the build before smoke. `npm run test:watch` supports unit development.
+Individual commands: `npm run typecheck`, `npm run lint`, `npm test`, `npm run build`. Run the build before smoke. `npm run test:watch` supports unit development. Speech checks require `npm run speech:build`, explicit `npm run speech:model -- tiny.en`, and the first `npm run speech:test -- --install-fixture`. They never download a model implicitly. The first fixture flag explicitly downloads a pinned known speech sample; subsequent speech checks work offline.
 
 Recorded on **2026-10-27**, in the provided Windows environment:
 
-| Check                                                      | Result                                                                                 |
-| ---------------------------------------------------------- | -------------------------------------------------------------------------------------- |
-| Strict TypeScript                                          | Passed                                                                                 |
-| ESLint with zero warnings                                  | Passed                                                                                 |
-| Vitest                                                     | **102 passed, 0 failed; 11 files**                                                     |
-| Production build                                           | Passed; main, two sandboxed preloads, overlay, audio document and AudioWorklet emitted |
-| Real Electron smoke                                        | **47 assertions passed**, with synthetic media; all three hotkeys registered           |
-| Hardware microphone / native Windows loopback / real calls | **Not performed**                                                                      |
-| P1 physical Windows acceptance                             | **Not completed**, confirmed by the user                                               |
+| Check                                                      | Result                                                                                  |
+| ---------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| Strict TypeScript                                          | Passed                                                                                  |
+| ESLint with zero warnings                                  | Passed                                                                                  |
+| Vitest                                                     | **157 passed, 0 failed; 17 files**                                                      |
+| Production build                                           | Passed; main, two sandboxed preloads, overlay, audio document and AudioWorklet emitted  |
+| Core Electron smoke                                        | **47 assertions passed**, with synthetic media; all three hotkeys registered            |
+| Speech Electron smoke                                      | **11 assertions passed**, real tiny.en inference through two synthetic P2 streams       |
+| Native helper + actual inference                           | Built/installed successfully; two known speech jobs recognised through one loaded model |
+| Hardware microphone / native Windows loopback / real calls | **Not performed**                                                                       |
+| P1 physical Windows acceptance                             | **Not completed**, confirmed by the user                                                |
 
-During development, tests were updated for newly permitted audio consent and the extended state shape, a lint/type issue was corrected, and the smoke test was changed to poll acknowledged IPC state rather than treating async predicates as settled. Final verification passes; no failing checks are suppressed.
+Final checks pass with no suppressed failures. During P3, build setup was corrected to use the x64 CMake platform name, install only the helper component and use the upstream root license location; third-party CMake/MSVC warnings remain visible. Initial PCM tests accidentally exceeded the existing 8192-sample packet bound and were corrected to use valid packets. Lint findings were corrected. A bounded resampler kernel cache reduces repeated per-sample work. Native/fixture success is reported separately from hardware acceptance.
+
+## P3 coverage and real inference evidence
+
+| File / command                     | Coverage                                                                                                                                                                       |
+| ---------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `transcription-pcm.test.ts`        | Validation, mono/stereo mixing, 8–192 kHz conversion, anti-alias filtering, streaming duration/timestamps and discontinuities                                                  |
+| `transcription-segments.test.ts`   | Silence/noise gating, partial/final boundaries, short pauses, maximum length, overlap and reset bounds                                                                         |
+| `transcripts.test.ts`              | Provisional replacement, final protection, source ordering, overlap deduplication, retention/count/character caps and clear                                                    |
+| `transcription-controller.test.ts` | Authorised routing, simultaneous sources, cancellation/loading/crash failures, fairness/backpressure, new-session guards, clear and automatic expiry                           |
+| `whisper-worker.test.ts`           | Hidden single-process protocol, model errors, crashes, bounded I/O, timeout, stop and late-result rejection                                                                    |
+| `speech-models.test.ts`            | No implicit fetch, trusted-checksum success/failure, size caps, abort cleanup, missing runtime and corrupt settings                                                            |
+| Extended P2 tests                  | Explicit token/source PCM gate, native-clock timestamp spacing and muted-zero PCM                                                                                              |
+| `speech:test`                      | Real C API tiny.en inference on the checksum-verified upstream JFK fixture, twice through one loaded model; checks the expected recognised phrase                              |
+| `smoke:speech`                     | Real AudioWorklets, 16 kHz conversion, segmentation, fair helper scheduling, provisional/final text from both sources, ordering, UI, clear and independent transcription pause |
+
+The default core smoke still uses only oscillators and needs no model. Speech smoke uses known fixture MediaStreams injected only by Playwright, then the actual production PCM/Whisper pipeline. No production fake-recognition mode exists. Test profiles use isolated settings/model hard links and are removed afterward. No real microphone, Windows playback or desktop content is acquired by either smoke test.
+
+Known-fixture evidence is written only by test scripts to ignored `artifacts/inference.json`, `artifacts/speech-smoke.json` and `artifacts/everyhint-transcription.png`. Product capture does not write raw audio or conversations. Upstream fixture SHA-256: `59dfb9a4acb36fe2a2affc14bacbee2920ff435cb13cc314a08c13f66ba7860e`.
+
+### Recorded performance observations
+
+One recorded x64/CPU/four-thread run on 2026-10-27 (warm filesystem cache): tiny.en helper load **86.3 ms**; the approximately 11-second fixture took **648.0 ms** and **528.2 ms** for consecutive jobs. Working set was about **165 MiB** after inference; helper CPU during inference was **373–395% of one core** (roughly four cores, not that percentage of the whole machine). Direct-test results are checked against real recognised speech, not mocked text.
+
+A recorded dual-source Electron run loaded in **134.2 ms**, averaged **487.4 ms** across **10** chunk recognitions, and ended at queue length **0**, dropped jobs **0**, gaps **0**, working set approximately **166 MiB**. These are short fixture measurements, not universal latency, cold-start, battery, full-application CPU or 15-minute stability guarantees. Reruns vary; the ignored reports contain each latest run. Base.en actual inference and hardware speech remain untested.
+
+## P3 Windows manual acceptance
+
+All items below remain **Pending**, in addition to P1/P2 checks further down.
+
+| #   | Check                                                                            | Expected result                                                                                                                              |
+| --- | -------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
+| 1   | Launch normally, without enabling capture/transcription                          | Existing overlay works; transcription OFF; no model process, microphone activation or automatic download                                     |
+| 2   | Build helper; explicitly install/verify tiny.en; enable after authorised capture | Installed status/size visible; checksum validated; local model loads and diagnostics update                                                  |
+| 3   | Speak through a real selected microphone                                         | Actual readable Mic text, provisional replacements and final segments                                                                        |
+| 4   | Play spoken audio through Windows                                                | Actual System text where loopback/routing permits; no unintended microphone activation                                                       |
+| 5   | Use both sources simultaneously, including a consented call                      | Provenance remains separate; fair updates; no speaker-identity claim                                                                         |
+| 6   | Compare source labels and audio timestamps across sources                        | Correct source and chronological ordering; timestamps represent audio rather than inference completion                                       |
+| 7   | Speak with short and long pauses                                                 | Short pauses remain inside an utterance; long silence finalises; no repeated appending of provisional text                                   |
+| 8   | Speak continuously beyond the maximum segment                                    | Bounded segmentation with limited overlap; inspect boundary deduplication and missed/revised words                                           |
+| 9   | Explicitly install base.en and switch models                                     | Settings change pauses transcription, old helper releases, new chosen model loads once after Resume                                          |
+| 10  | Toggle compact/expanded mode and scroll transcript                               | Latest line/status in compact; ordered rolling view and usable controls in expanded mode                                                     |
+| 11  | Pause transcription independently                                                | Audio indicators/capture remain truthful; no further recognition until explicitly resumed                                                    |
+| 12  | Pause and Stop capture by UI/tray/global shortcuts, including while hidden       | Pending recognition cancelled; helper exits; no late text; no automatic transcription after capture Resume                                   |
+| 13  | Clear text during queued/in-flight recognition                                   | Final/provisional text removed; old results cannot reappear; transcription remains paused                                                    |
+| 14  | Inspect network/offline operation after setup                                    | No transcription API, content upload, analytics or listening HTTP service; offline inference still works                                     |
+| 15  | Inspect application data after a conversation and restart                        | Only preferences/models/runtime persist; no conversation/raw capture files; capture/transcription start disabled                             |
+| 16  | Disconnect microphone or change Windows playback device                          | Existing P2 failure/consent cleanup remains; inference stops; no orphan process                                                              |
+| 17  | Interrupt helper/model loading, remove/corrupt a model, or terminate helper      | Readable error, no hung queue, no surviving model process or late results; capture never starts independently                                |
+| 18  | Re-run all original screen/audio combinations                                    | All seven combinations remain functional; screen-only cannot enable speech recognition                                                       |
+| 19  | Run a **15-minute authorised continuous conversation**                           | Sample diagnostics/Task Manager at 0/5/10/15 min; record CPU, working set, queue/drops/gaps, transcript stability and helper exit after Stop |
+| 20  | Exercise retention limits while quiet and while speaking                         | Old text expires automatically; line/character caps hold; Clear releases all current text                                                    |
+
+For the 15-minute test, note model/thread configuration, hardware, sources, room noise and output routing. Record actual values rather than marking it passed from unit/synthetic tests. The energy gate can treat noise as speech or miss quiet words; overlap text matching is approximate and overload deliberately drops old queued audio.
 
 ## Coverage
 
@@ -75,7 +132,7 @@ Run `npm run dev`, or build then `npm start`. Use content and participants for w
 | 19  | Disable Windows desktop microphone access, use an unavailable/exclusively held device, or interrupt startup          | Useful error and complete cleanup; no stuck STARTING state past the startup deadline                                          |
 | 20  | Observe Task Manager and Windows privacy indicators through a long authorised session and repeated pause/stop cycles | No continuing microphone indication or audio processing after stop; record real CPU/RSS before making performance claims      |
 
-Loopback is the supported playback mix, not an arbitrary external application's isolated audio. Protected/exclusive playback, nondefault output routing, remote sessions and drivers can prevent capture. Windows/app mute and device-change notifications vary. A headset and disabled microphone monitoring reduce duplication. EveryHint has no speech recognition or automatic meeting recording in P2.
+Loopback is the supported playback mix, not an arbitrary external application's isolated audio. Protected/exclusive playback, nondefault output routing, remote sessions and drivers can prevent capture. Windows/app mute and device-change notifications vary. A headset and disabled microphone monitoring reduce duplication. P2 capture checks do not enable P3 recognition; transcription requires its separate explicit action.
 
 ## Outstanding P1 regression checklist
 

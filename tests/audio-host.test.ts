@@ -111,6 +111,47 @@ describe("main-process audio lifecycle and permissions", () => {
     new ElectronAudioCapture(url, "audio.cjs", vi.fn());
     expect(native.windows).toHaveLength(0);
   });
+  it("only forwards bounded PCM with the current explicit transcription token and authorised source", async () => {
+    const consume = vi.fn(() => true),
+      host = new ElectronAudioCapture(url, "audio.cjs", vi.fn(), consume);
+    const starting = host.start(
+      { ...plan, systemAudio: false },
+      vi.fn(),
+      vi.fn(),
+    );
+    report({ type: "diagnostics", sources: [sources[0]] });
+    await starting;
+    const frame = {
+      source: "microphone",
+      streamId: "stream-1",
+      sequence: 0,
+      timestamp: 1000,
+      sampleRate: 16000,
+      channels: 1,
+      format: "f32-interleaved",
+      lifecycle: "data",
+      samples: new Float32Array(320),
+    };
+    expect(
+      ipc("everyhint:audio-pcm")(workerEvent(), { token: "old", frame }),
+    ).toBe(false);
+    host.setTranscriptionToken("current");
+    expect(
+      ipc("everyhint:audio-pcm")(workerEvent(), { token: "current", frame }),
+    ).toBe(true);
+    expect(() =>
+      ipc("everyhint:audio-pcm")(workerEvent(), {
+        token: "current",
+        frame: { ...frame, source: "systemAudio" },
+      }),
+    ).toThrow("authorised");
+    host.setTranscriptionToken(null);
+    expect(
+      ipc("everyhint:audio-pcm")(workerEvent(), { token: "current", frame }),
+    ).toBe(false);
+    expect(consume).toHaveBeenCalledTimes(1);
+    host.stop();
+  });
   it("turns synchronous capture-context creation failures into rejected startup", async () => {
     const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn());
     native.constructorFailure = true;

@@ -36,6 +36,7 @@ function statuses(): SessionSnapshot["sources"] {
 }
 export class CaptureSessionController {
   private snapshot: SessionSnapshot = {
+    sessionId: null,
     epoch: 0,
     state: "IDLE",
     consent: null,
@@ -132,6 +133,7 @@ export class CaptureSessionController {
     if (source) sources.screen.name = source.name;
     sources.microphone.deviceId = deviceId;
     this.snapshot = {
+      sessionId: crypto.randomUUID(),
       epoch: ++this.generation,
       state: "READY",
       consent,
@@ -203,6 +205,7 @@ export class CaptureSessionController {
         sources[id].name = this.snapshot.sources[id].name;
       }
     this.snapshot = {
+      sessionId: null,
       epoch: this.generation,
       state: "STOPPED",
       consent: null,

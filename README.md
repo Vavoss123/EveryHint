@@ -2,7 +2,7 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 provides the floating overlay, screen snapshots, tray, hotkeys and settings. P2 adds independently authorised microphone and Windows playback capture, device selection, mute and live audio diagnostics. Transcription and AI remain future features. No account, API credits or paid service is needed.
+EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local live English transcription through whisper.cpp. AI remains a future feature. No account, API credits or paid service is needed.
 
 ## Install and run
 
@@ -22,6 +22,25 @@ npm start
 ```
 
 Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Windows installers and signing belong to P6.
+
+## Set up local speech transcription
+
+Install Visual Studio 2022/2026 C++ Build Tools with the Windows SDK and CMake (3.24+), plus Git. Then explicitly build the CPU helper and install the default model:
+
+```powershell
+npm run speech:build
+npm run speech:model -- tiny.en
+```
+
+The build fetches pinned official whisper.cpp source, never a model. Model installation downloads **77.7 MB** for tiny.en and verifies its pinned SHA-256. The optional base.en model is **148.0 MB**, selectable/installable in EveryHint settings or with `npm run speech:model -- base.en`. Models never download automatically. The tiny.en model and runtime have already been installed locally during P3 verification with the user's authorisation.
+
+Files live under `%LOCALAPPDATA%\EveryHint\speech`: `runtime/`, `models/`, `build/` and speech settings. Set `EVERYHINT_SPEECH_HOME` to choose another local directory; pass the same path using `-SpeechHome` when invoking `scripts/build-transcriber.ps1` directly. Model binaries are excluded from Git. The tested x64 CPU build uses AVX2/FMA/F16C/BMI2; ARM64 builds and older CPU configurations need separate acceptance. No GPU is required. See [the architecture decision](docs/DECISIONS/P3-transcription.md).
+
+After capture has started, choose **Enable transcription**. It cannot activate audio itself. The live panel shows source labels, audio timestamps, provisional replacements and final text. Models load once per enabled run. Partial results are chunk-based inference, not token streaming. The system source can contain several people; EveryHint does not identify speakers.
+
+**Pause transcription** leaves authorised capture running. Pausing/stopping capture cancels inference too. After capture resumes, explicitly resume transcription. **Clear transcript** cancels pending work and removes text, then leaves transcription paused until re-enabled. Final text otherwise remains in memory until cleared, expired or a new capture session is prepared. Settings control model, sensitivity, silence, segment length, overlap and retention. Settings changes pause transcription. Compact mode shows the latest line/status.
+
+Once the helper and a verified model are installed, transcription runs offline. A missing/invalid model or worker failure produces a visible error; no remote service is used as a fallback.
 
 ## Capture a session
 
@@ -46,8 +65,8 @@ Shortcut conflicts appear as warnings. Overlay and tray controls remain availabl
 
 ## Privacy and Windows limits
 
-- No raw audio files, screenshots, conversations, consent, device choices or credentials are persisted. Only window preferences, snapshot interval and bounds are stored, normally under `%APPDATA%\EveryHint\settings.json`.
-- Audio stays in a dedicated sandboxed context. Local PCM buffers are bounded to two seconds, 32 packets and 768,000 bytes per source. Only status and low-rate audio levels reach the overlay; no audio or images go to providers.
+- No raw captured audio, screenshots, conversations, consent, device choices or credentials are persisted. Window preferences, interval and bounds live under `%APPDATA%\EveryHint`; speech configuration and installed public model files live under local application data.
+- P2 PCM caches remain bounded to two seconds, 32 packets and 768,000 bytes per source. Explicitly enabled transcription forwards validated PCM locally to main and one native helper. Separate segmentation buffers cap speech at 10–15 seconds; at most four recognition jobs wait. Transcript retention is bounded by age, line count and 50,000 characters. No content goes to providers.
 - Windows system audio uses Electron's supported unmuted loopback option. It captures supported playback mix, rather than selecting one application's audio. Discord, Teams, Zoom and browsers depend on their output routing, Windows permissions and content restrictions; real-call compatibility is unverified.
 - Chromium requires an accompanying display track for loopback. EveryHint releases it immediately without reading its images or starting screen analysis. Speakers continue playing.
 - Device disconnection, observed playback changes, permission revocation and capture errors stop the session and require fresh preparation. Windows/driver mute and routing behaviour varies; restart the session after changing output devices even if Windows does not report a change.
@@ -59,8 +78,10 @@ Shortcut conflicts appear as warnings. Overlay and tray controls remain availabl
 ```powershell
 npm run check
 npm run smoke
+npm run speech:test -- --install-fixture
+npm run smoke:speech
 ```
 
-`check` runs strict TypeScript, lint, all unit tests and the production build. `smoke` launches compiled Electron with a temporary profile and synthetic media; it does **not** capture a microphone, Windows playback or the desktop. App-only diagnostic screenshots are written to ignored `artifacts/`.
+`check` runs strict TypeScript, lint, unit tests and production build. `smoke` uses synthetic media and needs no speech runtime. The additional speech checks need the installed tiny.en model/helper. `speech:test -- --install-fixture` explicitly downloads a checksum-verified public upstream speech fixture once; subsequent tests are offline. `smoke:speech` sends that fixture through both synthetic P2 sources, real PCM conversion and real whisper.cpp inference. No hardware audio or desktop capture is performed. Known-fixture reports and app-only screenshots are written to ignored `artifacts/`.
 
-The automated baseline is **102 unit tests and 47 Electron smoke assertions**. P1 manual checks are still pending, as confirmed by the user. Hardware microphones, real Windows loopback and consented calls also require the [manual checklist](docs/TESTING.md). See [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). P3 has not started.
+The P3 baseline is **157 unit tests**, **47 core Electron smoke assertions**, **11 speech smoke assertions**, successful native/production builds and actual tiny.en recognition. P1/P2 hardware and P3 real-device/15-minute acceptance remain pending. See [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). P4/P5 have not started.

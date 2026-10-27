@@ -10,6 +10,7 @@ import type {
   MicrophoneDevice,
 } from "../../shared/contracts";
 import "./styles.css";
+import { TranscriptionPanel } from "./TranscriptionPanel";
 
 function Icon({
   name,
@@ -234,7 +235,7 @@ function App() {
             e<span>h</span>
           </div>
           <span>EveryHint</span>
-          <span className="phase">P2</span>
+          <span className="phase">P3</span>
         </div>
         <div className="window-actions">
           <button
@@ -353,6 +354,7 @@ function App() {
               </select>
             </label>
             <h2>Global shortcuts</h2>
+            <TranscriptionPanel settings canEnable={active} />
             {app.hotkeys.map((hotkey) => (
               <div className="shortcut" key={hotkey.action}>
                 <span>
@@ -383,8 +385,8 @@ function App() {
               capture continues while Active Mode is on.
             </p>
             <p className="muted">
-              Microphone and Windows system audio stay local. Transcription
-              arrives in P3. Codex and Claude arrive in P4.
+              Microphone, Windows audio and speech transcription stay local.
+              Codex and Claude arrive in P4.
             </p>
             <button
               className="secondary full"
@@ -559,6 +561,16 @@ function App() {
           </div>
         ) : (
           <>
+            <TranscriptionPanel
+              compact={settings.compact}
+              canEnable={
+                active &&
+                Object.entries(session.sources).some(
+                  ([id, source]) =>
+                    id !== "screen" && source.state === "CAPTURING",
+                )
+              }
+            />
             {!settings.compact && (
               <div className={`response-panel ${expanded ? "expanded" : ""}`}>
                 <div className="response-heading">
@@ -772,7 +784,7 @@ function App() {
             {active
               ? "Hiding keeps capture on · Stop works globally"
               : "Capture starts only with your authorisation"}
-            <span className="version">v0.2</span>
+            <span className="version">v0.3</span>
           </div>
         )}
       </footer>

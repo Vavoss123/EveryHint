@@ -12,11 +12,14 @@ import type {
   AudioPlan,
   AudioSourceId,
   MicrophoneDevice,
+  AudioFrame,
 } from "../shared/contracts";
 import { parseAudioReport, type AudioWorkerPlan } from "../shared/audio-ipc";
 import { errorMessage } from "../shared/validation";
 import { trustedDocument } from "./security";
 import { audioPermissionAllowed } from "./audio-permissions";
+import { parseAudioFrame } from "../shared/transcription";
+import { exactKeys, record } from "../shared/validation";
 
 interface Operation {
   window: BrowserWindow;
@@ -33,10 +36,13 @@ interface Operation {
 export class ElectronAudioCapture implements AudioCaptureManager {
   private operation: Operation | undefined;
   private readonly browserSession: Session;
+  private transcriptionToken: string | null = null;
   constructor(
     private readonly url: string,
     private readonly preload: string,
     configureSession: (target: Session, audio: boolean) => void,
+    private readonly pcm: (token: string, frame: AudioFrame) => boolean = () =>
+      false,
   ) {
     this.browserSession = session.fromPartition("everyhint-audio", {
       cache: false,
@@ -124,6 +130,24 @@ export class ElectronAudioCapture implements AudioCaptureManager {
     ipcMain.handle(
       "everyhint:audio-configuration",
       (event: IpcMainInvokeEvent) => this.trusted(event).plan,
+    );
+    ipcMain.handle(
+      "everyhint:audio-pcm",
+      (event: IpcMainInvokeEvent, value: unknown): boolean => {
+        const current = this.trusted(event),
+          input = record(value);
+        exactKeys(input, ["token", "frame"]);
+        if (
+          current.plan.mode !== "capture" ||
+          !this.transcriptionToken ||
+          input.token !== this.transcriptionToken
+        )
+          return false;
+        const frame = parseAudioFrame(input.frame);
+        if (!current.plan.capture[frame.source])
+          throw new Error("PCM source is not authorised.");
+        return this.pcm(this.transcriptionToken, frame);
+      },
     );
     ipcMain.handle("everyhint:audio-ready", (event: IpcMainInvokeEvent) => {
       const current = this.trusted(event);
@@ -320,6 +344,7 @@ export class ElectronAudioCapture implements AudioCaptureManager {
     }
   }
   private destroy(current: Operation): void {
+    this.transcriptionToken = null;
     if (this.operation === current) this.operation = undefined;
     clearTimeout(current.timeout);
     if (!current.window.isDestroyed()) current.window.destroy();
@@ -342,5 +367,17 @@ export class ElectronAudioCapture implements AudioCaptureManager {
       current.settled = true;
       current.reject(new Error("Audio operation cancelled."));
     }
+  }
+  setTranscriptionToken(token: string | null): void {
+    this.transcriptionToken = token;
+    const current = this.operation;
+    if (
+      current &&
+      current.plan.mode === "capture" &&
+      !current.window.isDestroyed()
+    )
+      current.window.webContents.send("everyhint:audio-control", {
+        transcriptionToken: token,
+      });
   }
 }

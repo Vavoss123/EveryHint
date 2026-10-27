@@ -6,7 +6,7 @@ Implemented in `e2e4ecb`. **Windows manual acceptance remains pending, confirmed
 
 ## P2 — Live Audio Capture
 
-**Implementation complete; automated verification passes; hardware/real-call acceptance pending.** The user explicitly authorised P2 in the current request despite the outstanding P1 manual checklist. P3 is not authorised.
+**Implementation complete; automated verification passes; hardware/real-call acceptance pending.** P3 is now explicitly authorised and implemented below. P1/P2 hardware acceptance is still open.
 
 | Checkpoint                | Dependencies                                       | Completion criteria                                                                                    | State                                                             |
 | ------------------------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------ | ----------------------------------------------------------------- |
@@ -24,15 +24,34 @@ Baseline: **102 unit tests in 11 files**, **47 Electron smoke assertions**, stri
 
 Known Windows limits: loopback is a playback mix rather than per-application isolation; DRM/exclusive routing/drivers can restrict it; hardware/app mute states may only appear as silence; device-change notifications are imperfect. Use the [manual checklist](TESTING.md) and [capture boundaries](ARCHITECTURE.md). Consider native WASAPI only if supported Electron loopback fails documented MVP needs after real testing.
 
+## P3 — Local Live Speech Transcription
+
+**Implementation and automated verification complete; real-device/long-run acceptance pending.** The user authorised the tiny.en/fixture download for real local inference. No P4/P5 implementation has started.
+
+| Checkpoint               | Dependencies / completion criteria                                                                                                            | State                                                                         |
+| ------------------------ | --------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
+| Integration decision     | Official whisper.cpp C API; dedicated CPU helper; preserve P2 capture and all seven source combinations                                       | Complete; [decision](DECISIONS/P3-transcription.md)                           |
+| Runtime/model setup      | Pinned helper build, explicit tiny.en/base.en install, exact size/SHA-256 validation, settings/status, no automatic downloads                 | Complete; native build and tiny.en verified; base.en actual inference pending |
+| PCM preparation          | Validated source/stream metadata, audio-clock timestamps, mono/FIR 16 kHz conversion, bounded histories and gap handling                      | Complete; deterministic tests and real Electron pipeline                      |
+| Speech segmentation      | Energy gate, conservative settings, partial/final jobs, silence/max boundaries and limited overlap                                            | Complete; tests and known speech fixture                                      |
+| Inference scheduling     | Single loaded model, fair source queue, bounded backlog and observable drops                                                                  | Complete; lifecycle/fairness/overload tests                                   |
+| Live transcript UI       | Source/time/provisional labels, ordering/replacement/deduplication, auto-scroll, compact view, clear/pause/settings                           | Complete; actual inference through both synthetic P2 streams                  |
+| Context contract/storage | Typed session/event/model metadata; memory-only rolling text; retention/character limits and expiry                                           | Complete; no AI memory/question detection                                     |
+| Privacy/lifecycle        | Explicit enable after authorised audio; no media activation; run/job guards; cancellation on capture pause/stop/clear/shutdown; model release | Complete; unit and Electron checks                                            |
+| Performance/acceptance   | Load/inference/CPU/RSS/queue/drop diagnostics, real fixture results, hardware/15-minute checklist                                             | Software measurements recorded; hardware and long-run tests pending           |
+
+Current P3 baseline: **157 unit tests across 17 files**, **47 core + 11 speech Electron smoke assertions**, strict TypeScript/lint/production build, native helper build, and actual tiny.en fixture inference all pass. P2's original 102 tests remain, with additional PCM-gating/timestamp checks. No npm dependency was added.
+
+Remaining acceptance: real microphone and Windows loopback transcription; consented calls; base.en quality/switching; ARM64/older CPU builds; a 15-minute conversation with CPU/RSS/stability measurements. Current energy VAD can react to noise, chunked inference can revise words, overload deliberately drops queued audio, and overlap deduplication is approximate. Keep all P1/P2 physical checks open. See [Testing](TESTING.md).
+
 ## Later milestones — deferred
 
-| Milestone                       | Dependencies                                                       | Completion criteria                                                                                          |
-| ------------------------------- | ------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------ |
-| P3 — Local Speech Transcription | Accepted P2, explicit approval, whisper.cpp runtime/model strategy | Local partial/final transcripts, bounded context, audio conversion/model/lifecycle tests                     |
-| P4 — AI Provider Integration    | Earlier phases accepted, current official SDK/auth support         | Codex/Claude adapters, supported subscription auth, abortable streaming, manual switching and usage controls |
-| P5 — Context Intelligence       | Reliable capture/transcription, approved AI providers              | Meaningful screen changes, duplicate suppression, adaptive capture, spoken questions and bounded memory      |
-| P6 — Optimisation and Release   | Accepted earlier phases, release requirements                      | Hardware performance/security review, Windows installer/signing, compatibility matrix and final verification |
+| Milestone                     | Dependencies                                               | Completion criteria                                                                                          |
+| ----------------------------- | ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------ |
+| P4 — AI Provider Integration  | Earlier phases accepted, current official SDK/auth support | Codex/Claude adapters, supported subscription auth, abortable streaming, manual switching and usage controls |
+| P5 — Context Intelligence     | Reliable capture/transcription, approved AI providers      | Meaningful screen changes, duplicate suppression, adaptive capture, spoken questions and bounded memory      |
+| P6 — Optimisation and Release | Accepted earlier phases, release requirements              | Hardware performance/security review, Windows installer/signing, compatibility matrix and final verification |
 
 ## Dependencies
 
-P2 adds **no npm dependency or native module**. Version is 0.2.0. Existing pinned baseline remains React 19.3.1, Electron 45.0.0, electron-vite 6.0.0, Vite 8.3.5, TypeScript 6.0.3, Vitest 5.0.5, ESLint 10.13.0 and Playwright Core 1.64.1. Node 24 LTS is used for development. Whisper.cpp, AI SDKs, credentials and external services remain absent.
+Version is **0.3.0**. P3 adds no npm package. The native helper links official whisper.cpp **v1.9.5**, pinned to `d1be6fde11ac6e0407606b4e42fe72d34add8037`; source/model/runtime files remain outside Git. Existing React/Electron/Vite/TypeScript/Vitest/ESLint/Playwright versions are unchanged. Node 24 LTS and Visual Studio C++/CMake support development. AI SDKs, credentials and external inference services remain absent.

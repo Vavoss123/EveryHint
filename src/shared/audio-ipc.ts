@@ -1,4 +1,9 @@
-import type { AudioDiagnostic, AudioPlan, MicrophoneDevice } from "./contracts";
+import type {
+  AudioDiagnostic,
+  AudioFrame,
+  AudioPlan,
+  MicrophoneDevice,
+} from "./contracts";
 import { exactKeys, parseDeviceId, record } from "./validation";
 export type AudioWorkerPlan = {
   token: string;
@@ -13,7 +18,13 @@ export interface AudioWorkerBridge {
   configuration(): Promise<AudioWorkerPlan>;
   ready(): Promise<void>;
   report(report: AudioWorkerReport): void;
-  onControl(listener: (command: { muted: boolean }) => void): () => void;
+  pcm(token: string, frame: AudioFrame): Promise<boolean>;
+  onControl(
+    listener: (command: {
+      muted?: boolean;
+      transcriptionToken?: string | null;
+    }) => void,
+  ): () => void;
 }
 export function parseAudioReport(value: unknown): AudioWorkerReport {
   const input = record(value);

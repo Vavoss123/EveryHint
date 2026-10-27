@@ -1,6 +1,6 @@
 // Playwright-only media fixture. This function is injected into the isolated
 // capture document by the smoke test; it is never included in application code.
-export function installSyntheticAudio() {
+export function installSyntheticAudio(fixture) {
   if (!location.pathname.endsWith("/audio.html")) return;
   const tracks = [];
   const counters = { microphone: 0, systemAudio: 0 };
@@ -8,14 +8,24 @@ export function installSyntheticAudio() {
   async function create(source) {
     counters[source]++;
     const context = new AudioContext();
-    const oscillator = context.createOscillator();
+    const oscillator = fixture
+      ? context.createBufferSource()
+      : context.createOscillator();
     const destination = context.createMediaStreamDestination();
     const gain = context.createGain();
-    gain.gain.value = source === "microphone" ? 0.2 : 0.5;
-    oscillator.frequency.value = source === "microphone" ? 440 : 660;
+    gain.gain.value = fixture ? 1 : source === "microphone" ? 0.2 : 0.5;
+    if (fixture) {
+      const buffer = context.createBuffer(
+        1,
+        fixture.samples.length,
+        fixture.sampleRate,
+      );
+      buffer.copyToChannel(Float32Array.from(fixture.samples), 0);
+      oscillator.buffer = buffer;
+    } else oscillator.frequency.value = source === "microphone" ? 440 : 660;
     oscillator.connect(gain);
     gain.connect(destination);
-    oscillator.start();
+    oscillator.start(fixture ? context.currentTime + 3 : 0);
     await context.resume();
     const stream = destination.stream;
     const track = stream.getAudioTracks()[0];

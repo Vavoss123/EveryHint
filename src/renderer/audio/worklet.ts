@@ -1,5 +1,6 @@
 import { AudioPacketAccumulator } from "../../shared/audio";
 declare const sampleRate: number;
+declare const currentFrame: number;
 declare class AudioWorkletProcessor {
   readonly port: MessagePort;
 }
@@ -18,7 +19,13 @@ class EveryHintPCM extends AudioWorkletProcessor {
     const packet = this.packets.accept(channels);
     if (packet)
       this.port.postMessage(
-        { samples: packet, channels: Math.min(2, channels.length), sampleRate },
+        {
+          samples: packet,
+          channels: Math.min(2, channels.length),
+          sampleRate,
+          startTimeSeconds:
+            (currentFrame + (channels[0]?.length ?? 0) - 4096) / sampleRate,
+        },
         [packet.buffer],
       );
     // Leave output zero-filled; never play captured conversations to speakers.

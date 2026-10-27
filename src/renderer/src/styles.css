@@ -641,3 +641,108 @@ footer {
 .audio-diagnostics > .muted {
   margin-top: 9px;
 }
+.transcription-panel {
+  padding: 13px;
+  border: 1px solid #3c3550;
+  border-radius: 10px;
+  background: #1c1925;
+  margin-bottom: 14px;
+}
+.transcription-state {
+  color: #baabe9;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+.transcription-controls {
+  display: flex;
+  gap: 6px;
+  margin: 12px 0;
+}
+.transcription-controls button {
+  padding: 7px 9px;
+  font-size: 10px;
+}
+.transcript-list {
+  max-height: 220px;
+  overflow: auto;
+  scrollbar-width: thin;
+  padding: 1px 2px;
+}
+.transcript-line {
+  margin: 11px 0;
+  border-left: 2px solid #7e6caa;
+  padding-left: 9px;
+}
+.transcript-line > div {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  font-size: 10px;
+}
+.transcript-line strong {
+  color: #c8b9ed;
+  font-weight: 600;
+}
+.transcript-line time {
+  color: #7e7d90;
+}
+.transcript-line small {
+  margin: 0 0 0 auto;
+  font-size: 9px;
+}
+.transcript-line p {
+  margin-top: 5px;
+  line-height: 1.6;
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+.transcript-line.partial p {
+  color: #aaa4bb;
+  font-style: italic;
+}
+.transcription-panel > .muted {
+  margin-bottom: 9px;
+}
+.speech-settings {
+  padding-top: 12px;
+  border-top: 1px solid #353140;
+}
+.model-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+.model-row strong {
+  font-size: 12px;
+}
+.model-row button {
+  min-height: 30px;
+  font-size: 10px;
+  padding: 6px 10px;
+}
+.speech-settings .setting-row {
+  gap: 15px;
+}
+.speech-settings select {
+  max-width: 195px;
+}
+.speech-metrics {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 7px;
+  font-size: 10px;
+}
+.speech-metrics dd {
+  margin: 0;
+  color: #c3b4df;
+}
+.compact-transcript {
+  font-size: 11px;
+  color: #b9afce;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  padding: 4px 0;
+}

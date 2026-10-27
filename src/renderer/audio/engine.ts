@@ -12,6 +12,7 @@ import {
 import { errorMessage } from "../../shared/validation";
 
 interface Packet {
+  startTimeSeconds?: number;
   samples: Float32Array;
   channels: number;
   sampleRate: number;
@@ -28,6 +29,7 @@ interface Input {
   cleanupListeners: () => void;
   lastPacketAt: number;
   deviceGroup: string;
+  clockOrigin: number | null;
 }
 export interface AudioEnvironment {
   devices: Pick<
@@ -55,6 +57,7 @@ export class BrowserAudioCapture {
     private readonly environment: AudioEnvironment,
     private readonly report: (sources: AudioDiagnostic[]) => void,
     private readonly failure: (message: string, source?: AudioSourceId) => void,
+    private readonly onFrame: (frame: AudioFrame) => void = () => {},
   ) {}
   async start(plan: AudioPlan): Promise<void> {
     this.stop();
@@ -193,6 +196,7 @@ export class BrowserAudioCapture {
         cleanupListeners: () => {},
         lastPacketAt: Date.now(),
         deviceGroup: track.getSettings().groupId ?? "",
+        clockOrigin: null,
         diagnostic: {
           source,
           state: "CAPTURING",
@@ -259,14 +263,31 @@ export class BrowserAudioCapture {
             source,
             streamId: input.streamId,
             sequence: input.sequence++,
-            timestamp: Date.now(),
+            timestamp:
+              Date.now() -
+              ((packet.samples.length / packet.channels) * 1000) /
+                packet.sampleRate,
             sampleRate: packet.sampleRate,
             channels: packet.channels,
             format: "f32-interleaved",
             lifecycle: "data",
             samples: packet.samples,
           };
+          if (
+            typeof packet.startTimeSeconds === "number" &&
+            Number.isFinite(packet.startTimeSeconds)
+          ) {
+            input.clockOrigin ??=
+              frame.timestamp - packet.startTimeSeconds * 1000;
+            frame.timestamp =
+              input.clockOrigin + packet.startTimeSeconds * 1000;
+          }
           if (!input.diagnostic.muted) input.buffer.push(frame);
+          this.onFrame(
+            input.diagnostic.muted
+              ? { ...frame, samples: new Float32Array(frame.samples.length) }
+              : frame,
+          );
           input.diagnostic.level = input.diagnostic.muted
             ? 0
             : audioLevel(packet.samples);

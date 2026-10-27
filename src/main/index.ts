@@ -36,6 +36,8 @@ import {
 import { CaptureSessionController } from "./session";
 import { SettingsStore } from "./settings";
 import { ElectronAudioCapture } from "./audio-host";
+import { SpeechInstallation } from "./transcription/models";
+import { TranscriptionController } from "./transcription/controller";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -54,6 +56,7 @@ let window: BrowserWindow | undefined;
 let tray: Tray | undefined;
 let store: SettingsStore;
 let controller: CaptureSessionController;
+let speech: TranscriptionController | undefined;
 let shortcuts: HotkeyController;
 let hotkeys: HotkeyStatus[] = [];
 const warnings: string[] = [];
@@ -172,6 +175,7 @@ function updateTray(): void {
   window?.setTitle(`EveryHint · ${state}`);
 }
 function publish(): void {
+  if (speech && controller) speech.captureChanged(controller.value);
   revision++;
   updateTray();
   if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
@@ -284,6 +288,25 @@ async function initialise(): Promise<void> {
     new URL("audio.html", documentUrl).href,
     join(directory, "../preload/audio.cjs"),
     configureSession,
+    (token, frame) => speech?.accept(token, frame) ?? false,
+  );
+  const speechRoot =
+    process.env.EVERYHINT_SPEECH_HOME ??
+    join(
+      process.env.LOCALAPPDATA ?? app.getPath("userData"),
+      "EveryHint",
+      "speech",
+    );
+  const installation = new SpeechInstallation(speechRoot, () =>
+    speech?.publish(),
+  );
+  speech = new TranscriptionController(
+    installation,
+    (value) => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:transcription", value);
+    },
+    (token) => audio.setTranscriptionToken(token),
   );
   controller = new CaptureSessionController(
     new ElectronScreenCapture(),
@@ -398,6 +421,20 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  handle("everyhint:transcription-get", () => speech!.value);
+  handle("everyhint:transcription-action", (input) => {
+    if (input === "enable") return speech!.enable();
+    if (input === "pause") return speech!.pause();
+    if (input === "clear") return speech!.clear();
+    if (input === "inspect") return installation.inspect();
+    throw new Error("Unknown transcription action.");
+  });
+  handle("everyhint:transcription-install", (input) =>
+    installation.install(input),
+  );
+  handle("everyhint:transcription-settings", (input) =>
+    speech!.configure(input),
+  );
   handle("everyhint:sources", (input) => controller.listSources(input));
   handle("everyhint:microphones", (input) => controller.listMicrophones(input));
   handle("everyhint:microphone-mute", (input) =>
@@ -429,6 +466,11 @@ async function initialise(): Promise<void> {
   powerMonitor.on("lock-screen", () => controller.stop());
   await window.loadURL(documentUrl);
   show();
+  void installation
+    .inspect()
+    .catch((error: unknown) =>
+      warn(`Could not inspect speech models: ${errorMessage(error)}`),
+    );
 }
 
 if (!app.requestSingleInstanceLock()) app.quit();
@@ -445,6 +487,7 @@ else {
 app.on("before-quit", () => {
   quitting = true;
   controller?.stop();
+  speech?.dispose();
   shortcuts?.dispose();
   if (saveTimer) clearTimeout(saveTimer);
   if (store) persistBounds();

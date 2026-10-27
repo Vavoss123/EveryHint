@@ -1,7 +1,7 @@
 {
   "name": "everyhint",
   "productName": "EveryHint",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "private": true,
   "description": "EveryHint — Intelligence when you need it.",
   "type": "module",
@@ -18,7 +18,11 @@
     "test:watch": "vitest",
     "build": "electron-vite build",
     "smoke": "node scripts/smoke.mjs",
-    "check": "npm run typecheck && npm run lint && npm test && npm run build"
+    "check": "npm run typecheck && npm run lint && npm test && npm run build",
+    "speech:build": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/build-transcriber.ps1",
+    "speech:model": "node scripts/install-model.mjs",
+    "speech:test": "node --experimental-transform-types scripts/test-inference.mjs",
+    "smoke:speech": "node scripts/smoke-transcription.mjs"
   },
   "dependencies": {
     "react": "19.3.1",

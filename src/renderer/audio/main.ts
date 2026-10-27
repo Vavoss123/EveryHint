@@ -9,6 +9,8 @@ declare global {
   }
 }
 
+let transcriptionToken: string | null = null;
+const sending: Record<string, boolean> = {};
 const engine = new BrowserAudioCapture(
   {
     devices: navigator.mediaDevices,
@@ -28,10 +30,32 @@ const engine = new BrowserAudioCapture(
       message: message.slice(0, 1000),
       source,
     }),
+  (frame) => {
+    const token = transcriptionToken;
+    if (!token || sending[frame.source]) return;
+    sending[frame.source] = true;
+    void window.audioHost
+      .pcm(token, frame)
+      .catch((error: unknown) => {
+        if (transcriptionToken === token)
+          window.audioHost.report({
+            type: "error",
+            message: `Local PCM transport failed: ${errorMessage(error)}`.slice(
+              0,
+              1000,
+            ),
+            source: frame.source,
+          });
+      })
+      .finally(() => {
+        sending[frame.source] = false;
+      });
+  },
 );
 window.addEventListener("pagehide", () => engine.stop());
-window.audioHost.onControl(({ muted }) => {
+window.audioHost.onControl(({ muted, transcriptionToken: token }) => {
   if (typeof muted === "boolean") engine.setMicrophoneMuted(muted);
+  if (token === null || typeof token === "string") transcriptionToken = token;
 });
 void window.audioHost
   .configuration()

@@ -59,6 +59,7 @@ export interface ScreenFrame {
   capturedAt: number;
 }
 export interface SessionSnapshot {
+  sessionId: string | null;
   epoch: number;
   sources: Record<CaptureSourceId, SourceStatus>;
   state: SessionState;
@@ -97,6 +98,23 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  getTranscription(): Promise<
+    Result<import("./transcription").TranscriptionSnapshot>
+  >;
+  transcription(
+    action: "enable" | "pause" | "clear" | "inspect",
+  ): Promise<Result<void>>;
+  installSpeechModel(
+    model: import("./transcription").SpeechModel,
+  ): Promise<Result<void>>;
+  saveTranscriptionSettings(
+    settings: import("./transcription").TranscriptionSettings,
+  ): Promise<Result<void>>;
+  onTranscription(
+    listener: (
+      snapshot: import("./transcription").TranscriptionSnapshot,
+    ) => void,
+  ): () => void;
   getSnapshot(): Promise<Result<AppSnapshot>>;
   listSources(consent: Consent): Promise<Result<CaptureSource[]>>;
   listMicrophones(consent: Consent): Promise<Result<MicrophoneDevice[]>>;
