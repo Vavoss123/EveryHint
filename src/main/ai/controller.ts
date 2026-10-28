@@ -47,8 +47,7 @@ export class AssistantController {
   private captureSession: string | null = null;
   private preparation = 0;
   private referenceGuard:
-    | { requestId: string; valid: () => boolean }
-    | undefined;
+    { requestId: string; valid: () => boolean } | undefined;
   constructor(
     private readonly providers: readonly AIProvider[],
     private readonly sources: () => {
@@ -59,6 +58,14 @@ export class AssistantController {
     private readonly timeoutMs = 90000,
     private readonly now: () => number = Date.now,
     private readonly freshCapture?: () => Promise<SessionSnapshot>,
+    private readonly modeContext?: () => import("../../shared/personal").ModeContext,
+    private readonly retrieveKnowledge?: (
+      query: string,
+      ids: string[],
+    ) => Promise<{
+      excerpts: import("../../shared/knowledge").KnowledgeExcerpt[];
+      valid: () => boolean;
+    }>,
   ) {
     if (
       new Set(providers.map((provider) => provider.id)).size !== 2 ||
@@ -87,6 +94,11 @@ export class AssistantController {
   }
   allowsTranscript(id: string): boolean {
     return !this.excludedTranscripts.has(id);
+  }
+  allowsAction(
+    action: import("../../shared/intelligence").ContextualAction,
+  ): boolean {
+    return this.modeContext?.().mode.actions.includes(action) ?? true;
   }
   get routing(): {
     sessionId: string;
@@ -156,6 +168,7 @@ export class AssistantController {
     value: unknown,
     automatic = false,
     reference?: { context: MeetingAIContext; valid: () => boolean },
+    automaticKnowledgeIds?: string[],
   ): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     if (this.active)
@@ -165,6 +178,46 @@ export class AssistantController {
         "A manual review is pending. Automatic preparation is unavailable.",
       );
     const input = parseReview(value);
+    const modeContext = this.modeContext?.();
+    if (automatic && input.knowledgeIds?.length)
+      throw new Error(
+        "Automatic knowledge must come from the scoped Live grant.",
+      );
+    const knowledgeIds = automatic
+      ? (automaticKnowledgeIds ?? [])
+      : (input.knowledgeIds ?? []);
+    if (
+      knowledgeIds.length &&
+      (!this.retrieveKnowledge ||
+        !modeContext ||
+        knowledgeIds.some((id) => !modeContext.mode.knowledgeIds.includes(id)))
+    )
+      throw new Error(
+        "Knowledge must belong to the active mode and current profile.",
+      );
+    let knowledge:
+      | {
+          excerpts: import("../../shared/knowledge").KnowledgeExcerpt[];
+          valid: () => boolean;
+        }
+      | undefined;
+    if (modeContext) {
+      if (
+        !modeContext.mode.actions.includes(input.action ?? "get-answer") &&
+        !reference
+      )
+        throw new Error(
+          "This contextual action is disabled in the active AI mode.",
+        );
+      for (const key of [
+        "screenshot",
+        "microphone",
+        "systemAudio",
+        "history",
+      ] as const)
+        input.options[key] =
+          input.options[key] && modeContext.mode.context[key];
+    }
     if (
       reference &&
       (this.selected !== "codex" ||
@@ -214,6 +267,15 @@ export class AssistantController {
         this.now(),
       );
       if (status.selectedModel) review.model = status.selectedModel;
+      if (modeContext) {
+        review.modeContext = modeContext;
+        review.prompt = contextPrompt(review);
+        review.textChars = review.prompt.length;
+        if (review.textChars > input.options.totalChars)
+          throw new Error(
+            "Mode instructions exceed the selected context budget. Shorten instructions or select less context.",
+          );
+      }
       if (input.regenerateId) review.replacesRequestId = input.regenerateId;
       if (automatic) review.automatic = true;
       if (reference) {
@@ -251,6 +313,31 @@ export class AssistantController {
           throw new Error(
             "This unchanged screenshot was already submitted. Uncheck screenshot or capture an updated image.",
           );
+      if (knowledge) {
+        if (!knowledge.valid())
+          throw new Error(
+            "Knowledge changed during preparation. Review again.",
+          );
+        review.knowledge = structuredClone(knowledge.excerpts);
+        review.notices.push(
+          review.knowledge.length
+            ? "Only the displayed knowledge excerpts will be shared. Citations indicate supplied references, not independently verified claim support."
+            : "No sufficiently relevant authorised knowledge excerpt was found.",
+        );
+        const referenceValid = this.referenceGuard?.valid;
+        const knowledgeValid = knowledge.valid;
+        this.referenceGuard = {
+          requestId: review.requestId,
+          valid: () =>
+            knowledgeValid() && (!referenceValid || referenceValid()),
+        };
+        review.prompt = contextPrompt(review);
+        review.textChars = review.prompt.length;
+        if (review.textChars > input.options.totalChars)
+          throw new Error(
+            "Knowledge and mode context exceed the selected total text limit. Select less context or increase the limit.",
+          );
+      }
       this.review = review;
       this.reviewTimer = setTimeout(
         () => this.discardReview(),
@@ -258,9 +345,19 @@ export class AssistantController {
       );
       if (!automatic) this.publish();
     };
-    if (input.options.screenshot && this.freshCapture)
-      return this.freshCapture().then(finish);
-    finish(this.sources().capture);
+    const captureAndFinish = () => {
+      if (input.options.screenshot && this.freshCapture)
+        return this.freshCapture().then(finish);
+      finish(this.sources().capture);
+    };
+    if (knowledgeIds.length)
+      return this.retrieveKnowledge!(input.question, knowledgeIds).then(
+        (result) => {
+          knowledge = result;
+          return captureAndFinish();
+        },
+      );
+    return captureAndFinish();
   }
   discardReview(): void {
     this.referenceGuard = undefined;
@@ -316,7 +413,11 @@ export class AssistantController {
       this.discardReview();
       return;
     }
+    const guard = this.referenceGuard;
+    const previousId = review.requestId;
     review.requestId = randomUUID();
+    if (!review.meetingContext && guard?.requestId === previousId)
+      this.referenceGuard = { ...guard, requestId: review.requestId };
     review.prompt = contextPrompt(review);
     review.textChars = review.prompt.length;
     this.publish();
@@ -358,6 +459,10 @@ export class AssistantController {
       throw new Error(
         "Meeting context must be prepared through its selected profile review.",
       );
+    if (request.knowledge?.length && !referenceGuard)
+      throw new Error(
+        "Knowledge must be prepared through a current local-source review.",
+      );
     if (permission && !permission())
       throw new Error(
         "Live Assist permission expired or changed before transmission.",
@@ -366,6 +471,12 @@ export class AssistantController {
       validateScreenshot(request.screenshot, this.now(), 120000);
     const abort = new AbortController();
     const response: AIResponse = {
+      ...(request.knowledge?.length
+        ? { knowledge: structuredClone(request.knowledge) }
+        : {}),
+      ...(request.modeContext
+        ? { modeName: request.modeContext.mode.name }
+        : {}),
       requestId: request.requestId,
       sessionId: this.sessionId,
       provider: request.provider,

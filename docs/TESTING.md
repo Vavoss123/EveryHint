@@ -1,3 +1,70 @@
+# P9 modes, knowledge, language and template verification — 2026-10-28
+
+Baseline `bf92396`. [P9 architecture/checkpoints](DECISIONS/P9-personalisation.md). P9.1–P9.5 preserve the existing P1–P8 capture, Whisper, reviewed/Live provider and meeting gates. Historical results below remain bounded evidence, not blanket acceptance. No P10/P11/P12 work was started.
+
+| Check | P9 result |
+| --- | --- |
+| `npm run check` | Generated theme/spec checks, strict TypeScript, zero-warning lint, **610 unit/regression cases / 47 files**, production build |
+| `npm run test:plan` | **5** local HTTP/JWT/SSE/native-vault integration cases; no genuine inference |
+| `npm run test:ai-sdk` | **6** installed Claude SDK loopback cases; no paid requests |
+| `npm run test:meetings` | **12** actual compiled SQLite-worker/native-credential assertions; P8 persistence retained |
+| Electron core / AI / speech / UI / intelligence / meetings / personal | **47 / 44 / 11 / 44 / 28 / 42 / 34 = 250 assertions** |
+| `npm run speech:test` | Actual cached tiny.en/JFK helper inference retained; latest observed two jobs **503.158 / 378.483 ms**, no model/fixture download |
+| `npm run personal:bench` | Actual compiled personal worker, ten generated large documents / 3,630 indexed sections; no remote request |
+| Genuine P9 AI | **Exactly 2 expressly authorised gpt-6.1-sol Responses requests completed**, no retry/fallback; results below |
+
+## Genuine provider evidence
+
+The user explicitly authorised the two scoped tests in chat. `scripts/verify-personal-ai.mjs --authorised-two-requests` refuses ordinary execution without its opt-in flag, reserves a single report before the first Ask, and delegates the real HTTPS transport only for each exact approved frozen prompt. It observes at most two POSTs, requires the official endpoint/model and `store:false`, `stream:true`, `tools:[]`, `tool_choice:none`, one `input_text`, no screenshots/history/unrelated sources, and never retries. An existing quiet development preview was checked for empty drafts/responses/transcripts and inactive capture/grants before replacement; no credentials were copied. Native file-dialog choice alone was mocked to the newly authored harmless Markdown file; actual extraction/encryption/retrieval/provider paths were used.
+
+1. **Custom mode + knowledge + citation:** the new Markdown source says the prototype release is Thursday and checklist is due Wednesday. The custom release-coach mode requested concise English bullets. Only one selected active-mode excerpt appeared in the frozen review. Genuine gpt-6.1-sol completed in **3.002 s**, using **454 input / 47 output tokens**, returning both correct days and the exact `[K:document:section]` reference. This is an observed supported short answer; it does not establish semantic verification for arbitrary claims/documents/languages.
+2. **Custom meeting template:** the existing offline TTS fixture passed through one synthetic microphone and actual cached tiny.en, yielding the three exact sentences: “We decided to release the prototype on Thursday.” “I will prepare the test checklist by Wednesday.” “The owner and deadline for documentation are not specified.” The custom template used Release overview, Confirmed decisions and Checklist commitments. Only those selected microphone final excerpts were sent. Genuine completion took **19.061 s**, **1443 input / 472 output tokens**. Exact evidence validation passed; the response had a supported Thursday decision and Wednesday checklist action, unknown owner null. It remained unsaved until scripted review/Apply; the saved summary retained the custom template snapshot.
+
+Actual observed Responses POSTs **2**, rejected scope attempts **0**. No physical microphone, system playback, screenshot, personal document, raw-audio transfer, generated-code execution, paid API fallback or Claude request occurred. Test document/mode/template/meeting records were removed, app/speech/personal/history preferences restored and synthetic test app closed. Ignored evidence: `artifacts/p9-live-ai-result.json`; it contains harmless fixture results, never tokens. No additional genuine requests are authorised by the committed test script. Genuine automatic Live **with knowledge** remains unverified; its scheduler/permission/cooldown path has deterministic provider tests. The user's carried-forward P7 acceptance item is not reclassified by this P9 test.
+
+## Requested coverage and boundaries
+
+| Requested categories | Evidence |
+| --- | --- |
+| 1–9 mode CRUD, built-in protection, migration, validation, switching/session isolation | `modes`, `personal-integration`, `personal-storage`, `templates`; actual editor/selection/restart smoke and genuine custom mode |
+| 10–16 import, malformed formats, PDF/DOCX/TXT/MD, sizes/parser failure | `knowledge`; deterministic actual PDF/ZIP/XML/UTF-8 fixtures, macro/entity/decompression limits, isolated parser crash/cancel; all four real compiled extraction formats in Electron |
+| 17–20 encryption/keys/deletion/index cleanup | `modes/knowledge/personal-storage`, P8 cipher/key suites; actual SQLite/journal marker scan and native-key smoke; association/section cascades and original-source preservation |
+| 21–25 local search/ranking/disabled sources/context bounds/source accuracy | `knowledge/personal-integration`; common-topic large-index regression, exact extracted PDF page/null non-PDF pages, bounded results/budget; real local search and genuine source reference |
+| 26 prompt injection | Malicious instruction-like document fixtures remain JSON reference data; immutable provider instructions/mode/template precedence and no executable tool path; not a claim of semantic prompt-injection immunity |
+| 27–28 manual consent/Live knowledge | `personal-integration` checks fresh acknowledgement, stale guards, independent retrieval/remote/source selection, forbidden public automatic overrides and actual scheduler-selected excerpts/cooldown; P7/P8/plan pre-POST regressions retained |
+| 29–30 output language/Whisper compatibility | `modes/templates/personal-integration`, `speech-models/settings/transcription-controller`; French frozen preference, English genuine mode override, unsupported speech models refused; only tiny.en/base.en English offered |
+| 31–34 template editor/persistence/summary/manual preservation | `templates/personal-integration`, existing P8 suites; actual editor/reorder/restart and genuine selected-template summary; reviewed draft/Apply/previous versions/clear-derivative tests |
+| 35–37 provider/account/cancel | `personal-integration/personal-storage` plus existing AI/plan/P7/P8 suites; wrong-profile/key/corrupt/newer-schema failures, delayed unlock/retrieval refusal, parser termination and reload/restart locks |
+| 38 P1–P8 regressions | All existing 543 baseline unit cases remain enabled; full provider/SQLite/core/AI/speech/UI/intelligence/meeting checks rerun |
+
+The local P9 Electron smoke uses a fresh profile and actual Windows Credential Manager, SQLite, parser and storage workers. It exercises functional mode/template forms, all formats, metadata/inspection/search, source selection, fresh consent refusal, invalidation on disable, profile lock/restart, deletion/cascade/original preservation and malformed import. Native import **choice** is mocked, while chosen synthetic files are truly read and parsed; no real picker interaction or genuine provider result is inferred from smoke fixtures. Earlier P8 native save-dialog/clipboard/mail ports remain mocked in their tests.
+
+## Performance observations
+
+One local small-document Electron run (warm package cache): PDF import **219.120 ms**, of which extraction **161.690 ms**; DOCX **63.589/2.143 ms** import/extraction; TXT **52.309/0.307 ms**; Markdown **51.444/0.360 ms**. Search across four documents **5.752 ms**; mode-switch IPC/persistence **10.845 ms**. Parser used about **11.00 MB** V8 heap after PDF extraction; app main RSS snapshot **155.66 MB**, not whole-app memory. These are observations, not cold-start/physical-device guarantees.
+
+The standalone compiled-worker benchmark uses ten generated **399,000-character** source documents, **3,990,000** total source characters / **3,630** overlapping sections. Encrypted import mean **12.352 ms/document** (excludes extraction). Five retrieval runs mean/max **102.918/114.194 ms**. Results: **4800 excerpt characters**, **5489 serialized excerpt characters** before other prompt content; whole-request bounds are independently rechecked. Encrypted database **28,672 → 5,066,752 bytes**; encrypted index/storage growth **5,038,080 bytes**. Worker heap snapshot **5,807,556 → 25,452,520 bytes**; combined standalone test-process/worker RSS **185,655,296 bytes**. RSS includes the host and is not per-worker peak memory. Input/page/text/queue/time bounds and V8 resource limits apply, but native/external allocations are not a hard RSS sandbox. No large-document startup load, UI-thread parsing, remote embedding or persistent plaintext index exists.
+
+The benchmark exposed an absolute BM25-cutoff defect (common topics disappeared as corpus size grew). Meaningful keyword coverage and a dedicated regression now retain those matches; generic English stopword-only queries yield no results. Retrieval remains lexical, bounded to selected sources and ten documents per library-search page, with no semantic/full-library ranking guarantee. Large adversarial PDFs and combined 15-minute capture/Whisper/AI stress remain manual release work. Reports: ignored `artifacts/p9-performance.json`, `p9-smoke.json`.
+
+## Windows manual acceptance — still open
+
+1. Create a custom mode; edit its name/icon/instructions/length/format/actions/context; duplicate/delete it; reset a built-in and verify built-in deletion is unavailable. Restart/unlock and verify the default mode, profile and saved preferences.
+2. Switch modes in compact, expanded and dashboard; verify the same active name, no capture/inference starts and pending review/Live grant is revoked. Test saved custom instructions only through Review → acknowledgement → Ask.
+3. Use the **real native picker** to upload representative PDF, DOCX, UTF-8 TXT and Markdown files. Inspect headings/pages/null page metadata, file size/import/update time/status/section counts; try malformed, encrypted/scanned/no-text and limit-sized files; cancel processing.
+4. Search specific local terms; continue beyond ten documents; inspect excerpts; rename/disable/re-enable/associate/remove associations/delete. Verify disabled/unassociated sources cannot enter AI context, and original files survive app deletion.
+5. Ask about an explicitly selected document. Inspect exact transmitted excerpts, compare cited statements/quotes with the source and verify unknown refs are flagged; no page reference may be invented. Verify encrypted SQLite/journal content, missing-key fail-closed behaviour and managed derivative cleanup with suitable test data.
+6. Set global output language and a different mode override, review the effective prompt and assess genuine language quality. Confirm tiny.en/base.en explicitly say English-only. Multilingual Whisper testing is **not applicable until separately implemented and explicitly downloaded/checksum-verified**.
+7. Create a template, edit headings/guidance/content mapping/order, remove/add/duplicate/rename it, select a default and mode association, preview, generate from real consented final transcripts, inspect exact evidence and Apply. Edit notes, regenerate a fresh draft and confirm manual notes/previous saved version remain available; test stale revisions and explicit manual-replacement approval.
+8. For Live, select a mode and documents, independently enable retrieval and remote excerpt sharing, then acknowledge sources/account/model/time/cap/cooldown. Confirm no document upload creates requests, unselected sources never appear, sent excerpts remain inspectable, and Pause/Stop/cancel/account/model/mode/source/expiry revoke sharing. Resume must require renewed permission.
+9. Recheck all P1–P8 workflows with physical Windows microphone, playback, both and consented calls/noise/overlap; physical shortcuts/tray/device recovery/lock/suspend; 100/125/150/200% and mixed DPI/multi-monitor, light/dark/high contrast/opacity, Narrator and keyboard-only focus/reflow, minimum-width Stop visibility, base.en/ARM64/older CPUs, forced-close recovery and 15-minute combined CPU/RSS/stability. Account lifecycle/release checks and the user's carried-forward P7 acceptance stay open.
+
+No human hardware/visual/accessibility/endurance acceptance is inferred from screenshots, mocked dialogs or synthetic speech. The previously automatic-review-blocked P8 folder `everyhint-p8-storage-kUp6R1` and restricted P6 profiles were left untouched. Future formats, OCR, multilingual models, semantic retrieval and P10–P12 remain deferred. Feature rows 44–55 record actual scope; none is COMPLETE.
+
+---
+
+## Historical P8 verification
+
 # P8 Meeting Notes, History and Intelligence verification — 2026-10-28
 
 Baseline `2047110`. P8.1–P8.4 were independently gated in [P8-meetings.md](DECISIONS/P8-meetings.md). Existing P1–P7 controllers/transport/EverySession assets remain; no new dependency, model download, raw-audio storage, tool executor or paid API fallback was added. Earlier phase results below are historical; all open human Windows/device/call/endurance gates remain open.

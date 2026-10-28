@@ -38,6 +38,9 @@ export class IntelligenceController extends LocalIntelligence {
       accountId: string | null;
       accountLabel?: string;
       transcribing: boolean;
+      modeId?: string;
+      modeName?: string;
+      knowledgeSources?: { id: string; name: string }[];
     } = () => ({ accountId: null, transcribing: false }),
     monotonic: () => number = () => performance.now(),
   ) {
@@ -114,6 +117,13 @@ export class IntelligenceController extends LocalIntelligence {
     const sources = this.snapshot.settings.sources;
     return {
       captureSessionId: capture.sessionId,
+      ...(connection.modeId
+        ? {
+            modeId: connection.modeId,
+            modeName: connection.modeName,
+            knowledgeSources: connection.knowledgeSources ?? [],
+          }
+        : {}),
       captureEpoch: capture.epoch,
       assistantSessionId: assistant.sessionId,
       accountId: connection.accountId,
@@ -255,6 +265,7 @@ export class IntelligenceController extends LocalIntelligence {
         });
     }
     this.snapshot.suggestions = candidates
+      .filter((candidate) => this.assistant.allowsAction(candidate.action))
       .sort(
         (a, b) => b.score - a.score || b.at - a.at || a.id.localeCompare(b.id),
       )
@@ -303,6 +314,8 @@ export class IntelligenceController extends LocalIntelligence {
   }
   async action(value: unknown): Promise<ActionOutcome> {
     const input = parseAction(value);
+    if (!this.assistant.allowsAction(input.action))
+      throw new Error("This action is disabled in the active AI mode.");
     this.scheduler.revoke("A reviewed contextual action was chosen.");
     const suggestion = input.suggestionId
       ? this.value.suggestions.find((item) => item.id === input.suggestionId)

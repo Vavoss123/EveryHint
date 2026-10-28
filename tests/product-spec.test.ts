@@ -67,6 +67,13 @@ describe("product specification coverage", () => {
       DESTINATIONS.filter((item) => !plannedDestination(item.id)).map(
         (item) => item.id,
       ),
-    ).toEqual(["home", "assistant", "meetings", "settings"]);
+    ).toEqual([
+      "home",
+      "assistant",
+      "meetings",
+      "knowledge",
+      "modes",
+      "settings",
+    ]);
   });
 });

@@ -220,6 +220,7 @@ export function registerMeetingIPC(ports: {
     } else if (input.action === "clear-transcript")
       await store.clearTranscript(id, meetings.value.preferences.retentionDays);
     else {
+      doc.summaryVersions = [];
       if (doc.summary) {
         const keep = (items: EvidenceText[]) =>
           items.filter((item) => item.authorship === "user");
@@ -305,7 +306,7 @@ export function registerMeetingIPC(ports: {
 export function hasGeneratedContent(doc: MeetingDocument): boolean {
   return Boolean(
     doc.summary ||
-      doc.actions.some((item) => item.authorship === "ai") ||
-      doc.decisions.some((item) => item.authorship === "ai"),
+    doc.actions.some((item) => item.authorship === "ai") ||
+    doc.decisions.some((item) => item.authorship === "ai"),
   );
 }

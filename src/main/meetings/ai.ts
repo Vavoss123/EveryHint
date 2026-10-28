@@ -58,6 +58,9 @@ export class MeetingAIController {
     private readonly connection: () => { accountId: string | null },
     private readonly changed: () => void,
     private readonly now: () => number = Date.now,
+    private readonly template?: (
+      id?: string,
+    ) => import("../../shared/templates").NoteTemplate,
   ) {}
   get value(): MeetingAIState {
     return structuredClone(this.state);
@@ -193,6 +196,14 @@ export class MeetingAIController {
     this.cancel("A new meeting AI review was chosen.");
     const generation = this.generation;
     const selected = await this.context(selection);
+    if (this.template && selection.purpose === "summary") {
+      selected.context.template = this.template(selection.templateId);
+      selected.context.sections = selected.context.template.sections
+        .map((s) => s.source)
+        .filter((s) => selection.sections.includes(s));
+      if (!selected.context.sections.length)
+        throw new Error("Select at least one section in the chosen template.");
+    }
     const valid = () =>
       generation === this.generation &&
       selected.valid() &&
@@ -395,6 +406,22 @@ export class MeetingAIController {
       throw new Error(
         "Some selected sections contain manual edits. Keep them or explicitly acknowledge replacing those sections.",
       );
+    if (doc.summary) {
+      doc.summaryVersions = [
+        ...(doc.summaryVersions ?? []),
+        {
+          summary: structuredClone(doc.summary),
+          decisions: structuredClone(doc.decisions),
+          actions: structuredClone(doc.actions),
+          savedAt: this.now(),
+        },
+      ].slice(-3);
+      while (
+        doc.summaryVersions.length > 1 &&
+        JSON.stringify(doc.summaryVersions).length > 250000
+      )
+        doc.summaryVersions.shift();
+    }
     const summary: MeetingSummary = doc.summary ?? {
       overview: null,
       topics: [],
@@ -413,6 +440,8 @@ export class MeetingAIController {
       else summary[section] = structuredClone(draft.summary[section]);
     }
     summary.model = draft.summary.model;
+    if (draft.summary.template)
+      summary.template = structuredClone(draft.summary.template);
     summary.generatedAt = draft.summary.generatedAt;
     doc.summary = summary;
     doc.editedSections = doc.editedSections.filter(

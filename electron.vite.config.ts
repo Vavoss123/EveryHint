@@ -9,6 +9,10 @@ export default defineConfig({
         input: {
           index: resolve("src/main/index.ts"),
           "meetings-worker": resolve("src/main/meetings/worker.ts"),
+          "personal-worker": resolve("src/main/personal/worker.ts"),
+          "extraction-worker": resolve(
+            "src/main/personal/extraction-worker.ts",
+          ),
         },
         output: { entryFileNames: "[name].js" },
       },

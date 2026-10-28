@@ -100,9 +100,12 @@ try {
   );
   check(
     (
-      await page.getByLabel("Assist preset").locator("option").allTextContents()
-    ).join("|") === "General Assist|Code Assist|Conversation Assist",
-    "three built-in presets are available without a custom-mode editor",
+      await page
+        .getByLabel("Active AI mode")
+        .locator("option")
+        .allTextContents()
+    ).join("|") === "General|Coding|Interview|Sales|Meeting|Conversation",
+    "five P9 modes and legacy Conversation share one selector",
   );
   check(
     (

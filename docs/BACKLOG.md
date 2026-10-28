@@ -1,6 +1,14 @@
 # EveryHint milestones
 
-## P8 — Meeting Notes, History and Intelligence (current delivery)
+## P9 — Modes, personal knowledge, languages and templates (current delivery)
+
+Implemented on `bf92396` in checkpoint order; [architecture and gates](DECISIONS/P9-personalisation.md), [verification](TESTING.md), [delivery](DELIVERY.md). Typed shared modes/legacy mapping, functional editors and profile-encrypted persistence; native PDF/DOCX/TXT/MD extraction and local bounded retrieval; independent global/mode output languages; honest English-only Whisper model management; grounded ordered custom meeting templates and prior-summary preservation; manual/Live source-review/permission integration. Two expressly authorised genuine gpt-6.1-sol requests passed without retries or paid fallback. Prior P1–P8 automated coverage remains enabled.
+
+Open: real native file-picker interaction; broad PDF/DOCX/encoding/adversarial resource/partial-page evaluation; real-call note/source quality; multilingual output quality; physical Windows mic/playback/calls; visual/DPI/multi-monitor/accessibility/keyboard acceptance; base.en/ARM64/older CPUs; 15-minute combined CPU/RSS/endurance; account lifecycle/release acceptance. Carry forward the user's unresolved P7 acceptance item without reclassifying it from historical synthetic evidence. Restricted P6 profiles and the previously blocked P8 temporary folder remain untouched.
+
+Deferred: multilingual Whisper models/language detection (no new downloads), OCR/scanned/image documents, legacy DOC/RTF/HTML/spreadsheets, embedded DOCX objects/headers/comments and layout page numbers, semantic/embedding retrieval/stemming/full-library global ranking, rich arbitrary template schemas beyond seven grounded categories, cloud sync/automatic uploads, independent semantic citation verification, hosted sharing/Gmail, P10 calendar/people, P11 enterprise and P12 mobile. Stop after P9. Intended commit: `feat: add EveryHint custom AI modes and knowledge`.
+
+## P8 — Meeting Notes, History and Intelligence (historical delivery)
 
 Implemented on baseline 2047110. Four checkpoints passed independently: encrypted opt-in persistence; grounded AI drafts/one-attempt End consent; scoped history/search/editing/meeting AI; explicit exports/clipboard/email handoff. Final automated results and all limits are in [TESTING.md](TESTING.md), architecture in [P8 design](DECISIONS/P8-meetings.md), and changed-file manifest in [DELIVERY.md](DELIVERY.md). P1–P7 capabilities and EverySession styling remain. No dependency, raw-audio storage, tool executor, hidden sync or paid fallback was added.
 

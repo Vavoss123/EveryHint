@@ -155,8 +155,8 @@ export function DashboardHome({
             ))}
           </dl>
           <p className="muted">
-            {app.session.frameCount} local frames in this session. Historical
-            meetings are not stored.
+            {app.session.frameCount} local frames in this session. Meeting
+            history is available with separate local-saving consent.
           </p>
           <button className="secondary" onClick={prepare}>
             Choose capture sources
@@ -166,8 +166,9 @@ export function DashboardHome({
       <div className="privacy-note">
         <Icon name="lock" />
         <p>
-          Manual mode is active. Auto-Hint and Live Assist are planned; nothing
-          is automatically sent to AI.
+          Choose reviewed Manual Assist, local Auto-Hint suggestions, or
+          separately authorised Live Assist. Capture and remote sharing have
+          separate permissions.
         </p>
       </div>
     </section>

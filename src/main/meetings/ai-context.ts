@@ -254,6 +254,9 @@ export function parseMeetingDraft(
       context.meetings.length === 1 ? context.meetings[0]!.revision : null,
     sections: context.sections,
     summary: {
+      ...(context.template
+        ? { template: structuredClone(context.template) }
+        : {}),
       overview: item(input.overview),
       topics: array(input.topics).map((value) => item(value)),
       points: array(input.points).map((value) => item(value)),

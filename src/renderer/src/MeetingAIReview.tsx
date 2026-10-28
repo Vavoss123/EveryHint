@@ -14,6 +14,7 @@ import { SUMMARY_SECTIONS } from "../../shared/meeting-ai";
 import { meetingResult, meetingScope } from "./useMeetings";
 import { ResponseText } from "./ResponseText";
 import { MeetingEmailDraft } from "./MeetingSharing";
+import { usePersonal } from "./PersonalPages";
 const sectionLabels: Record<SummarySection, string> = {
   overview: "Overview",
   topics: "Discussion topics",
@@ -83,6 +84,8 @@ export function MeetingAIReview({
   connection: () => void;
   disabledReason?: string;
 }) {
+  const personal = usePersonal();
+  const [templateId, setTemplateId] = useState("");
   const [purpose, setPurpose] = useState<MeetingPurpose>("summary"),
     [question, setQuestion] = useState(""),
     [sources, setSources] = useState({
@@ -149,6 +152,7 @@ export function MeetingAIReview({
             sources,
             segmentIds: selectedRefs,
             sections,
+            ...(templateId ? { templateId } : {}),
           }),
         ),
       );
@@ -212,6 +216,26 @@ export function MeetingAIReview({
           onChange={(event) => setQuestion(event.target.value)}
         />
       </label>
+      {purpose === "summary" && personal && (
+        <label>
+          Meeting note template
+          <select
+            aria-label="Meeting note template"
+            value={templateId}
+            onChange={(e) => {
+              setTemplateId(e.target.value);
+              setAck(false);
+            }}
+          >
+            <option value="">Active mode / default template</option>
+            {personal.config.templates.map((t) => (
+              <option value={t.id} key={t.id}>
+                {t.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       {(["microphone", "systemAudio", "notes"] as const).map((source) => (
         <label className="ai-choice" key={source}>
           <input
@@ -370,41 +394,54 @@ export function MeetingAIReview({
             the cited text remain Unassigned / Not specified. Select sections to
             save; manual edits require separate replacement approval.
           </p>
-          {ai.draft.summary.overview && (
-            <EvidenceItem item={ai.draft.summary.overview} open={onEvidence} />
-          )}
-          {(["topics", "points", "outstanding", "nextSteps"] as const).map(
-            (section) =>
-              ai.draft!.summary[section].length > 0 && (
-                <section key={section}>
-                  <h3>{sectionLabels[section]}</h3>
-                  {ai.draft!.summary[section].map((item, index) => (
-                    <EvidenceItem key={index} item={item} open={onEvidence} />
+          {ai.draft.summary.template ? (
+            <TemplateSummary doc={ai.draft} open={onEvidence} />
+          ) : (
+            <>
+              {ai.draft.summary.overview && (
+                <EvidenceItem
+                  item={ai.draft.summary.overview}
+                  open={onEvidence}
+                />
+              )}
+              {(["topics", "points", "outstanding", "nextSteps"] as const).map(
+                (section) =>
+                  ai.draft!.summary[section].length > 0 && (
+                    <section key={section}>
+                      <h3>{sectionLabels[section]}</h3>
+                      {ai.draft!.summary[section].map((item, index) => (
+                        <EvidenceItem
+                          key={index}
+                          item={item}
+                          open={onEvidence}
+                        />
+                      ))}
+                    </section>
+                  ),
+              )}
+              {ai.draft.decisions.length > 0 && (
+                <section>
+                  <h3>Decisions</h3>
+                  {ai.draft.decisions.map((item) => (
+                    <EvidenceItem key={item.id} item={item} open={onEvidence} />
                   ))}
                 </section>
-              ),
-          )}
-          {ai.draft.decisions.length > 0 && (
-            <section>
-              <h3>Decisions</h3>
-              {ai.draft.decisions.map((item) => (
-                <EvidenceItem key={item.id} item={item} open={onEvidence} />
-              ))}
-            </section>
-          )}
-          {ai.draft.actions.length > 0 && (
-            <section>
-              <h3>Action items</h3>
-              {ai.draft.actions.map((item) => (
-                <div key={item.id}>
-                  <EvidenceItem item={item} open={onEvidence} />
-                  <small>
-                    {item.owner ?? "Unassigned"} ·{" "}
-                    {item.deadline ?? "Not specified"} · Open
-                  </small>
-                </div>
-              ))}
-            </section>
+              )}
+              {ai.draft.actions.length > 0 && (
+                <section>
+                  <h3>Action items</h3>
+                  {ai.draft.actions.map((item) => (
+                    <div key={item.id}>
+                      <EvidenceItem item={item} open={onEvidence} />
+                      <small>
+                        {item.owner ?? "Unassigned"} ·{" "}
+                        {item.deadline ?? "Not specified"} · Open
+                      </small>
+                    </div>
+                  ))}
+                </section>
+              )}
+            </>
           )}
           {ai.draft.meetingId && ai.draft.meetingId === current?.id ? (
             <>
@@ -520,5 +557,53 @@ export function MeetingAIReview({
         </p>
       )}
     </section>
+  );
+}
+export function TemplateSummary({
+  doc,
+  open,
+}: {
+  doc: Pick<MeetingDocument, "summary" | "actions" | "decisions">;
+  open: (ref: string) => void;
+}) {
+  if (!doc.summary?.template) return null;
+  return (
+    <div className="panel-stack" aria-label="Templated meeting notes">
+      <p className="eyebrow">{doc.summary.template.name}</p>
+      {doc.summary.template.sections.map((section) => {
+        const items =
+          section.source === "actions"
+            ? doc.actions
+            : section.source === "decisions"
+              ? doc.decisions
+              : section.source === "overview"
+                ? doc.summary?.overview
+                  ? [doc.summary.overview]
+                  : []
+                : (doc.summary?.[section.source] ?? []);
+        return (
+          <section key={section.source}>
+            <h3>{section.heading}</h3>
+            {items.length ? (
+              items.map((item, i) => (
+                <div key={i}>
+                  <EvidenceItem item={item} open={open} />
+                  {"owner" in item && "deadline" in item && (
+                    <small>
+                      {String(item.owner ?? "Unassigned")} ·{" "}
+                      {String(item.deadline ?? "Not specified")}
+                    </small>
+                  )}
+                </div>
+              ))
+            ) : (
+              <p className="muted">
+                No supported content saved for this section.
+              </p>
+            )}
+          </section>
+        );
+      })}
+    </div>
   );
 }

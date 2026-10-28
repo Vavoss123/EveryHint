@@ -1,3 +1,103 @@
+# P9 delivery — custom AI modes and personal knowledge
+
+Implemented P9.1–P9.5 on `bf92396`, preserving P1–P8. Five checkpoint gates are in [P9-personalisation.md](DECISIONS/P9-personalisation.md). No P10/P11/P12 work was started. Version remains 0.4.0.
+
+- **Modes:** General, Coding, Interview, Sales, Meeting and legacy Conversation; provider-independent typed roles/output/context/actions/document/template preferences; functional create/edit/rename/icon/duplicate/delete/reset editor, validation, frozen-review test interface, global/default selection and encrypted profile persistence. One selector works across all shells and all shared AI paths. Legacy preset inputs/settings remain compatible.
+- **Knowledge:** functional native-import dashboard for PDF, DOCX, UTF-8 TXT/Markdown; isolated cancellable local parsing with size/page/text/time/V8 limits and partial/no-text/error disclosure; encrypted text/metadata/section storage using P8 cipher/key/profile architecture with independent native key service; inspect/search/rename/enable/mode association/delete; original source files remain untouched.
+- **Source-aware requests:** bounded local keyword/BM25-style retrieval, selected-mode/enabled-source filters, exact references/excerpts/pages where extracted, deduplication and request budgets; manual review/acknowledgement and separate explicit Live retrieval/remote/source grant. Untrusted documents/custom instructions/templates cannot change capture, sharing, billing, model/tool restrictions. Excerpts sent remain inspectable; citations are not semantic proof.
+- **Languages/templates:** global and mode output-language preferences, honest English-only tiny.en/base.en display and unchanged approved/checksummed downloads; four built-in/custom ordered note-template editors/default/mode associations/preview; P8 strict grounding/draft/Apply/manual-edit protection, saved template snapshots/display/export and bounded previous-summary archives with derivative deletion.
+
+Verification: **610 unit/regression cases / 47 files**, **5 plan + 6 installed-SDK integration cases**, **12 actual meeting SQLite/native-key assertions**, **250 Electron assertions** (47 core + 44 AI + 11 speech + 44 UI + 28 intelligence + 42 meetings + 34 P9). Theme/spec checks, strict TypeScript, zero-warning lint and production build pass. Existing 543 baseline unit cases remain. Actual cached tiny.en/JFK inference and both synthetic audio-source regressions pass; no model download occurred.
+
+**Genuine AI:** user separately authorised exactly two gpt-6.1-sol requests. Custom mode + uploaded test Markdown excerpt returned Thursday/Wednesday with the exact source reference in **3.002 s**, **454 input / 47 output tokens**. Custom-template summary from synthetic microphone → actual tiny.en final text completed in **19.061 s**, **1443 input / 472 output tokens**; exact transcript evidence passed, unknown owner stayed null, Wednesday deadline stayed literal, and the draft saved only after scripted review/Apply. Exactly two observed Responses POSTs, zero rejected scope attempts/retries/paid fallback, no screenshot/system playback/physical microphone/personal document/tool execution. Test records removed, preferences restored, synthetic test app closed. This proves those short scoped paths; genuine automatic Live with knowledge and broad source/language/meeting quality remain unverified.
+
+**Performance:** ten generated 399k-character documents / 3,630 sections: retrieval five-run mean/max **102.918/114.194 ms**, encrypted import mean **12.352 ms/document**, four excerpts / **4,800 text characters** (**5,489 serialized**). Encrypted storage **28,672 → 5,066,752 bytes**. Small real Electron imports PDF/DOCX/TXT/MD about **219.1/63.6/52.3/51.4 ms** in one warm-cache run; local search **5.75 ms**, mode switch **10.85 ms**. Methodology, extraction/memory measurements, corrected common-topic ranking and limits are in [TESTING.md](TESTING.md). These are not endurance or peak-memory guarantees.
+
+**Privacy/encryption:** actual Electron parser/storage/native-key flow, database/journal plaintext-marker checks, wrong key/profile/tamper/corrupt/future-schema refusal, schema/config migrations, delayed-profile reads, cancellation, restart locks, disabled-source exclusion, section/association cleanup and original-source preservation pass. All sensitive metadata/text/config are AES-GCM authenticated ciphertext before SQL. No plaintext library/index/temp copy or automatic cloud upload exists. V8 memory limits are not an absolute native RSS sandbox; same-user compromise, paging/crash dumps, SSD erasure, external exports/backups and provider retention remain separate. Libraries added: pinned PDF.js 6.4.299, fflate 0.8.3, Saxes 6.0.0 and their locked dependencies; no large vector database or paid embeddings.
+
+**Open manual Windows acceptance:** actual file picker/representative documents/partial PDFs/adversarial resource stress; real-call note/citation quality; multilingual response quality; physical microphone/playback/calls; all prior P5 visual/DPI/mixed-monitor/accessibility/keyboard checks, base.en/ARM64/older CPUs, recovery/account lifecycle and combined 15-minute CPU/RSS/endurance. The carried-forward P7 acceptance item is not silently closed. Restricted P6 editor profiles and previously blocked P8 Temp folder remain untouched.
+
+**Deferred:** multilingual Whisper/new model downloads, OCR/scanned-image conversion, legacy DOC/RTF/HTML/spreadsheets, DOCX embedded/header/comment extraction/page layout, semantic/embedding/global-library retrieval, arbitrary rich template schemas beyond seven grounded categories, independent semantic citation verification, cloud sync, hosted links/direct Gmail, P10 calendar/people, P11 enterprise and P12 mobile. Matrix rows **44–55** are updated with evidence and explicit limits: **42 AUTOMATED VERIFIED, 13 MANUAL VERIFIED, 6 IMPLEMENTED, 42 PLANNED, 0 COMPLETE** across all 103 requirements.
+
+Delivery commit subject: `feat: add EveryHint custom AI modes and knowledge`, no AI co-author trailer. Source changes are committed; generated builds, evidence, screenshots, fixtures containing live results and model/runtime caches remain ignored. No push or deployment requested.
+
+## P9 changed-file manifest
+
+66 changed files:
+
+```text
+README.md
+docs/ARCHITECTURE.md
+docs/BACKLOG.md
+docs/DECISIONS/P9-personalisation.md
+docs/DELIVERY.md
+docs/DESIGN_SYSTEM.md
+docs/FEATURE_MATRIX.md
+docs/PRODUCT_SPEC.md
+docs/TESTING.md
+electron.vite.config.ts
+package-lock.json
+package.json
+resources/feature-inventory.json
+scripts/benchmark-personal.mjs
+scripts/build-feature-matrix.mjs
+scripts/personal-smoke-key.mjs
+scripts/smoke-ai.mjs
+scripts/smoke-personal.mjs
+scripts/smoke-ui.mjs
+scripts/verify-personal-ai.mjs
+src/main/ai/context.ts
+src/main/ai/controller.ts
+src/main/index.ts
+src/main/intelligence/controller.ts
+src/main/intelligence/live.ts
+src/main/meetings/ai-context.ts
+src/main/meetings/ai.ts
+src/main/meetings/database.ts
+src/main/meetings/ipc.ts
+src/main/meetings/sharing.ts
+src/main/personal/controller.ts
+src/main/personal/database.ts
+src/main/personal/extract.ts
+src/main/personal/extraction-worker.ts
+src/main/personal/import.ts
+src/main/personal/retrieval.ts
+src/main/personal/store.ts
+src/main/personal/worker.ts
+src/preload/index.ts
+src/renderer/src/AssistantPanel.tsx
+src/renderer/src/Dashboard.tsx
+src/renderer/src/LiveConsent.tsx
+src/renderer/src/MeetingAIReview.tsx
+src/renderer/src/MeetingDetail.tsx
+src/renderer/src/PersonalPages.tsx
+src/renderer/src/TranscriptionPanel.tsx
+src/renderer/src/components/Icon.tsx
+src/renderer/src/main.tsx
+src/renderer/src/styles.css
+src/shared/ai.ts
+src/shared/contracts.ts
+src/shared/intelligence.ts
+src/shared/knowledge.ts
+src/shared/meeting-ai.ts
+src/shared/meetings.ts
+src/shared/modes.ts
+src/shared/navigation.ts
+src/shared/personal.ts
+src/shared/templates.ts
+tests/fixtures/knowledge.ts
+tests/knowledge.test.ts
+tests/modes.test.ts
+tests/personal-integration.test.ts
+tests/personal-storage.test.ts
+tests/product-spec.test.ts
+tests/templates.test.ts
+```
+
+---
+
+## Historical P8 delivery
+
 # P8 delivery — Meeting Notes, History and Intelligence
 
 Implemented on baseline `2047110`, preserving P1–P7 and the EverySession design. Four independently verified checkpoints are recorded in [P8-meetings.md](DECISIONS/P8-meetings.md). Version stays 0.4.0. No npm dependency/model download, paid API fallback, raw-audio storage, tool execution or P9/P10 work was added.

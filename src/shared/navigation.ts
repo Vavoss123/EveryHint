@@ -61,4 +61,6 @@ export const DESTINATIONS = [
 ] as const;
 export type Destination = (typeof DESTINATIONS)[number]["id"];
 export const plannedDestination = (id: Destination): boolean =>
-  !["home", "assistant", "meetings", "settings"].includes(id);
+  !["home", "assistant", "meetings", "modes", "knowledge", "settings"].includes(
+    id,
+  );

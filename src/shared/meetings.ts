@@ -45,6 +45,7 @@ export interface MeetingAction extends EvidenceText {
   status: ActionStatus;
 }
 export interface MeetingSummary {
+  template?: import("./templates").NoteTemplate;
   overview: EvidenceText | null;
   topics: EvidenceText[];
   points: EvidenceText[];
@@ -54,6 +55,12 @@ export interface MeetingSummary {
   generatedAt: number;
 }
 export interface MeetingDocument {
+  summaryVersions?: {
+    summary: MeetingSummary;
+    decisions: MeetingDecision[];
+    actions: MeetingAction[];
+    savedAt: number;
+  }[];
   id: string;
   title: string;
   createdAt: number;

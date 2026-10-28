@@ -12,7 +12,11 @@ import type {
   UserActionEdit,
   UserDecisionEdit,
 } from "../../shared/meeting-edits";
-import { EvidenceItem, MeetingAIReview } from "./MeetingAIReview";
+import {
+  EvidenceItem,
+  MeetingAIReview,
+  TemplateSummary,
+} from "./MeetingAIReview";
 import { MeetingSharingPanel } from "./MeetingSharing";
 import { meetingResult, meetingScope } from "./useMeetings";
 
@@ -385,72 +389,98 @@ export function MeetingDetail({
       >
         {tab === "overview" && (
           <>
-            <h2>Overview</h2>
-            {document.summary?.overview ? (
-              <EvidenceItem
-                item={document.summary.overview}
+            {document.summary?.template && (
+              <TemplateSummary
+                doc={document}
                 open={(ref) => void openEvidence(ref)}
               />
-            ) : (
-              <p className="muted">
-                No summary has been saved. Generate a reviewed draft in AI, or
-                write your own notes.
-              </p>
             )}
-            {(["topics", "points", "outstanding", "nextSteps"] as const).map(
-              (section) =>
-                document.summary?.[section].length ? (
-                  <section key={section}>
-                    <h3>
-                      {
-                        {
-                          topics: "Main topics",
-                          points: "Important points",
-                          outstanding: "Outstanding questions",
-                          nextSteps: "Suggested next steps",
-                        }[section]
-                      }
-                    </h3>
-                    {document.summary[section].map((item, index) => (
-                      <EvidenceItem
-                        key={index}
-                        item={item}
-                        open={(ref) => void openEvidence(ref)}
-                      />
-                    ))}
-                  </section>
-                ) : null,
-            )}
-            <h2>Decisions</h2>
-            {document.decisions.length ? (
-              document.decisions.map((item) => (
+            <div hidden={Boolean(document.summary?.template)}>
+              <h2>Overview</h2>
+              {document.summary?.overview ? (
                 <EvidenceItem
-                  key={item.id}
-                  item={item}
+                  item={document.summary.overview}
                   open={(ref) => void openEvidence(ref)}
                 />
-              ))
-            ) : (
-              <p className="muted">No decisions saved.</p>
-            )}
-            <h2>Action items</h2>
-            {document.actions.length ? (
-              document.actions.map((item) => (
-                <article className="card panel-stack" key={item.id}>
+              ) : (
+                <p className="muted">
+                  No summary has been saved. Generate a reviewed draft in AI, or
+                  write your own notes.
+                </p>
+              )}
+              {(["topics", "points", "outstanding", "nextSteps"] as const).map(
+                (section) =>
+                  document.summary?.[section].length ? (
+                    <section key={section}>
+                      <h3>
+                        {
+                          {
+                            topics: "Main topics",
+                            points: "Important points",
+                            outstanding: "Outstanding questions",
+                            nextSteps: "Suggested next steps",
+                          }[section]
+                        }
+                      </h3>
+                      {document.summary[section].map((item, index) => (
+                        <EvidenceItem
+                          key={index}
+                          item={item}
+                          open={(ref) => void openEvidence(ref)}
+                        />
+                      ))}
+                    </section>
+                  ) : null,
+              )}
+              <h2>Decisions</h2>
+              {document.decisions.length ? (
+                document.decisions.map((item) => (
                   <EvidenceItem
+                    key={item.id}
                     item={item}
                     open={(ref) => void openEvidence(ref)}
                   />
-                  <small>
-                    {item.owner ?? "Unassigned"} ·{" "}
-                    {item.deadline ?? "Not specified"} ·{" "}
-                    {item.status.replace("-", " ")}
-                  </small>
-                </article>
-              ))
-            ) : (
-              <p className="muted">No agreed action items saved.</p>
-            )}
+                ))
+              ) : (
+                <p className="muted">No decisions saved.</p>
+              )}
+              <h2>Action items</h2>
+              {document.actions.length ? (
+                document.actions.map((item) => (
+                  <article className="card panel-stack" key={item.id}>
+                    <EvidenceItem
+                      item={item}
+                      open={(ref) => void openEvidence(ref)}
+                    />
+                    <small>
+                      {item.owner ?? "Unassigned"} ·{" "}
+                      {item.deadline ?? "Not specified"} ·{" "}
+                      {item.status.replace("-", " ")}
+                    </small>
+                  </article>
+                ))
+              ) : (
+                <p className="muted">No agreed action items saved.</p>
+              )}
+            </div>
+            {(document.summaryVersions ?? []).map((version, index) => (
+              <details key={`${version.savedAt}-${index}`}>
+                <summary>
+                  Previous saved summary ·{" "}
+                  {new Date(version.savedAt).toLocaleString()}
+                </summary>
+                {version.summary.template ? (
+                  <TemplateSummary
+                    doc={version}
+                    open={(ref) => void openEvidence(ref)}
+                  />
+                ) : (
+                  <pre className="knowledge-text">
+                    {JSON.stringify(version, null, 2)}
+                  </pre>
+                )}
+              </details>
+            ))}
             <h2>Manual notes</h2>
             <p className="meeting-plain">
               {document.notes || "No manual notes saved."}

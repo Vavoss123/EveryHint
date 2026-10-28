@@ -409,8 +409,7 @@ export class MeetingDatabase {
                 "SELECT * FROM segments WHERE meeting=? AND session=? AND id=?",
               )
               .get(id, meetingId(session), meetingId(segment)) as
-              | Row
-              | undefined;
+              Row | undefined;
           })
           .filter((row): row is Row => Boolean(row))
       : (this.db
@@ -545,8 +544,7 @@ export class MeetingDatabase {
     ) {
       const id = this.searchState.ids[meetingOffset]!,
         row = this.db.prepare("SELECT * FROM meetings WHERE id=?").get(id) as
-          | Row
-          | undefined;
+          Row | undefined;
       if (!row) {
         meetingOffset++;
         segmentOffset = 0;
@@ -698,6 +696,7 @@ export class MeetingDatabase {
       doc.segmentCount = 0;
       // Generated derivatives are removed with their supporting transcript.
       doc.summary = null;
+      doc.summaryVersions = [];
       doc.actions = doc.actions.filter((a) => a.authorship === "user");
       doc.decisions = doc.decisions.filter((d) => d.authorship === "user");
       doc.revision++;

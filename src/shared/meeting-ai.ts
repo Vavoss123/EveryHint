@@ -29,6 +29,7 @@ export interface MeetingExcerpt {
   text: string;
 }
 export interface MeetingAIContext {
+  template?: import("./templates").NoteTemplate;
   purpose: MeetingPurpose;
   meetings: {
     id: string;
@@ -41,6 +42,7 @@ export interface MeetingAIContext {
   notices: string[];
 }
 export interface MeetingSelection {
+  templateId?: string;
   purpose: MeetingPurpose;
   meetingIds: string[];
   temporary: boolean;
@@ -96,6 +98,7 @@ export function parseMeetingSelection(value: unknown): MeetingSelection {
     "sources",
     "segmentIds",
     "sections",
+    "templateId",
   ]);
   if (
     !["summary", "ask", "follow-up", "action-summary"].includes(
@@ -105,6 +108,12 @@ export function parseMeetingSelection(value: unknown): MeetingSelection {
   )
     throw new Error("Choose a meeting AI action and context.");
   boundedText(input.question, 4000);
+  if (
+    input.templateId !== undefined &&
+    (typeof input.templateId !== "string" ||
+      !/^[a-zA-Z0-9_-]{1,80}$/.test(input.templateId))
+  )
+    throw new Error("Choose a valid meeting template.");
   if (
     !Array.isArray(input.meetingIds) ||
     input.meetingIds.length > 3 ||

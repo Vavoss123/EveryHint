@@ -70,7 +70,36 @@ export class LiveScheduler {
         "Pause the current Live authorisation before starting another.",
       );
     const sharing = record(input.sharing);
-    exactKeys(sharing, ["microphone", "systemAudio", "screenshot", "history"]);
+    exactKeys(sharing, [
+      "microphone",
+      "systemAudio",
+      "screenshot",
+      "history",
+      "knowledge",
+    ]);
+    let knowledge:
+      { enabled: boolean; remote: boolean; ids: string[] } | undefined;
+    if (sharing.knowledge !== undefined) {
+      const inputKnowledge = record(sharing.knowledge);
+      exactKeys(inputKnowledge, ["enabled", "remote", "ids"]);
+      if (
+        typeof inputKnowledge.enabled !== "boolean" ||
+        typeof inputKnowledge.remote !== "boolean" ||
+        !Array.isArray(inputKnowledge.ids) ||
+        inputKnowledge.ids.length > 10 ||
+        inputKnowledge.ids.some(
+          (id) => typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(id),
+        )
+      )
+        throw new Error(
+          "Choose bounded Live knowledge sources and sharing permission.",
+        );
+      knowledge = inputKnowledge as unknown as typeof knowledge;
+      if (knowledge!.enabled && (!knowledge!.remote || !knowledge!.ids.length))
+        throw new Error(
+          "Live knowledge requires explicitly selected documents and separate remote-sharing permission.",
+        );
+    }
     for (const key of ["microphone", "systemAudio", "screenshot", "history"])
       if (typeof sharing[key] !== "boolean")
         throw new Error("Choose each remote-sharing source explicitly.");
@@ -91,6 +120,9 @@ export class LiveScheduler {
       "images",
       "transcribing",
       "available",
+      "modeId",
+      "modeName",
+      "knowledgeSources",
     ]);
     for (const key of [
       "captureSessionId",
@@ -169,6 +201,15 @@ export class LiveScheduler {
         throw new Error(
           "Enable local speech transcription before authorising Live Assist.",
         );
+      if (
+        knowledge?.enabled &&
+        knowledge.ids.some(
+          (id) => !context.knowledgeSources?.some((source) => source.id === id),
+        )
+      )
+        throw new Error(
+          "A selected Live knowledge document is unavailable or outside the active mode.",
+        );
       for (const source of ["microphone", "systemAudio", "screenshot"] as const)
         if (sharing[source] && !context.available[source])
           throw new Error(
@@ -182,6 +223,7 @@ export class LiveScheduler {
       this.deadline = this.monotonic() + settings.sessionMinutes * 60000;
       this.nextMonotonicRequestAt = this.monotonic();
       this.grant = {
+        ...(context.modeId ? { modeId: context.modeId } : {}),
         id: randomUUID(),
         captureSessionId: context.captureSessionId,
         captureEpoch: context.captureEpoch,
@@ -191,6 +233,7 @@ export class LiveScheduler {
         sourceId: context.sourceId,
         sourceName: context.sourceName,
         sharing: {
+          ...(knowledge ? { knowledge: structuredClone(knowledge) } : {}),
           microphone: sharing.microphone as boolean,
           systemAudio: sharing.systemAudio as boolean,
           screenshot: sharing.screenshot as boolean,
@@ -238,17 +281,23 @@ export class LiveScheduler {
     const context = this.ports.context();
     return Boolean(
       context &&
-        context.transcribing &&
-        context.captureSessionId === grant.captureSessionId &&
-        context.captureEpoch === grant.captureEpoch &&
-        context.assistantSessionId === grant.assistantSessionId &&
-        context.accountId === grant.accountId &&
-        context.model === grant.model &&
-        context.sourceId === grant.sourceId &&
-        (!grant.sharing.microphone || context.available.microphone) &&
-        (!grant.sharing.systemAudio || context.available.systemAudio) &&
-        (!grant.sharing.screenshot ||
-          (context.available.screenshot && context.images)),
+      context.transcribing &&
+      context.captureSessionId === grant.captureSessionId &&
+      context.captureEpoch === grant.captureEpoch &&
+      context.assistantSessionId === grant.assistantSessionId &&
+      context.accountId === grant.accountId &&
+      context.model === grant.model &&
+      context.sourceId === grant.sourceId &&
+      context.modeId === grant.modeId &&
+      (!grant.sharing.knowledge?.enabled ||
+        (grant.sharing.knowledge.remote &&
+          grant.sharing.knowledge.ids.every((id) =>
+            context.knowledgeSources?.some((source) => source.id === id),
+          ))) &&
+      (!grant.sharing.microphone || context.available.microphone) &&
+      (!grant.sharing.systemAudio || context.available.systemAudio) &&
+      (!grant.sharing.screenshot ||
+        (context.available.screenshot && context.images)),
     );
   }
   private suppress(question: DetectedQuestion, reason: string): void {
@@ -384,7 +433,14 @@ export class LiveScheduler {
         { action: "get-answer", question: slot.question.text, options },
         slot.question,
       );
-      await this.ports.assistant.prepare(prepared.review!, true);
+      await this.ports.assistant.prepare(
+        prepared.review!,
+        true,
+        undefined,
+        grant.sharing.knowledge?.enabled && grant.sharing.knowledge.remote
+          ? grant.sharing.knowledge.ids
+          : [],
+      );
       if (
         this.slot !== slot ||
         !this.valid(grant) ||

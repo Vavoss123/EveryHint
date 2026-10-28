@@ -138,10 +138,8 @@ try {
   );
   await shot("dashboard-light");
   for (const [name, milestone] of [
-    ["Knowledge", "P9"],
     ["Calendar", "P10"],
     ["People", "P10"],
-    ["Modes", "P9"],
   ]) {
     await page
       .getByRole("navigation", { name: "Main navigation" })
@@ -153,6 +151,19 @@ try {
     check(
       content.includes("Not available yet") && content.includes(milestone),
       `${name} is an honest planned destination`,
+    );
+  }
+  for (const [name, label] of [
+    ["Knowledge", "Knowledge library"],
+    ["Modes", "AI Modes"],
+  ]) {
+    await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name, exact: true })
+      .click();
+    check(
+      await page.getByLabel(label, { exact: true }).isVisible(),
+      `${name} exposes a real profile-scoped P9 page`,
     );
   }
   await page

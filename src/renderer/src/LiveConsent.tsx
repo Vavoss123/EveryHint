@@ -24,15 +24,39 @@ export function LiveConsent({ snapshot }: { snapshot: IntelligenceSnapshot }) {
   useEffect(() => {
     setAcknowledged(false);
     setError(null);
-    setSharing((previous) => ({
-      ...previous,
-      microphone: previous.microphone && Boolean(context?.available.microphone),
-      systemAudio:
-        previous.systemAudio && Boolean(context?.available.systemAudio),
-      screenshot:
-        previous.screenshot &&
-        Boolean(context?.available.screenshot && context.images),
-    }));
+    setSharing((previous) =>
+      snapshot.live
+        ? structuredClone(snapshot.live.sharing)
+        : {
+            ...previous,
+            microphone:
+              previous.microphone && Boolean(context?.available.microphone),
+            systemAudio:
+              previous.systemAudio && Boolean(context?.available.systemAudio),
+            screenshot:
+              previous.screenshot &&
+              Boolean(context?.available.screenshot && context.images),
+            ...(previous.knowledge
+              ? {
+                  knowledge: {
+                    enabled:
+                      previous.knowledge.enabled &&
+                      previous.knowledge.ids.some((id) =>
+                        context?.knowledgeSources?.some(
+                          (source) => source.id === id,
+                        ),
+                      ),
+                    remote: false,
+                    ids: previous.knowledge.ids.filter((id) =>
+                      context?.knowledgeSources?.some(
+                        (source) => source.id === id,
+                      ),
+                    ),
+                  },
+                }
+              : {}),
+          },
+    );
   }, [binding]);
   async function authorise() {
     if (!context) return;
@@ -89,6 +113,8 @@ export function LiveConsent({ snapshot }: { snapshot: IntelligenceSnapshot }) {
           {context?.model ??
             "Refresh models and choose one in connection settings"}
           <br />
+          <strong>AI mode:</strong> {context?.modeName ?? "General"}
+          <br />
           <strong>Screen/window:</strong>{" "}
           {context?.sourceName ?? "No screen selected · audio only"}
         </p>
@@ -133,6 +159,82 @@ export function LiveConsent({ snapshot }: { snapshot: IntelligenceSnapshot }) {
             </label>
           ))}
         </fieldset>
+        {context?.knowledgeSources && (
+          <fieldset disabled={busy || Boolean(snapshot.live)}>
+            <legend>Knowledge for this Live session</legend>
+            <label className="ai-choice">
+              <input
+                type="checkbox"
+                aria-label="Enable Live knowledge retrieval"
+                checked={sharing.knowledge?.enabled ?? false}
+                onChange={(e) => {
+                  setAcknowledged(false);
+                  setSharing({
+                    ...sharing,
+                    knowledge: {
+                      enabled: e.target.checked,
+                      remote: sharing.knowledge?.remote ?? false,
+                      ids: sharing.knowledge?.ids ?? [],
+                    },
+                  });
+                }}
+              />
+              Enable relevant-excerpt retrieval
+            </label>
+            <label className="ai-choice">
+              <input
+                type="checkbox"
+                aria-label="Allow Live knowledge remote sharing"
+                checked={sharing.knowledge?.remote ?? false}
+                onChange={(e) => {
+                  setAcknowledged(false);
+                  setSharing({
+                    ...sharing,
+                    knowledge: {
+                      enabled: sharing.knowledge?.enabled ?? false,
+                      remote: e.target.checked,
+                      ids: sharing.knowledge?.ids ?? [],
+                    },
+                  });
+                }}
+              />
+              Allow selected excerpts to be shared remotely with OpenAI
+            </label>
+            {context.knowledgeSources.length === 0 && (
+              <p>No enabled documents associated with the active mode.</p>
+            )}
+            {context.knowledgeSources.map((doc) => (
+              <label className="ai-choice" key={doc.id}>
+                <input
+                  type="checkbox"
+                  checked={sharing.knowledge?.ids.includes(doc.id) ?? false}
+                  onChange={(e) => {
+                    setAcknowledged(false);
+                    const old = sharing.knowledge ?? {
+                      enabled: false,
+                      remote: false,
+                      ids: [],
+                    };
+                    setSharing({
+                      ...sharing,
+                      knowledge: {
+                        ...old,
+                        ids: e.target.checked
+                          ? [...old.ids, doc.id]
+                          : old.ids.filter((id) => id !== doc.id),
+                      },
+                    });
+                  }}
+                />
+                {doc.name}
+              </label>
+            ))}
+            <p>
+              At most four relevant excerpts / 4,800 text characters per
+              request. Sent excerpts remain inspectable on each answer.
+            </p>
+          </fieldset>
+        )}
         {!context?.transcribing && (
           <p className="muted">
             Start authorised microphone/system capture and enable local Whisper

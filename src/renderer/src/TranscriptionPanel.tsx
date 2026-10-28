@@ -131,6 +131,21 @@ export function TranscriptionPanel({
             <option value="base.en">base.en · Higher quality English</option>
           </select>
         </label>
+        <label>
+          Speech transcription language
+          <select
+            aria-label="Speech transcription language"
+            value="en"
+            disabled
+          >
+            <option value="en">English · English-only models</option>
+          </select>
+        </label>
+        <p className="muted">
+          tiny.en and base.en support English transcription. AI output language
+          is a separate response preference. Multilingual Whisper models are not
+          installed or offered; no model is downloaded automatically.
+        </p>
         {snapshot.models.map((model) => (
           <div className="model-row" key={model.id}>
             <div>

@@ -58,6 +58,11 @@ import { MeetingPreferencesStore } from "./meetings/preferences";
 import { historyProfile } from "./meetings/keys";
 import { registerMeetingIPC } from "./meetings/ipc";
 import { MeetingSharing } from "./meetings/sharing";
+import { PersonalController } from "./personal/controller";
+import { PersonalStore } from "./personal/store";
+import { defaultConfig, migratePreset } from "../shared/modes";
+import { parseReview } from "../shared/ai";
+import { record } from "../shared/validation";
 import design from "../../resources/design-tokens.json";
 import {
   presentation,
@@ -93,6 +98,7 @@ let meetings: MeetingController | undefined;
 let meetingAI: MeetingAIController | undefined;
 let postNotes: PostMeetingNotes | undefined;
 let meetingProfile = "";
+let personal: PersonalController | undefined;
 let meetingAIRevision = 0;
 let meetingCompactRow = false;
 let lastMeetingAIState = "";
@@ -128,9 +134,9 @@ function meetingAISnapshot() {
 function syncMeetingSize(): void {
   const row = Boolean(
     meetings?.indicator.saving ||
-      meetings?.indicator.pendingResumeId ||
-      postNotes?.enabled ||
-      meetingAI?.status === "draft",
+    meetings?.indicator.pendingResumeId ||
+    postNotes?.enabled ||
+    meetingAI?.status === "draft",
   );
   if (row === meetingCompactRow) return;
   meetingCompactRow = row;
@@ -169,6 +175,7 @@ function stopCapture(): void {
   controller?.stop();
 }
 function lockMeetingHistory(reason: string): void {
+  personal?.lock();
   postNotes?.revoke(reason);
   meetingAI?.resetProfile();
   meetings?.lock(reason);
@@ -183,6 +190,7 @@ function updateMeetingProfile(): void {
   const profile = historyProfile(app.getPath("userData"), selected?.id ?? null);
   if (profile === meetingProfile) return;
   meetingProfile = profile;
+  personal?.switchProfile(profile);
   cancelMeetingWork();
   meetingAI?.resetProfile();
   meetings.switchProfile(
@@ -556,6 +564,12 @@ async function initialise(): Promise<void> {
     90000,
     Date.now,
     () => controller.freshScreenshot(),
+    () =>
+      personal?.modeContext ?? {
+        mode: defaultConfig().modes[0]!,
+        outputLanguage: "default",
+      },
+    (query, ids) => personal!.knowledgeContext(query, ids),
   );
   intelligence = new IntelligenceController(
     assistant,
@@ -570,6 +584,19 @@ async function initialise(): Promise<void> {
       accountId: accounts?.identity ?? null,
       accountLabel: currentAccountLabel,
       transcribing: transcriptionListening,
+      ...(personal
+        ? {
+            modeId: personal.modeContext.mode.id,
+            modeName: personal.modeContext.mode.name,
+            knowledgeSources: personal.value.documents
+              .filter(
+                (d) =>
+                  d.enabled &&
+                  personal!.modeContext.mode.knowledgeIds.includes(d.id),
+              )
+              .map((d) => ({ id: d.id, name: d.name })),
+          }
+        : {}),
     }),
   );
   intelligence.configure(store.settings.intelligence ?? DEFAULT_INTELLIGENCE);
@@ -580,6 +607,33 @@ async function initialise(): Promise<void> {
         "EveryHint",
         "meetings",
       );
+  personal = new PersonalController(
+    (profile) => new PersonalStore(join(meetingRoot, "personal"), profile),
+    (value) => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:personal-state", value);
+    },
+    () => {
+      intelligence?.revoke(
+        "AI mode or personal knowledge changed. Renew sharing explicitly.",
+      );
+      cancelMeetingWork();
+      assistant?.clear();
+    },
+    async () => {
+      const result = await dialog.showOpenDialog(window!, {
+        title: "Import local knowledge",
+        properties: ["openFile"],
+        filters: [
+          {
+            name: "Reference documents",
+            extensions: ["pdf", "docx", "txt", "md"],
+          },
+        ],
+      });
+      return result.canceled ? null : (result.filePaths[0] ?? null);
+    },
+  );
   meetings = new MeetingController(
     () => ({
       capture: controller.metadata,
@@ -608,6 +662,8 @@ async function initialise(): Promise<void> {
     }),
     () => ({ accountId: accounts?.identity ?? null }),
     publishMeetingAI,
+    Date.now,
+    (id) => personal!.template(id),
   );
   postNotes = new PostMeetingNotes(
     meetingAI,
@@ -880,6 +936,10 @@ async function initialise(): Promise<void> {
     await assistant!.inspect();
   });
   handle("everyhint:ai-get", () => assistant!.value);
+  handle("everyhint:personal-get", () => personal!.value);
+  handle("everyhint:personal-command", (input) => personal!.command(input));
+  handle("everyhint:personal-inspect", (input) => personal!.inspect(input));
+  handle("everyhint:personal-search", (input) => personal!.search(input));
   handle("everyhint:ai-inspect", () => assistant!.inspect());
   handle("everyhint:ai-select", async (input) => {
     cancelMeetingWork();
@@ -892,9 +952,16 @@ async function initialise(): Promise<void> {
     cancelMeetingWork();
     return assistant!.billing(input);
   });
-  handle("everyhint:ai-review", (input) => {
+  handle("everyhint:ai-review", async (input) => {
     cancelMeetingWork();
     intelligence!.revoke("Manual Assist was started.");
+    if (Object.hasOwn(record(input), "preset")) {
+      const parsed = parseReview(input);
+      await personal!.command({
+        scopeId: personal!.value.scopeId,
+        value: { type: "select", id: migratePreset(parsed.preset!) },
+      });
+    }
     return assistant!.prepare(input);
   });
   handle("everyhint:ai-remove", (input) => assistant!.removeContext(input));
@@ -1043,6 +1110,7 @@ app.on("before-quit", (event) => {
   if (quitting) return;
   event.preventDefault();
   quitting = true;
+  personal?.lock();
   postNotes?.dispose();
   meetingAI?.cancel();
   accounts?.dispose();

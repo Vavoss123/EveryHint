@@ -6,6 +6,35 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  personal: Object.freeze({
+    inspect: (
+      input: Parameters<
+        import("../shared/personal").PersonalBridge["inspect"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:personal-inspect", input),
+    search: (
+      input: Parameters<
+        import("../shared/personal").PersonalBridge["search"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:personal-search", input),
+    get: () => ipcRenderer.invoke("everyhint:personal-get"),
+    command: (
+      input: Parameters<
+        import("../shared/personal").PersonalBridge["command"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:personal-command", input),
+    onState: (
+      listener: (state: import("../shared/personal").PersonalState) => void,
+    ) => {
+      const wrapped = (
+        _event: Electron.IpcRendererEvent,
+        value: import("../shared/personal").PersonalState,
+      ) => listener(value);
+      ipcRenderer.on("everyhint:personal-state", wrapped);
+      return () =>
+        ipcRenderer.removeListener("everyhint:personal-state", wrapped);
+    },
+  }),
   meetings: Object.freeze({
     export: (
       input: Parameters<

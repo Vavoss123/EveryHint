@@ -3,13 +3,13 @@ import type {
   AssistantSnapshot,
   ContextOptions,
   ProviderId,
-  AssistPreset,
 } from "../../shared/ai";
 import { ASSIST_PRESETS, DEFAULT_CONTEXT } from "../../shared/ai";
 import type { Result } from "../../shared/contracts";
 import { AccountPanel } from "./AccountPanel";
 import { ResponseText } from "./ResponseText";
 import { ACTION_LABELS, type OperatingMode } from "../../shared/intelligence";
+import { usePersonal } from "./PersonalPages";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -31,8 +31,9 @@ export function AssistantPanel({
   openMeetings?: () => void;
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
+  const personal = usePersonal();
+  const [knowledgeIds, setKnowledgeIds] = useState<string[]>([]);
   const [question, setQuestion] = useState("");
-  const [preset, setPreset] = useState<AssistPreset>("general");
   const [options, setOptions] = useState<ContextOptions>({
     ...DEFAULT_CONTEXT,
   });
@@ -58,8 +59,8 @@ export function AssistantPanel({
   }, [snapshot?.review?.requestId, snapshot?.sessionId]);
   useEffect(() => {
     setQuestion("");
-    setPreset("general");
     setOptions({ ...DEFAULT_CONTEXT });
+    setKnowledgeIds([]);
   }, [snapshot?.sessionId]);
   async function run(task: () => Promise<unknown>): Promise<void> {
     if (operation.current) return;
@@ -101,7 +102,11 @@ export function AssistantPanel({
     return run(async () => {
       setAcknowledged(false);
       unwrap(
-        await window.everyhint.reviewContext({ question, options, preset }),
+        await window.everyhint.reviewContext({
+          question,
+          options,
+          knowledgeIds,
+        }),
       );
     });
   }
@@ -289,24 +294,14 @@ export function AssistantPanel({
           </label>
         )}
       </details>
-      <label>
-        Assist preset
-        <select
-          aria-label="Assist preset"
-          value={preset}
-          disabled={active || busy}
-          onChange={(event) => {
-            invalidate();
-            setPreset(event.target.value as AssistPreset);
-          }}
-        >
-          {Object.entries(ASSIST_PRESETS).map(([id, item]) => (
-            <option key={id} value={id}>
-              {item.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <p className="muted">
+        AI mode:{" "}
+        {personal?.config.modes.find(
+          (m) => m.id === personal.config.activeModeId,
+        )?.name ?? "General"}
+        . Choose a mode in the title bar; switching never starts capture or
+        inference.
+      </p>
       <label className="ai-question">
         {latest
           ? "Question or follow-up (optional)"
@@ -394,6 +389,41 @@ export function AssistantPanel({
           ))}
         </details>
       </fieldset>
+      {personal?.unlocked && (
+        <fieldset disabled={busy || active}>
+          <legend>Knowledge for this request</legend>
+          <p>
+            Only relevant excerpts from checked, enabled documents associated
+            with the active AI mode are retrieved. Review the exact text before
+            Ask.
+          </p>
+          {personal.documents
+            .filter(
+              (d) =>
+                d.enabled &&
+                personal.config.modes
+                  .find((m) => m.id === personal.config.activeModeId)
+                  ?.knowledgeIds.includes(d.id),
+            )
+            .map((doc) => (
+              <label className="ai-choice" key={doc.id}>
+                <input
+                  type="checkbox"
+                  checked={knowledgeIds.includes(doc.id)}
+                  onChange={(e) => {
+                    invalidate();
+                    setKnowledgeIds((old) =>
+                      e.target.checked
+                        ? [...old, doc.id]
+                        : old.filter((id) => id !== doc.id),
+                    );
+                  }}
+                />
+                {doc.name}
+              </label>
+            ))}
+        </fieldset>
+      )}
       <p className="muted">
         Whisper stays local. Ask sends your reviewed text and optional image to
         the selected provider. Raw audio is never included. Nothing is sent
@@ -442,7 +472,8 @@ export function AssistantPanel({
             {review.model ? ` · ${review.model}` : ""}
           </strong>
           <small>
-            {ASSIST_PRESETS[review.preset ?? "general"].name}
+            {review.modeContext?.mode.name ??
+              ASSIST_PRESETS[review.preset ?? "general"].name}
             {review.action ? ` · ${ACTION_LABELS[review.action]}` : ""}
             {review.sourceName ? ` · ${review.sourceName}` : ""}
           </small>
@@ -456,6 +487,7 @@ export function AssistantPanel({
               {notice}
             </p>
           ))}
+          {review.knowledge && <KnowledgeSources sources={review.knowledge} />}
           {review.meetingContext && (
             <div className="panel-stack">
               <strong>
@@ -655,6 +687,12 @@ export function AssistantPanel({
             ) : (
               <ResponseText text={response.text} />
             )}
+            {response.knowledge && (
+              <KnowledgeSources
+                sources={response.knowledge}
+                answer={response.text}
+              />
+            )}
             {response.error && (
               <p className="error-message" role="alert">
                 {response.error.message}
@@ -706,14 +744,12 @@ export function AssistantPanel({
                     void run(async () => {
                       const nextOptions = { ...DEFAULT_CONTEXT };
                       setQuestion(response.question);
-                      setPreset(response.preset ?? "general");
                       setOptions(nextOptions);
                       setAcknowledged(false);
                       unwrap(
                         await window.everyhint.reviewContext({
                           question: response.question,
                           options: nextOptions,
-                          preset: response.preset ?? "general",
                           action: response.action,
                           regenerateId: response.requestId,
                         }),
@@ -745,5 +781,51 @@ export function AssistantPanel({
         data.
       </small>
     </section>
+  );
+}
+export function KnowledgeSources({
+  sources,
+  answer,
+}: {
+  sources: import("../../shared/knowledge").KnowledgeExcerpt[];
+  answer?: string;
+}) {
+  const unknown =
+    answer
+      ?.match(/\[K:[^\]\r\n]{1,180}\]/g)
+      ?.filter((ref) => !sources.some((s) => `[${s.ref}]` === ref)) ?? [];
+  return (
+    <details className="card" open={answer === undefined}>
+      <summary>
+        {answer === undefined
+          ? "Knowledge excerpts to be sent"
+          : "Knowledge excerpts sent · verify generated claims"}{" "}
+        ({sources.length})
+      </summary>
+      <p className="muted">
+        A citation identifies a supplied excerpt. It does not establish that
+        every generated claim is supported. Compare claims with the exact text.
+      </p>
+      {unknown.length > 0 && (
+        <p className="warning-message">
+          The response contains an unavailable knowledge reference. Treat that
+          citation as unsupported.
+        </p>
+      )}
+      {sources.map((source) => (
+        <article key={source.ref}>
+          <strong>
+            {source.documentName} · {source.heading}
+            {source.page === null ? "" : ` · Page ${source.page}`}
+          </strong>
+          <small>
+            {" "}
+            [{source.ref}]
+            {answer?.includes(`[${source.ref}]`) ? " · Cited in response" : ""}
+          </small>
+          <blockquote>{source.text}</blockquote>
+        </article>
+      ))}
+    </details>
   );
 }

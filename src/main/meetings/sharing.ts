@@ -33,6 +33,31 @@ export function readableSummary(
     "",
     "Scope: selected saved text only. AI-generated claims require review; supporting quotes are not independent fact verification.",
   ];
+  if (doc.summary?.template) {
+    lines.push("", `Template: ${doc.summary.template.name}`);
+    for (const section of doc.summary.template.sections) {
+      lines.push("", section.heading);
+      if (section.source === "actions") lines.push(actionText(doc));
+      else {
+        const items =
+          section.source === "decisions"
+            ? doc.decisions
+            : section.source === "overview"
+              ? doc.summary.overview
+                ? [doc.summary.overview]
+                : []
+              : doc.summary[section.source];
+        lines.push(
+          ...(items.length
+            ? items.map((item) => evidence(item))
+            : ["No supported content saved for this section."]),
+        );
+      }
+    }
+    if (includeNotes && doc.notes) lines.push("", "MANUAL NOTES", doc.notes);
+    if (doc.tags.length) lines.push("", `Tags: ${doc.tags.join(", ")}`);
+    return lines.join("\n") + "\n";
+  }
   if (doc.summary?.overview)
     lines.push("", "OVERVIEW", evidence(doc.summary.overview));
   for (const [field, label] of [

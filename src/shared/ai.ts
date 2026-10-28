@@ -63,6 +63,7 @@ export const DEFAULT_CONTEXT: ContextOptions = {
   imageBytes: 1500000,
 };
 export interface ReviewInput {
+  knowledgeIds?: string[];
   transcriptIds?: string[];
   action?: ContextualAction;
   question: string;
@@ -79,7 +80,17 @@ export function parseReview(value: unknown): ReviewInput {
     "regenerateId",
     "action",
     "transcriptIds",
+    "knowledgeIds",
   ]);
+  if (
+    input.knowledgeIds !== undefined &&
+    (!Array.isArray(input.knowledgeIds) ||
+      input.knowledgeIds.length > 10 ||
+      input.knowledgeIds.some(
+        (id) => typeof id !== "string" || !/^[a-zA-Z0-9_-]{1,80}$/.test(id),
+      ))
+  )
+    throw new Error("Select at most 10 local knowledge identifiers.");
   if (
     input.transcriptIds !== undefined &&
     (!Array.isArray(input.transcriptIds) ||
@@ -130,6 +141,9 @@ export function parseReview(value: unknown): ReviewInput {
       throw new Error(`Invalid context limit: ${key}.`);
   return {
     question: input.question.trim(),
+    ...(input.knowledgeIds === undefined
+      ? {}
+      : { knowledgeIds: [...new Set(input.knowledgeIds as string[])] }),
     ...(input.transcriptIds === undefined
       ? {}
       : { transcriptIds: [...new Set(input.transcriptIds as string[])] }),
@@ -156,6 +170,8 @@ export interface ConversationTurn {
   answer: string;
 }
 export interface AIRequest {
+  knowledge?: import("./knowledge").KnowledgeExcerpt[];
+  modeContext?: import("./personal").ModeContext;
   meetingContext?: import("./meeting-ai").MeetingAIContext;
   automatic?: boolean;
   action?: ContextualAction;
@@ -200,6 +216,8 @@ export interface AIUsage {
   estimatedUsd?: number;
 }
 export interface AIResponse {
+  knowledge?: import("./knowledge").KnowledgeExcerpt[];
+  modeName?: string;
   meetingPurpose?: import("./meeting-ai").MeetingPurpose;
   contextNotices?: string[];
   action?: ContextualAction;

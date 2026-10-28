@@ -33,6 +33,12 @@ import {
   MeetingPreferencesPanel,
 } from "./MeetingSessionControls";
 import { MeetingHistory } from "./MeetingHistory";
+import {
+  ModesPage,
+  ModeSelector,
+  PersonalSettings,
+  KnowledgePage,
+} from "./PersonalPages";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -363,6 +369,7 @@ function App() {
             e<span>h</span>
           </div>
           <span>EveryHint</span>
+          <ModeSelector />
           <span className="phase">
             {settings.compact
               ? "OVERLAY"
@@ -512,6 +519,16 @@ function App() {
           />
         )}
         <section className="content" id="workspace-content" tabIndex={-1}>
+          {dashboard &&
+            !settingsOpen &&
+            !preparing &&
+            destination === "modes" && (
+              <ModesPage openAssistant={() => openAssistant(true)} />
+            )}
+          {dashboard &&
+            !settingsOpen &&
+            !preparing &&
+            destination === "knowledge" && <KnowledgePage />}
           {meetings.state && (
             <MeetingHistory
               state={meetings.state}
@@ -695,6 +712,7 @@ function App() {
                   <MeetingPreferencesPanel state={meetings.state} />
                 )}
                 <ShortcutSettings settings={settings} save={save} />
+                <PersonalSettings />
                 <TranscriptionPanel settings canEnable={active} />
                 {app.hotkeys.map((hotkey) => (
                   <div className="shortcut" key={hotkey.action}>

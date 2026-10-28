@@ -108,12 +108,14 @@ export interface IntelligenceDiagnostics {
   responseLatencyMs: number | null;
 }
 export interface LiveSharing {
+  knowledge?: { enabled: boolean; remote: boolean; ids: string[] };
   microphone: boolean;
   systemAudio: boolean;
   screenshot: boolean;
   history: boolean;
 }
 export interface LiveAuthorisation {
+  modeId?: string;
   id: string;
   captureSessionId: string;
   captureEpoch: number;
@@ -132,6 +134,9 @@ export interface LiveAuthorisation {
   confidenceThreshold: number;
 }
 export interface LiveContext {
+  modeId?: string;
+  modeName?: string;
+  knowledgeSources?: { id: string; name: string }[];
   accountLabel: string;
   captureSessionId: string;
   captureEpoch: number;
