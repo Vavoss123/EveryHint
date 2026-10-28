@@ -50,6 +50,14 @@ import { ChatGptProvider } from "./ai/plan/provider";
 import { ClaudeProvider } from "./ai/claude";
 import { ChatGptAccounts } from "./ai/plan/accounts";
 import { ProviderError, providerError } from "./ai/errors";
+import { MeetingController } from "./meetings/controller";
+import { MeetingAIController } from "./meetings/ai";
+import { PostMeetingNotes } from "./meetings/post-notes";
+import { HistoryWorker } from "./meetings/store";
+import { MeetingPreferencesStore } from "./meetings/preferences";
+import { historyProfile } from "./meetings/keys";
+import { registerMeetingIPC } from "./meetings/ipc";
+import { MeetingSharing } from "./meetings/sharing";
 import design from "../../resources/design-tokens.json";
 import {
   presentation,
@@ -81,6 +89,13 @@ let assistant: AssistantController | undefined;
 let intelligence: IntelligenceController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
+let meetings: MeetingController | undefined;
+let meetingAI: MeetingAIController | undefined;
+let postNotes: PostMeetingNotes | undefined;
+let meetingProfile = "";
+let meetingAIRevision = 0;
+let meetingCompactRow = false;
+let lastMeetingAIState = "";
 let shortcuts: HotkeyController;
 let hotkeys: HotkeyStatus[] = [];
 const warnings: string[] = [];
@@ -102,6 +117,80 @@ function warn(message: string): void {
   if (!warnings.includes(message)) warnings.push(message);
   if (warnings.length > 10) warnings.shift();
   if (store && controller) publish();
+}
+function meetingAISnapshot() {
+  return {
+    ...meetingAI!.value,
+    ...postNotes!.value,
+    revision: meetingAIRevision,
+  };
+}
+function syncMeetingSize(): void {
+  const row = Boolean(
+    meetings?.indicator.saving ||
+      meetings?.indicator.pendingResumeId ||
+      postNotes?.enabled ||
+      meetingAI?.status === "draft",
+  );
+  if (row === meetingCompactRow) return;
+  meetingCompactRow = row;
+  if (window && store?.settings.compact) configureSize("compact");
+}
+function publishMeetingAI(): void {
+  postNotes?.observe();
+  syncMeetingSize();
+  updateTray();
+  const signature = JSON.stringify({
+    revision: meetingAI?.revision,
+    post: postNotes?.value,
+  });
+  if (signature === lastMeetingAIState) return;
+  lastMeetingAIState = signature;
+  meetingAIRevision++;
+  if (
+    meetingAI &&
+    postNotes &&
+    window &&
+    !window.isDestroyed() &&
+    !window.webContents.isDestroyed()
+  )
+    window.webContents.send("everyhint:meeting-ai-state", meetingAISnapshot());
+}
+function cancelMeetingWork(): void {
+  postNotes?.revoke();
+  meetingAI?.cancel();
+}
+function clearAssistantContext(): void {
+  cancelMeetingWork();
+  assistant?.clear();
+}
+function stopCapture(): void {
+  cancelMeetingWork();
+  controller?.stop();
+}
+function lockMeetingHistory(reason: string): void {
+  postNotes?.revoke(reason);
+  meetingAI?.resetProfile();
+  meetings?.lock(reason);
+}
+function updateMeetingProfile(): void {
+  if (!meetings) return;
+  const connection = accounts?.value,
+    selected = connection?.accounts?.find(
+      (account) =>
+        account.id === connection.selectedAccount && account.signedIn,
+    );
+  const profile = historyProfile(app.getPath("userData"), selected?.id ?? null);
+  if (profile === meetingProfile) return;
+  meetingProfile = profile;
+  cancelMeetingWork();
+  meetingAI?.resetProfile();
+  meetings.switchProfile(
+    profile,
+    selected
+      ? `${selected.label} · local encrypted history`
+      : "Local-only history · this Windows user",
+  );
 }
 function snapshot(): AppSnapshot {
   return {
@@ -177,6 +266,8 @@ function updateTray(): void {
     )
     .join(" · ");
   const sharing = intelligence?.indicator;
+  const recording = meetings?.indicator.saving ?? false;
+  const postEnabled = postNotes?.enabled ?? false;
   const mode =
     sharing?.mode === "live"
       ? "Live Assist"
@@ -185,18 +276,35 @@ function updateTray(): void {
         : "Manual";
   const remote = sharing?.enabled
     ? `LIVE REMOTE ENABLED · ${sharing.requests}/${sharing.limit} attempts`
-    : `${mode} · automatic sharing off`;
-  const key = `${state}:${summary}:${remote}:${sharing?.expiresAt ?? 0}`;
+    : `${mode} · live sharing off`;
+  const key = `${state}:${summary}:${remote}:${sharing?.expiresAt ?? 0}:${recording}:${postEnabled}`;
   if (key === lastTrayState) return;
   lastTrayState = key;
   tray.setImage(icon(state));
   tray.setToolTip(
-    `EveryHint · ${remote} · ${state} · ${summary}`.slice(0, 127),
+    `EveryHint · ${remote} · ${recording ? "saving final text" : "temporary"}${postEnabled ? " · End notes enabled" : ""} · ${state} · ${summary}`.slice(
+      0,
+      127,
+    ),
   );
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: `EveryHint · ${state}`, enabled: false },
       { label: remote, enabled: false },
+      {
+        label: recording
+          ? "Saved meeting · final text is persisted locally"
+          : "Temporary session · no meeting persistence",
+        enabled: false,
+      },
+      {
+        label: "Cancel automatic End notes",
+        enabled: postEnabled,
+        click: () =>
+          postNotes?.revoke(
+            "Automatic post-meeting notes cancelled from the tray.",
+          ),
+      },
       {
         label: "Pause Live Assist",
         enabled: sharing?.enabled ?? false,
@@ -221,14 +329,14 @@ function updateTray(): void {
       {
         label: "Stop all capture",
         accelerator: "Control+Alt+Shift+X",
-        click: () => controller.stop(),
+        click: stopCapture,
       },
       { type: "separator" },
       { label: "Quit EveryHint", click: () => app.quit() },
     ]),
   );
   window?.setTitle(
-    `EveryHint · ${mode}${sharing?.enabled ? " · remote enabled" : ""} · ${state}`,
+    `EveryHint · ${mode}${sharing?.enabled ? " · remote enabled" : ""}${postEnabled ? " · End notes enabled" : ""}${recording ? " · saving final text" : ""} · ${state}`,
   );
 }
 function publish(): void {
@@ -236,6 +344,9 @@ function publish(): void {
   if (assistant && controller) assistant.captureChanged(controller.value);
   if (intelligence && controller)
     intelligence.update(controller.value, speech?.value.events ?? []);
+  if (meetings && controller)
+    meetings.observe(controller.metadata, speech?.value.events ?? []);
+  publishMeetingAI();
   revision++;
   updateTray();
   if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
@@ -265,11 +376,11 @@ function configureSize(previous: Presentation): void {
   window.setMinimumSize(
     360,
     mode === "compact"
-      ? intelligenceMode === "manual"
-        ? 180
-        : intelligenceMode === "live"
-          ? 380
-          : 280
+      ? (intelligenceMode === "manual"
+          ? 180
+          : intelligenceMode === "live"
+            ? 400
+            : 280) + (meetingCompactRow ? 50 : 0)
       : 380,
   );
   window.setBounds(
@@ -394,6 +505,8 @@ async function initialise(): Promise<void> {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:transcription", value);
       if (controller) intelligence?.update(controller.value, value.events);
+      if (controller) meetings?.observe(controller.metadata, value.events);
+      publishMeetingAI();
     },
     (token) => audio.setTranscriptionToken(token),
   );
@@ -422,6 +535,7 @@ async function initialise(): Promise<void> {
         chatgpt?.invalidate();
         assistant?.clear();
       }
+      updateMeetingProfile();
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:account", value);
       void assistant?.inspect();
@@ -436,6 +550,8 @@ async function initialise(): Promise<void> {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:assistant", value);
       intelligence?.assistantChanged(value);
+      meetingAI?.assistantChanged(value);
+      publishMeetingAI();
     },
     90000,
     Date.now,
@@ -457,6 +573,55 @@ async function initialise(): Promise<void> {
     }),
   );
   intelligence.configure(store.settings.intelligence ?? DEFAULT_INTELLIGENCE);
+  const meetingRoot = process.env.EVERYHINT_TEST_USER_DATA
+    ? join(app.getPath("userData"), "meetings")
+    : join(
+        process.env.LOCALAPPDATA ?? app.getPath("userData"),
+        "EveryHint",
+        "meetings",
+      );
+  meetings = new MeetingController(
+    () => ({
+      capture: controller.metadata,
+      events: speech?.value.events ?? [],
+    }),
+    async (profile) => {
+      const worker = new HistoryWorker(meetingRoot, profile);
+      await worker.open();
+      return worker;
+    },
+    new MeetingPreferencesStore(join(meetingRoot, "preferences")),
+    (value) => {
+      syncMeetingSize();
+      updateTray();
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:meetings-state", value);
+      publishMeetingAI();
+    },
+  );
+  meetingAI = new MeetingAIController(
+    assistant,
+    meetings,
+    () => ({
+      capture: controller.metadata,
+      events: speech?.value.events ?? [],
+    }),
+    () => ({ accountId: accounts?.identity ?? null }),
+    publishMeetingAI,
+  );
+  postNotes = new PostMeetingNotes(
+    meetingAI,
+    meetings,
+    assistant,
+    () => controller.metadata,
+    () => ({
+      accountId: accounts?.identity ?? null,
+      accountLabel: currentAccountLabel,
+      transcribing: transcriptionListening,
+    }),
+    publishMeetingAI,
+  );
+  updateMeetingProfile();
   await accounts.restore();
 
   const saved = store.bounds;
@@ -513,12 +678,16 @@ async function initialise(): Promise<void> {
     event.preventDefault(),
   );
   window.webContents.on("did-start-loading", () => {
+    lockMeetingHistory(
+      "Interface reload locked local history; no recording or remote permission is restored.",
+    );
     accounts?.cancel();
     chatgpt?.invalidate();
     assistant?.clear();
-    if (controller.value.state !== "IDLE") controller.stop();
+    if (controller.value.state !== "IDLE") stopCapture();
   });
   window.webContents.on("render-process-gone", (_event, details) => {
+    lockMeetingHistory("Interface failure locked local history.");
     accounts?.cancel();
     chatgpt?.invalidate();
     assistant?.clear();
@@ -527,6 +696,7 @@ async function initialise(): Promise<void> {
     );
   });
   window.webContents.on("unresponsive", () => {
+    lockMeetingHistory("An unresponsive interface locked local history.");
     accounts?.cancel();
     chatgpt?.invalidate();
     assistant?.clear();
@@ -535,10 +705,10 @@ async function initialise(): Promise<void> {
   window.on("resize", queueBounds);
   window.on("move", queueBounds);
   window.on("minimize", () => {
-    if (!tray || tray.isDestroyed()) controller.stop();
+    if (!tray || tray.isDestroyed()) stopCapture();
   });
   window.on("hide", () => {
-    if (!quitting && (!tray || tray.isDestroyed())) controller.stop();
+    if (!quitting && (!tray || tray.isDestroyed())) stopCapture();
   });
   window.on("close", (event) => {
     if (!quitting && tray && !tray.isDestroyed()) {
@@ -566,13 +736,13 @@ async function initialise(): Promise<void> {
         pause: () => {
           safely(() => controller.togglePause());
         },
-        stop: () => controller.stop(),
+        stop: stopCapture,
         assist: () => {
           show();
           if (window && !window.isDestroyed())
             window.webContents.send("everyhint:assist");
         },
-        clear: () => assistant?.clear(),
+        clear: clearAssistantContext,
       },
       {
         ...DEFAULT_HOTKEYS,
@@ -589,6 +759,40 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  registerMeetingIPC({
+    snapshotAI: meetingAISnapshot,
+    handle,
+    meetings,
+    sharing: new MeetingSharing(meetings, {
+      choose: async (suggested, extension, label) => {
+        if (!window || window.isDestroyed())
+          throw Error("The main window is unavailable.");
+        const result = await dialog.showSaveDialog(window, {
+          title: "Export unencrypted meeting content",
+          defaultPath: suggested,
+          buttonLabel: "Export plaintext copy",
+          filters: [{ name: label, extensions: [extension] }],
+        });
+        return result.canceled || !result.filePath ? null : result.filePath;
+      },
+      clipboard: (text) => clipboard.writeText(text),
+      email: (url) => shell.openExternal(url),
+    }),
+    ai: meetingAI,
+    post: postNotes,
+    stop: () => controller.stop(),
+    cancelContent: () => {
+      cancelMeetingWork();
+      intelligence?.revoke("Local meeting content was cleared or deleted.");
+      assistant?.clear();
+    },
+    revokeLive: () => intelligence?.revoke("Meeting AI was chosen."),
+    changed: () => {
+      if (meetings && window && !window.isDestroyed())
+        window.webContents.send("everyhint:meetings-state", meetings.value);
+      publishMeetingAI();
+    },
+  });
   handle("everyhint:intelligence-get", () => intelligence!.value);
   handle("everyhint:intelligence-authorise", (input) =>
     intelligence!.authorise(input),
@@ -622,6 +826,7 @@ async function initialise(): Promise<void> {
   );
   handle("everyhint:account-get", () => accounts!.value);
   handle("everyhint:account-action", async (input) => {
+    cancelMeetingWork();
     if (
       input !== "sign-in" &&
       input !== "sign-out" &&
@@ -646,12 +851,14 @@ async function initialise(): Promise<void> {
       await assistant!.inspect();
   });
   handle("everyhint:account-select", async (input) => {
+    cancelMeetingWork();
     await accounts!.select(input);
     chatgpt!.invalidate();
     assistant!.clear();
     await assistant!.inspect();
   });
   handle("everyhint:ai-models", async (input) => {
+    cancelMeetingWork();
     if (input !== undefined || assistant!.value.selected !== "codex")
       throw new Error("Select ChatGPT before refreshing models.");
     assistant!.clear();
@@ -667,6 +874,7 @@ async function initialise(): Promise<void> {
     }
   });
   handle("everyhint:ai-model-select", async (input) => {
+    cancelMeetingWork();
     chatgpt!.selectModel(input);
     assistant!.clear();
     await assistant!.inspect();
@@ -674,19 +882,25 @@ async function initialise(): Promise<void> {
   handle("everyhint:ai-get", () => assistant!.value);
   handle("everyhint:ai-inspect", () => assistant!.inspect());
   handle("everyhint:ai-select", async (input) => {
+    cancelMeetingWork();
     assistant!.select(input);
     accounts?.cancel();
     if (input !== "codex") chatgpt?.invalidate();
     await assistant!.inspect();
   });
-  handle("everyhint:ai-billing", (input) => assistant!.billing(input));
+  handle("everyhint:ai-billing", (input) => {
+    cancelMeetingWork();
+    return assistant!.billing(input);
+  });
   handle("everyhint:ai-review", (input) => {
+    cancelMeetingWork();
     intelligence!.revoke("Manual Assist was started.");
     return assistant!.prepare(input);
   });
   handle("everyhint:ai-remove", (input) => assistant!.removeContext(input));
   handle("everyhint:ai-ask", (input) => {
     intelligence!.revoke("A manually reviewed request was chosen.");
+    if (assistant!.value.review?.meetingContext) return meetingAI!.ask(input);
     return assistant!.ask(input);
   });
   handle("everyhint:ai-copy", (input) => {
@@ -695,6 +909,7 @@ async function initialise(): Promise<void> {
     clipboard.writeText(input);
   });
   handle("everyhint:ai-action", (input) => {
+    cancelMeetingWork();
     intelligence!.revoke(
       "The assistant was cancelled, cleared or manually edited.",
     );
@@ -711,6 +926,7 @@ async function initialise(): Promise<void> {
       return speech!.pause();
     }
     if (input === "clear") {
+      cancelMeetingWork();
       intelligence!.clear();
       assistant!.discardReview();
       return speech!.clear();
@@ -737,6 +953,10 @@ async function initialise(): Promise<void> {
       !["start", "pause", "resume", "stop"].includes(input)
     )
       throw new Error("Unknown session action.");
+    if (input === "stop") {
+      stopCapture();
+      return;
+    }
     return controller.action(input as SessionAction);
   });
   handle("everyhint:settings", (input) => {
@@ -775,16 +995,22 @@ async function initialise(): Promise<void> {
     else throw new Error("Unknown window action.");
   });
   powerMonitor.on("suspend", () => {
+    lockMeetingHistory(
+      "Windows suspend locked local history and revoked remote permission.",
+    );
     accounts?.cancel();
     chatgpt?.invalidate();
     assistant?.clear();
-    controller.stop();
+    stopCapture();
   });
   powerMonitor.on("lock-screen", () => {
+    lockMeetingHistory(
+      "Windows lock locked local history and revoked remote permission.",
+    );
     accounts?.cancel();
     chatgpt?.invalidate();
     assistant?.clear();
-    controller.stop();
+    stopCapture();
   });
   await window.loadURL(documentUrl);
   show();
@@ -817,6 +1043,8 @@ app.on("before-quit", (event) => {
   if (quitting) return;
   event.preventDefault();
   quitting = true;
+  postNotes?.dispose();
+  meetingAI?.cancel();
   accounts?.dispose();
   controller?.stop();
   speech?.dispose();
@@ -827,7 +1055,16 @@ app.on("before-quit", (event) => {
   tray?.destroy();
   // Allow SDK teardown and temporary-directory removal to finish before exiting.
   void Promise.race([
-    assistant?.dispose() ?? Promise.resolve(),
+    Promise.all([
+      assistant?.dispose() ?? Promise.resolve(),
+      (async () => {
+        try {
+          await meetings?.flush();
+        } finally {
+          meetings?.lock("Application closed; history is locked.");
+        }
+      })(),
+    ]),
     new Promise<void>((done) => {
       const timer = setTimeout(done, 5000);
       timer.unref();
@@ -838,7 +1075,10 @@ app.on("before-quit", (event) => {
         "Assistant cleanup did not complete. Check temporary EveryHint AI directories.",
       ),
     )
-    .finally(() => app.quit());
+    .finally(() => {
+      meetings?.lock("Application closed; history is locked.");
+      app.quit();
+    });
 });
 app.on("will-quit", () => globalShortcut.unregisterAll());
 app.on("window-all-closed", () => app.quit());

@@ -25,7 +25,7 @@ Dependency installation and Electron's first native binary download need interne
 
 ## Interface and product roadmap
 
-The header switches between the **dashboard**, **expanded assistant** and **compact overlay**. All views share the existing capture, transcription and account controllers. Home reports actual current state; Assistant and Settings expose working controls. Meetings, Knowledge, Calendar, People and Modes are clearly labelled as planned and create no records or connections.
+The header switches between the **dashboard**, **expanded assistant** and **compact overlay**. All views share the existing capture, transcription and account controllers. Home reports actual current state; Assistant and Settings expose working controls. Meetings now provides explicitly saved local history, notes, search and reviewed meeting AI. Knowledge, Calendar, People and Modes remain planned and create no records or connections.
 
 - Use **Get Answer** or **Ctrl+Enter while EveryHint is focused** to open/focus the question composer. Neither submits a request. Existing global show/hide, Pause and Stop shortcuts remain unchanged.
 - Global **Ctrl+Alt+A** opens Assist and prepares a review; **Ctrl+Alt+Shift+C** clears context and cancels generation. Configure these two chords in Settings. Get Answer prepares a preview; a fresh acknowledgement and Ask are required to send selected information to OpenAI.
@@ -85,6 +85,20 @@ After capture has started, choose **Enable transcription**. It cannot activate a
 Clear transcript also discards any pending AI context review. AI answers and data already sent to a provider are separate: use Clear conversation to clear local AI history. Pausing capture clears the live frame but deliberately preserves a screenshot you explicitly froze in an AI review, allowing inspection; Stop discards that review too.
 
 Once the helper and a verified model are installed, transcription runs offline. A missing/invalid model or worker failure produces a visible error; no remote service is used as a fallback.
+
+## Save and review meetings (P8)
+
+Temporary is the default. In Meetings or Settings, explicitly enable local history and acknowledge 7/30/90-day or indefinite retention (30 days by default). Future-session auto-save is separately optional and off. Opening Meetings never starts capture or opens a database until Unlock/save.
+
+1. Start consented capture and local transcription using the existing controls. Save this meeting session with a title and separate persistence acknowledgement; only final text and source metadata are saved. After Stop, available retained temporary text can also be explicitly saved. No raw audio or screenshots are stored.
+2. Open Meetings to browse real records, search text/tags/dates/status, or create a manual-note record. Overview/Transcript/Notes/AI provide source references, explicit speaker corrections, tasks/status, save/revert and protected manual edits. Transcript/search pages are bounded; Continue scans more. Resume only arms a fresh segment and opens capture consent.
+3. In AI, choose mic/system/user-note sources and a summary, selected-meeting question, follow-up or action summary. Review the exact excerpts/account/model and acknowledge before sending to OpenAI. Results remain unsaved until Apply. Unknown people/deadlines remain unassigned/unspecified; check every claim against its source. This reuses the ChatGPT plan connection with no paid fallback.
+4. Optional automatic End notes need a separate current-run/account/model/source grant with 1–60-minute expiry and one attempt. Default is off. Only deliberate End triggers it; general Stop/Pause revokes it. Drafts still require review/Apply.
+5. Export TXT/Markdown/JSON/readable summary through a native save dialog, or copy summary/actions/transcript, after acknowledging an unencrypted copy. Choose a new filename; existing files are preserved. Follow-up drafts leave recipients blank; separately approve the exact edited draft before email-client handoff. Longer mailto drafts must be copied. EveryHint never sends mail; hosted links/Gmail remain deferred.
+
+Sensitive SQLite content is AES-256-GCM encrypted before SQL writes, with profile keys in Windows Credential Manager. IDs/status/times/counts/file size remain visible. History is locked on restart/account/lifecycle changes. Keys are not configuration, and missing keys/corruption preserve encrypted files rather than resetting. Local deletion cannot remove exports, provider retention or guarantee physical SSD erasure. This does not protect against malicious software running as the same Windows user. See [P8 boundaries](docs/DECISIONS/P8-meetings.md).
+
+The authorised synthetic-speech/real-Whisper/gpt-6.1-sol summary test passed generation, evidence validation and Apply in 11.028 seconds; it is not physical-hardware or broad accuracy acceptance. Tests: npm run test:meetings (actual worker/native keyring), npm run smoke:meetings (isolated Windows UI/files; mocked external ports), and npm run check. Remaining human Windows/real-call/endurance checks are in [Testing](docs/TESTING.md).
 
 ## Capture a session
 

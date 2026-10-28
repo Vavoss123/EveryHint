@@ -19,6 +19,7 @@ import {
   validateScreenshot,
 } from "./context";
 import { providerError, ProviderError } from "./errors";
+import type { MeetingAIContext } from "../../shared/meeting-ai";
 
 const maxResponseChars = 32000;
 export class AssistantController {
@@ -45,6 +46,9 @@ export class AssistantController {
   private closed = false;
   private captureSession: string | null = null;
   private preparation = 0;
+  private referenceGuard:
+    | { requestId: string; valid: () => boolean }
+    | undefined;
   constructor(
     private readonly providers: readonly AIProvider[],
     private readonly sources: () => {
@@ -148,7 +152,11 @@ export class AssistantController {
     if (this.inspecting) await this.inspecting;
     await this.inspect();
   }
-  prepare(value: unknown, automatic = false): void | Promise<void> {
+  prepare(
+    value: unknown,
+    automatic = false,
+    reference?: { context: MeetingAIContext; valid: () => boolean },
+  ): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     if (this.active)
       throw new Error("Cancel the active request before reviewing another.");
@@ -157,6 +165,17 @@ export class AssistantController {
         "A manual review is pending. Automatic preparation is unavailable.",
       );
     const input = parseReview(value);
+    if (
+      reference &&
+      (this.selected !== "codex" ||
+        input.options.screenshot ||
+        input.options.microphone ||
+        input.options.systemAudio ||
+        input.options.history)
+    )
+      throw new Error(
+        "Meeting AI uses only selected meeting text through ChatGPT plan inference.",
+      );
     const status = this.statuses.find((status) => status.id === this.selected)!;
     if (input.options.screenshot && !status.capabilities.images)
       throw new Error(
@@ -197,6 +216,24 @@ export class AssistantController {
       if (status.selectedModel) review.model = status.selectedModel;
       if (input.regenerateId) review.replacesRequestId = input.regenerateId;
       if (automatic) review.automatic = true;
+      if (reference) {
+        if (!reference.valid())
+          throw new Error(
+            "The selected meeting context changed. Review it again.",
+          );
+        review.meetingContext = structuredClone(reference.context);
+        review.notices.push(...reference.context.notices);
+        review.prompt = contextPrompt(review);
+        review.textChars = review.prompt.length;
+        if (review.textChars > 20000)
+          throw new Error(
+            "Selected meeting context exceeds 20,000 serialized characters. Select fewer excerpts.",
+          );
+        this.referenceGuard = {
+          requestId: review.requestId,
+          valid: reference.valid,
+        };
+      }
       if (
         review.screenshot &&
         this.sentImages.has(imageHash(review.screenshot.dataUrl))
@@ -226,6 +263,7 @@ export class AssistantController {
     finish(this.sources().capture);
   }
   discardReview(): void {
+    this.referenceGuard = undefined;
     this.preparation++;
     if (this.reviewTimer) clearTimeout(this.reviewTimer);
     this.reviewTimer = undefined;
@@ -308,7 +346,19 @@ export class AssistantController {
       throw new Error(
         "Automatic reviews belong to Live Assist. Prepare a manual review to send manually.",
       );
-    if (canSend && !canSend())
+    const referenceGuard =
+      this.referenceGuard?.requestId === request.requestId
+        ? this.referenceGuard.valid
+        : undefined;
+    const permission =
+      canSend && referenceGuard
+        ? () => canSend() && referenceGuard()
+        : (canSend ?? referenceGuard);
+    if (request.meetingContext && !referenceGuard)
+      throw new Error(
+        "Meeting context must be prepared through its selected profile review.",
+      );
+    if (permission && !permission())
       throw new Error(
         "Live Assist permission expired or changed before transmission.",
       );
@@ -320,6 +370,9 @@ export class AssistantController {
       sessionId: this.sessionId,
       provider: request.provider,
       question: request.question,
+      ...(request.meetingContext
+        ? { meetingPurpose: request.meetingContext.purpose }
+        : {}),
       ...(request.automatic
         ? { automatic: true, contextNotices: request.notices.slice(0, 8) }
         : {}),
@@ -379,17 +432,17 @@ export class AssistantController {
           if (this.sentImages.size > 32)
             this.sentImages.delete(this.sentImages.values().next().value!);
         }
-        if (canSend && !canSend())
+        if (permission && !permission())
           throw new ProviderError(
             "cancelled",
             "Live Assist permission expired or changed before transmission.",
           );
-        const stream = canSend
-          ? provider.respond(request, abort.signal, canSend)
+        const stream = permission
+          ? provider.respond(request, abort.signal, permission)
           : provider.respond(request, abort.signal);
         for await (const event of stream) {
           if (!this.current(response)) break;
-          if (canSend && !canSend())
+          if (permission && !permission())
             throw new ProviderError(
               "cancelled",
               "Live Assist permission expired or changed during the response.",
@@ -416,11 +469,12 @@ export class AssistantController {
               this.history = this.history.filter(
                 (turn) => turn.requestId !== request.replacesRequestId,
               );
-            this.history.push({
-              requestId: request.requestId,
-              question: request.question,
-              answer: response.text,
-            });
+            if (!request.meetingContext)
+              this.history.push({
+                requestId: request.requestId,
+                question: request.question,
+                answer: response.text,
+              });
             while (
               this.history.length > 4 ||
               this.history.reduce(

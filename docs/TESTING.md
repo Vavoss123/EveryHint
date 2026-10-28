@@ -1,3 +1,108 @@
+# P8 Meeting Notes, History and Intelligence verification — 2026-10-28
+
+Baseline `2047110`. P8.1–P8.4 were independently gated in [P8-meetings.md](DECISIONS/P8-meetings.md). Existing P1–P7 controllers/transport/EverySession assets remain; no new dependency, model download, raw-audio storage, tool executor or paid API fallback was added. Earlier phase results below are historical; all open human Windows/device/call/endurance gates remain open.
+
+| Check | P8 result |
+| --- | --- |
+| `npm run check` | Theme/spec generation checks, strict TypeScript, zero-warning lint, **543 unit tests / 42 files**, production build pass |
+| `npm run test:plan` | **5 integration cases pass** using real local HTTP/JWT/SSE and isolated native credentials; no OpenAI inference |
+| `npm run test:ai-sdk` | **6 integration cases pass** against installed Claude SDK loopback fixtures; no paid requests |
+| `npm run test:meetings` | **12 assertions pass** using actual Electron Node 24.22.0 / SQLite 3.53.4 compiled worker and isolated Windows Credential Manager; 500 generated final segments, no remote request |
+| Electron core / AI / speech / UI / intelligence / meetings | **47 / 44 / 11 / 44 / 28 / 42 = 216 assertions**; media/transcripts/email UI are explicitly labelled fixtures; native external ports are mocked |
+| `npm run speech:test` | Cached verified tiny.en + upstream JFK; actual native inference **373.485 / 359.969 ms** for the two source IDs; no physical capture |
+| Genuine P8 summary | **Passed generation, exact-evidence validation and review/Apply**: three offline TTS sentences through synthetic mic + real tiny.en; gpt-6.1-sol **11.028 s, 1,090 input / 795 output tokens** |
+| Production output | Main about **290 kB**, history worker **22 kB**, renderer JS **349 kB**, CSS **29 kB**, plus existing local fonts; no remote font or asset loading |
+
+## Genuine summary evidence and limits
+
+The user separately authorised exactly one initial summary test and, after a harness failure, exactly one additional test. Both delegated genuine official ChatGPT-plan inference, with one POST per run and no automatic retry. The first produced a schema/quote-validated draft; the test script mistakenly searched the response using the terminal-cleared request ID and cleaned up before inspecting/applying it. The corrected replacement identified the response using the frozen review ID and saved evidence before further assertions. This is a test-harness correction, not a fabricated model result.
+
+The successful run used these exact harmless offline-TTS sentences, all recognised correctly by actual tiny.en: “We decided to release the prototype on Thursday.” “I will prepare the test checklist by Wednesday.” “The owner and deadline for documentation are not specified.” Only three final microphone excerpts from that explicitly saved labelled meeting appeared in the frozen 3,127-character review. Automatic End notes stayed off. A separately checked main transport delegated exactly one official `https://api.openai.com/v1/responses` POST with gpt-6.1-sol, `store:false`, `stream:true`, `tools:[]`, `tool_choice:none`, one text input, no screenshot/raw audio/system source/previous history/API billing fallback. Completion required the real terminal provider event and structured quote/ref validation.
+
+The actual output recapped the Thursday release, Wednesday checklist and unspecified documentation ownership/deadline. It produced one supported decision and one Open action; the action owner was null (Unassigned), deadline exactly Wednesday. No fictional participant, calendar date or documentation commitment was invented. The result stayed unsaved until Apply; the reviewed sections then persisted with AI provenance and the actual three segments. Both labelled test meetings were deleted, original local-history/speech/appearance preferences restored, and test apps closed to dispose synthetic overrides. No email application was opened or message sent. Normal startup is IDLE/Manual, history locked and automatic grants absent.
+
+Ignored evidence: `artifacts/p8-live-summary-result.json` (limited first run), `artifacts/p8-live-summary-replacement-result.json` (successful run), `artifacts/p8-meeting-smoke.json`, `artifacts/p8-storage-integration.json`. Genuine verification covers this one account/model/short synthetic conversation and reviewed summary path. Genuine automatic End, prior-meeting QA and follow-up email inference are **not** claimed; those have deterministic provider tests only. Physical audio/calls, broad extraction accuracy, overlapping speakers and other models/accounts remain pending.
+
+## Encryption, persistence and recovery verification
+
+Actual SQLite tests inspect database/journal artifacts for plaintext title/device/transcript/manual-note/tag markers; test wrong key/profile, nonce variation, ciphertext/metadata tampering, key loss and OS-secret failure. Keys are protected by a distinct native credential service and never renderer/config fields. Sensitive content is authenticated AES-256-GCM ciphertext before SQLite sees it; visible IDs/timing/status/count/revision/expiry/file size are disclosed. No plaintext FTS/search cache or raw-audio file is created.
+
+Versioned migrations, future-schema refusal, rollback on migration failure, preserved corrupt files, abruptly terminated subprocess transactions and interrupted-run recovery are tested. Reopen with the same key restores only committed data, not capture/remote permissions or offline recording duration. Application-level delete/retention removes managed rows/derivatives and invalidates search/draft/reference access. User notes/corrections are preserved by appropriate clear-generated controls; clear-live text is independent of stored history. Missing keys never cause silent reset/replacement. Same-user malware, paging/crash dumps, external backups/exports, SSD physical erasure and provider retention are outside these guarantees.
+
+The Windows app smoke uses an isolated installation profile and real SQLite/worker/native credential; the source transcripts and email response are explicitly deterministic fixtures. It verifies locked/no-database startup, real empty/history state, preferences/create/edit/revert/reopen, safe snippets/markup, full transcript paging/search/user labels, missing-model refusal, fresh capture consent on resume, deletion and lock cache clearing. Native save-dialog **choices**, clipboard **writes** and external email **opening** are mocked: actual selected test files are written/inspected, while the user's clipboard and email apps remain untouched. Arrow/Home tab navigation and compact 360-DIP/125% status/Stop bounds are automated; this does not replace human accessibility/DPI checks.
+
+## Coverage of the 30 requested categories
+
+| Requested categories | Evidence |
+| --- | --- |
+| 1–4 opt-in, temporary isolation, create/update | `meeting-controller`, `meeting-storage`, `meeting-history`; real app create/edit/restart |
+| 5–7 encryption, keys, migrations | `meeting-storage`; actual native-key/compiled-worker integration |
+| 8–10 dedup, ordering, crash saving | `meeting-storage/controller`; abrupt subprocess rollback and interrupted-run recovery |
+| 11–14 search correctness, deletion, retention | `meeting-history/storage`; 1,105-segment continuation, 25-meeting pages, tags/dates/status, snippets, RAM-only cursors and cascades |
+| 15–18 actions, decisions, unknown fields, summary | `meeting-ai/post-notes`; separately authorised genuine summary with exact quotes |
+| 19–20 editing and protected regeneration | `meeting-history/ai/sharing`; UI save/revert/navigation, version/manual-provenance protection |
+| 21–23 remote/Post consent and cancel | `meeting-ai/post-notes`, existing plan-provider token-renewal guard; no unapproved retry/empty call |
+| 24–25 selected-meeting context and resume | `meeting-ai/history/controller`; up to three meetings/100 refs; fresh-capture-only association |
+| 26–27 exports and follow-up | `meeting-sharing`; real chosen files and mocked native ports; labelled provider/UI follow-up fixtures |
+| 28–29 account isolation and no capture on reopen | Scoped IPC before/after awaits, profile/cancellation/delayed-attachment/apply tests, worker separation, restart app checks |
+| 30 P1–P7 regressions | All existing unit/provider/core/AI/speech/UI/intelligence checks retained; historical genuine evidence remains separately bounded |
+
+The final review added six regression cases for temporary-draft attachment/changed text/profile cutoffs and async account changes during attachment/apply. They prevent old-profile content reappearing or older operations replacing newer draft state. Snapshot and pushed meeting-AI revisions now use one main sequence. Search dates/order match displayed start time (creation for drafts); global title sort is not advertised.
+
+Three additional host tests run actual deterministic worker threads to verify immediate write/global-retention guard invalidation and worker termination when initial readiness fails. A fourth test verifies copied-key cleanup when SQLite cannot open a file. Failed opens now release their worker instead of retaining a waiting thread. The native/SQLite integration remains separate from these explicitly labelled RPC fixtures.
+
+## Performance observations
+
+One isolated Windows compiled-worker run (500 generated finals, no physical capture or remote calls):
+
+| Observation | Measured |
+| --- | --- |
+| Meeting creation | 3.901 ms |
+| Saving 20-final batch | mean 5.398 ms / p95 6.292 ms |
+| Load saved meeting | 0.603 ms |
+| Retrieve 100 final segments | 2.401 ms |
+| Search through 500 encrypted segments for the last marker | 23.843 ms |
+| SQLite size | 40,960 → 352,256 bytes |
+| Isolated worker-test process RSS sample | 64,724,992 bytes; not full-app/endurance memory |
+| Actual app edit-save / search UI | About 77 / 88 ms in the 42-assertion run; includes IPC/render scheduling, not a latency guarantee |
+| Genuine summary | 11.028 s / 1,090 input + 795 output tokens |
+| Successful synthetic summary speech | helper load 105 ms; average inference 476 ms; about 173 MB helper RSS; zero queued/dropped jobs/gaps at observation |
+
+Limits are explicit: 25-row lists, 100-segment transcript pages, 30-match/1,000-scan transcript search, 25-meeting/1,000-segment/about-4M-character search work steps, at most 10,000 meeting IDs in unlocked search state, 20,000 segments/100 capture runs per record, bounded recorder/RPC queues and 100/12,000-character AI excerpts. SQLite's pinned Node API remains experimental. No long-session RSS/CPU/battery or real device/call performance guarantee is claimed; the 15-minute endurance gate remains open.
+
+## P8 human Windows acceptance — still open
+
+Every row below needs human acceptance on authorised real content. Automated/synthetic evidence is stated separately and is not a manual pass.
+
+| # | Human scenario | Automated/limited evidence; remaining work |
+| --- | --- | --- |
+| 1 | Start and explicitly save a consented meeting | Synthetic save passes; human source/participant consent and real workflow pending |
+| 2 | Physical microphone transcription | Real tiny.en synthetic path passes; actual mic/noise/devices pending |
+| 3 | Windows system-audio transcription | Synthetic source regression passes; real routing/calls/overlap pending |
+| 4 | End and reopen saved meeting | Actual worker/app restart and synthetic End pass; human full meeting pending |
+| 5 | Generate real AI summary | Genuine short synthetic summary/Apply passed; real-call accuracy/quality pending |
+| 6 | Edit and save notes | UI/optimistic save/revert pass; physical keyboard/Narrator/conflict usability pending |
+| 7 | Inspect decisions/actions and unknown fields | One genuine supported decision/action passes; broader ambiguity/accuracy pending |
+| 8 | Search real meeting history | Deep literal search/cursors/snippets pass; long-history/user usability pending |
+| 9 | Ask about selected meeting(s) | Deterministic provider fixtures pass; genuine remote QA and human relevance pending |
+| 10 | Export through native save dialog | Actual test files pass with dialog choices mocked; real dialog/drives/permissions pending |
+| 11 | Draft/edit email and explicitly hand off | AI/UI/native ports mocked; actual mail handler, long drafts and human approval pending |
+| 12 | Delete a meeting and derivative data | Actual SQL/app deletion and real test cleanup pass; human scope/export expectations pending |
+| 13 | Restart and inspect persistence | Actual process restart passes; human multi-account Windows workflow pending |
+| 14 | Confirm temporary sessions leave no saved content | Unit/no-database startup pass; human multi-session/retention observation pending |
+| 15 | Confirm reopening never captures/resumes sharing | Actual app idle/consent gates pass; physical source/tray/hotkey check pending |
+| 16 | Force shutdown during a saved real meeting | Subprocess transaction/recovery tests pass; full-app real-device forced-close recovery pending |
+| 17 | DPI/keyboard/accessibility | Arrow/Home tabs and 360-DIP/125% bounds pass; mixed DPI/multi-monitor/Narrator/themes/opacity pending |
+| 18 | P7 Live Assist with saved meeting controls | Existing P7 tests/previous genuine answer retained; human combined Live/Post/cooldown/expiry/cap/Pause/Stop/account checks pending |
+
+Carry forward P1's user-confirmed incomplete Windows checks, P2 physical mic/loopback/calls, P3 base.en/ARM64/older CPUs, P5 human visual/DPI/accessibility, P6 physical shortcuts/real audio/accounts and P7 15-minute CPU/RSS/usability. Do not infer their acceptance from this milestone. Direct Gmail/send, hosted links/backend access controls, speaker identification and P9/P10 remain deferred.
+
+Automatic approval review previously rejected deletion of the failed-test Temp folder `everyhint-p8-storage-kUp6R1` as “blocked by policy”, without a further reason. It remains untouched; no alternative deletion mechanism was used. The four restricted P6 editor profiles remain untouched too. This is separate from the two authorised test-meeting row deletions, which succeeded.
+
+---
+
+## Historical P7 verification
+
 # P7 Automatic Conversation Intelligence verification — 2026-10-28
 
 Baseline `e68bfe7`. P7.1, P7.2 and P7.3 were verified in order; design and intermediate gates are in [P7-intelligence.md](DECISIONS/P7-intelligence.md). P1–P6 hardware/visual/endurance acceptance remains open. No P8 records, new dependency, classifier/model download, raw-audio transfer, paid API fallback or automatic Claude request was added.

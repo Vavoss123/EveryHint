@@ -26,6 +26,13 @@ import { plannedDestination, type Destination } from "../../shared/navigation";
 import { useAssistantSnapshot } from "./useAssistantSnapshot";
 import { TranscriptionPanel } from "./TranscriptionPanel";
 import { AssistantPanel } from "./AssistantPanel";
+import { useMeetings } from "./useMeetings";
+import {
+  MeetingStatus,
+  MeetingSessionControls,
+  MeetingPreferencesPanel,
+} from "./MeetingSessionControls";
+import { MeetingHistory } from "./MeetingHistory";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -35,6 +42,10 @@ function unwrap<T>(result: Result<T>): T {
 function App() {
   const intelligence = useIntelligenceSnapshot();
   const assistant = useAssistantSnapshot();
+  const meetings = useMeetings();
+  const [requestedMeetingId, setRequestedMeetingId] = useState<string | null>(
+    null,
+  );
   const [app, setApp] = useState<AppSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -146,6 +157,20 @@ function App() {
     setPreparing(false);
     setSettingsOpen(id === "settings");
     if (id === "assistant") focusComposer.current = true;
+  }
+  function openMeetings(id?: string): void {
+    setRequestedMeetingId(id ?? null);
+    setDestination("meetings");
+    setSettingsOpen(false);
+    setPreparing(false);
+    save({ compact: false, layout: "dashboard" });
+  }
+  function meetingCapture(): void {
+    setSettingsOpen(false);
+    setPreparing(true);
+  }
+  function meetingConnection(): void {
+    openAssistant();
   }
   useEffect(() => window.everyhint.onAssist(openAssistant));
   useEffect(() => {
@@ -449,15 +474,22 @@ function App() {
       </div>
 
       <LiveStatus snapshot={intelligence} />
+      <MeetingStatus
+        state={meetings.state}
+        ai={meetings.ai}
+        open={() => openMeetings()}
+      />
       {sharing && (
         <div className="remote-status" role="status">
           <Icon name="spark" />
           <span>
             {response.provider === "codex" ? "ChatGPT" : "Claude"} ·{" "}
             {response.status === "sending"
-              ? response.automatic
-                ? "Sending authorised Live context"
-                : "Sending reviewed context"
+              ? response.meetingPurpose
+                ? "Sending authorised meeting text"
+                : response.automatic
+                  ? "Sending authorised Live context"
+                  : "Sending reviewed context"
               : "Generating answer"}
           </span>
           <button
@@ -480,6 +512,22 @@ function App() {
           />
         )}
         <section className="content" id="workspace-content" tabIndex={-1}>
+          {meetings.state && (
+            <MeetingHistory
+              state={meetings.state}
+              ai={meetings.ai}
+              assistant={assistant}
+              visible={
+                dashboard &&
+                !settingsOpen &&
+                !preparing &&
+                destination === "meetings"
+              }
+              requestedId={requestedMeetingId}
+              prepareCapture={meetingCapture}
+              connection={meetingConnection}
+            />
+          )}
           {dashboard &&
             !settingsOpen &&
             !preparing &&
@@ -643,6 +691,9 @@ function App() {
                   snapshot={intelligence}
                   capture={session}
                 />
+                {meetings.state && (
+                  <MeetingPreferencesPanel state={meetings.state} />
+                )}
                 <ShortcutSettings settings={settings} save={save} />
                 <TranscriptionPanel settings canEnable={active} />
                 {app.hotkeys.map((hotkey) => (
@@ -861,6 +912,15 @@ function App() {
             )}
             <div hidden={settingsOpen || preparing}>
               <div className="session-workspace">
+                {!settings.compact && (
+                  <MeetingSessionControls
+                    state={meetings.state}
+                    ai={meetings.ai}
+                    capture={session}
+                    open={() => openMeetings()}
+                    saved={openMeetings}
+                  />
+                )}
                 <IntelligencePanel
                   snapshot={intelligence}
                   compact={settings.compact}
@@ -888,6 +948,7 @@ function App() {
                   compact={settings.compact}
                 >
                   <AssistantPanel
+                    openMeetings={() => openMeetings()}
                     operatingMode={intelligence?.mode ?? "manual"}
                     compact={settings.compact}
                     hideImage={active && session.source?.kind === "screen"}

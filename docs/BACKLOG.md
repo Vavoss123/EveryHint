@@ -1,10 +1,23 @@
 # EveryHint milestones
 
-## P7 -- Automatic Conversation Intelligence (current delivery)
+## P8 — Meeting Notes, History and Intelligence (current delivery)
+
+Implemented on baseline 2047110. Four checkpoints passed independently: encrypted opt-in persistence; grounded AI drafts/one-attempt End consent; scoped history/search/editing/meeting AI; explicit exports/clipboard/email handoff. Final automated results and all limits are in [TESTING.md](TESTING.md), architecture in [P8 design](DECISIONS/P8-meetings.md), and changed-file manifest in [DELIVERY.md](DELIVERY.md). P1–P7 capabilities and EverySession styling remain. No dependency, raw-audio storage, tool executor, hidden sync or paid fallback was added.
+
+Genuine P8 summary generation/review/Apply passed with synthetic microphone, actual tiny.en and one separately authorised gpt-6.1-sol request: 11.028 s, 1,090 input / 795 output tokens, one supported decision and one action with unknown owner left unassigned. An earlier separately authorised request also produced a validated draft, but a test-harness completion-ID lookup prevented further inspection; the corrected replacement passed without automatic retry. Both test records were deleted, preferences restored and synthetic capture disposed. This does not establish physical microphone/system-audio or broad summary accuracy.
+
+Remaining acceptance: all 18 P8 human Windows scenarios, real audio/calls/overlap/noise and summary quality, physical keyboard/Narrator, multi-monitor/DPI/contrast/opacity, external mail-client behavior, base.en/ARM64/older CPUs, long-session CPU/RSS and release/distribution/security review. The automated restart/crash/retention/encryption results do not close those manual gates. Lost-key recovery needs the original OS credential; there is no plaintext reset. SSD/remote/export erasure is not guaranteed.
+
+Deferred capability: hosted share links with authentication/revocation/expiry/backend; direct Gmail/OAuth/send; automatic speaker identification; global title sort; semantic search/embeddings; custom templates/modes/personal knowledge (P9), calendar/people (P10). Current search is literal bounded local work; meeting QA/follow-up/automatic End have deterministic provider tests, while genuine remote verification covers the reviewed summary path only. EH-039/EH-042 remain partial. The four restricted P6 editor profiles and the automatic-review-blocked P8 Temp directory remain untouched.
+
+Delivery commit: feat: add EveryHint meeting history and AI notes. Do not begin P9 as part of this delivery.
+
+
+## P7 -- Automatic Conversation Intelligence (previous delivery)
 
 P7.1 local final-question/keyword/stable-screen detection and correlation, P7.2 seven reviewed/local actions and ranked suggestions, and P7.3 separate expiring Live sharing are implemented on baseline `e68bfe7`. Each checkpoint was verified before the next. Existing P6 controllers/transport/EverySession tokens remain in use. Manual and Auto-Hint never submit automatically; Live is off at startup and has independent exact-source/account/model consent, expiry, cooldown, conservative attempt cap, one active request and cancellation. One separately authorised genuine gpt-6.1-sol automatic answer completed through synthetic microphone and real local Whisper (one request, 8.995 s, grant closed at cap). Measurements and scope are recorded in [TESTING.md](TESTING.md); no physical-hardware or broad accuracy claim follows from synthetic audio.
 
-Remaining P7 acceptance: physical mic/Windows playback/both and consented calls; real speech with VS Code; screen-change/duplicate usability; human Live expiry/cap/Pause/Stop/account revocation; compact/expanded/DPI/multi-monitor/Narrator; 15-minute CPU/RSS. English-only rules and source labels are not multilingual transcription/diarisation. Screen differences are not OCR or semantic question recognition. Fixed keyword cues are implemented; personal keyword-list editing remains absent. Context-only Fact Check, retained-window Recap and user-provided Who do not complete independent web research, P8 notes or P10 people research. No P8 work started. The four restricted P6 editor profiles remain untouched.
+Remaining P7 acceptance: physical mic/Windows playback/both and consented calls; real speech with VS Code; screen-change/duplicate usability; human Live expiry/cap/Pause/Stop/account revocation; compact/expanded/DPI/multi-monitor/Narrator; 15-minute CPU/RSS. English-only rules and source labels are not multilingual transcription/diarisation. Screen differences are not OCR or semantic question recognition. Fixed keyword cues are implemented; personal keyword-list editing remains absent. Context-only Fact Check, retained-window Recap and user-provided Who do not complete independent web research, P8 notes or P10 people research. P8 has since been implemented below its separately verified scope. The four restricted P6 editor profiles remain untouched.
 
 Commit: `feat: add EveryHint automatic conversation intelligence`. Resolve remaining manual gates and distribution eligibility before release.
 

@@ -21,12 +21,14 @@ export function AssistantPanel({
   expand,
   sourceName,
   operatingMode = "manual",
+  openMeetings,
 }: {
   compact: boolean;
   hideImage: boolean;
   expand: () => void;
   sourceName: string;
   operatingMode?: OperatingMode;
+  openMeetings?: () => void;
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
   const [question, setQuestion] = useState("");
@@ -454,6 +456,25 @@ export function AssistantPanel({
               {notice}
             </p>
           ))}
+          {review.meetingContext && (
+            <div className="panel-stack">
+              <strong>
+                Selected meeting text · {review.meetingContext.purpose}
+              </strong>
+              {review.meetingContext.excerpts.map((excerpt) => (
+                <div className="review-item" key={excerpt.ref}>
+                  <small>
+                    {excerpt.kind === "notes" ? "User notes" : excerpt.source} ·{" "}
+                    {excerpt.ref}
+                  </small>
+                  <p>{excerpt.text}</p>
+                </div>
+              ))}
+              <button className="secondary" onClick={openMeetings}>
+                Review meeting notes and drafts
+              </button>
+            </div>
+          )}
           {review.transcripts.map((excerpt, index) => (
             <div
               className="review-item"
@@ -599,7 +620,7 @@ export function AssistantPanel({
               {labels[response.status]}
               {response.model ? ` · ${response.model}` : ""}
             </small>
-            {response.automatic && (
+            {response.automatic && !response.meetingPurpose && (
               <small>
                 Live Assist · automatically requested within your authorised
                 session
@@ -619,7 +640,21 @@ export function AssistantPanel({
             {response.action === "recap" && (
               <small>Recap of selected retained context only</small>
             )}
-            <ResponseText text={response.text} />
+            {response.meetingPurpose === "summary" ? (
+              <>
+                <p className="muted">
+                  {response.status === "sending" ||
+                  response.status === "generating"
+                    ? "Generating a structured meeting draft…"
+                    : "Meeting summary request finished. Review its draft and supporting transcript in Meetings before saving."}
+                </p>
+                <button className="secondary" onClick={openMeetings}>
+                  Open meeting draft
+                </button>
+              </>
+            ) : (
+              <ResponseText text={response.text} />
+            )}
             {response.error && (
               <p className="error-message" role="alert">
                 {response.error.message}

@@ -1,3 +1,100 @@
+# P8 delivery — Meeting Notes, History and Intelligence
+
+Implemented on baseline `2047110`, preserving P1–P7 and the EverySession design. Four independently verified checkpoints are recorded in [P8-meetings.md](DECISIONS/P8-meetings.md). Version stays 0.4.0. No npm dependency/model download, paid API fallback, raw-audio storage, tool execution or P9/P10 work was added.
+
+- **Persistence:** Temporary default; explicit per-profile save/retention acknowledgement; optional future-authorised-audio auto-save off by default; final-only deduplicated source/time/session IDs; separate capture runs; opt-in SQLite worker with AES-256-GCM and Windows Credential Manager keys; transactions/migrations/corruption/key-loss preservation and interrupted recovery; clear/delete/all/retention controls.
+- **Meeting intelligence:** grounded structured summary/decisions/actions with exact refs/quotes and uncertainty; missing owners/deadlines stay unassigned/unspecified; review/Apply, editable notes/tasks/tags/title, save/revert and selected-section regeneration with manual-edit protection; separately scoped one-attempt expiring End permission, default off.
+- **History/search:** real empty/locked/error/dashboard/detail states, lazy pagination, scoped literal search/snippets/tags/dates/status/order, selected-meeting/excerpt AI through the existing plan provider, account/async cancellation guards, fresh-consent-only resume. Search has no plaintext persistent index.
+- **Sharing/follow-up:** explicit native-dialog TXT/Markdown/JSON/readable summaries, guarded new files, clipboard selection, editable email with no inferred recipients and separate mailto approval. Native external ports are mocked in tests; no email was sent or actual mail app opened.
+
+Build and verification: strict TypeScript, zero-warning lint, generated theme/spec checks and production build pass; **543 unit tests / 42 files**, **5 plan + 6 installed SDK integration cases**, **12 actual SQLite-worker/native-credential assertions**, **216 Electron assertions** (47 core + 44 AI + 11 speech + 44 UI + 28 intelligence + 42 meetings). Real cached tiny.en/JFK inference passes. Earlier P1–P7 tests remain; no failed security/acceptance coverage was removed.
+
+Genuine summary: the separately authorised replacement completed gpt-6.1-sol inference in **11.028 s, 1,090 input / 795 output tokens**, from three exact offline-TTS → synthetic-mic → real-tiny.en final sentences. It generated one supported release decision and one Wednesday checklist action with unknown owner left null. The draft stayed unsaved until reviewed Apply, then persisted. An initial separately authorised request also produced a validated draft but a completion-ID lookup in the test harness prevented inspection/save/latency verification. **Two total separately authorised requests**, no automatic retry or paid fallback. Both test meetings were deleted; preferences restored; synthetic test apps closed. This verifies the reviewed short synthetic summary path, not physical recording, broad accuracy, genuine automatic End/meeting QA/email generation or general release readiness.
+
+Persistence/encryption: actual SQLite/journal plaintext scans, tamper/wrong-profile/wrong-key/key-loss tests, migration rollback/newer-schema/corruption refusal, abrupt writes/recovery, restart, deletion/retention and real native-key worker tests pass. Sensitive fields are encrypted before SQL. IDs/times/count/status/file size remain visible; this is an OS-user boundary with no protection from same-user malware, guaranteed paging/crash-dump/SSD erasure or recall of exported/provider-retained copies. SQLite remains experimental in the pinned Node 24 runtime.
+
+One 500-final worker run: create **3.901 ms**; 20-final save mean/p95 **5.398/6.292 ms**; load **0.603 ms**; retrieve100 **2.401 ms**; search500 **23.843 ms**; database **40,960 → 352,256 B**; isolated test RSS **64,724,992 B**. App edit/search about **77/88 ms** in one run; genuine summary **11.028 s**. These are observations, not full-app/endurance guarantees. [TESTING.md](TESTING.md) records methodology, all 30 coverage categories and all 18 still-open human Windows checks.
+
+Remaining acceptance: physical mic/Windows playback/both and consented calls/noise/overlap; real-call summary quality; genuine selected-meeting QA/follow-up/automatic End; actual save dialog/mail handler; physical keyboard/Narrator/shortcuts/themes/opacity/mixed DPI/multi-monitor; full-app forced shutdown/device recovery; base.en/ARM64/older CPUs; 15-minute CPU/RSS/stability; distribution/security/release review. All earlier incomplete manual gates remain open.
+
+Deferred/partial: hosted authenticated/revocable/expiring share links need a backend; direct Gmail/OAuth/send; automatic speaker identity; semantic/global-title search; P9 modes/personal knowledge; P10 calendar/people. The regenerated 103-feature matrix records rows 28–43 with evidence and limits: **37 AUTOMATED VERIFIED, 9 MANUAL VERIFIED, 6 IMPLEMENTED, 51 PLANNED, 0 COMPLETE**. EH-039/EH-042 explicitly remain partial.
+
+Automatic approval review rejected deletion of one failed-test Windows Temp folder, `everyhint-p8-storage-kUp6R1`, as “blocked by policy”, without a further reason. It was left untouched, with no alternate deletion attempt. The four restricted P6 editor profiles also remain untouched. Authorised test meeting deletion succeeded and is separate from that filesystem cleanup.
+
+Delivery commit subject: `feat: add EveryHint meeting history and AI notes` (no co-author trailers). Generated builds, synthetic speech, live evidence and screenshots remain ignored.
+
+## P8 changed-file manifest
+
+61 source/build/fixture-test/documentation files changed. Full reviewable manifest:
+
+```text
+README.md
+docs/ARCHITECTURE.md
+docs/BACKLOG.md
+docs/DECISIONS/P8-meetings.md
+docs/DELIVERY.md
+docs/FEATURE_MATRIX.md
+docs/PRODUCT_SPEC.md
+docs/TESTING.md
+electron.vite.config.ts
+package.json
+resources/feature-inventory.json
+scripts/build-feature-matrix.mjs
+scripts/meeting-smoke-fixture.mjs
+scripts/smoke-meetings.mjs
+scripts/smoke-ui.mjs
+scripts/test-meeting-storage-runner.mjs
+scripts/test-meeting-storage.mjs
+src/main/ai/context.ts
+src/main/ai/controller.ts
+src/main/index.ts
+src/main/meetings/ai-context.ts
+src/main/meetings/ai.ts
+src/main/meetings/controller.ts
+src/main/meetings/crypto.ts
+src/main/meetings/database.ts
+src/main/meetings/edits.ts
+src/main/meetings/ipc.ts
+src/main/meetings/keys.ts
+src/main/meetings/post-notes.ts
+src/main/meetings/preferences.ts
+src/main/meetings/sharing.ts
+src/main/meetings/store.ts
+src/main/meetings/worker.ts
+src/main/session.ts
+src/preload/index.ts
+src/renderer/src/AssistantPanel.tsx
+src/renderer/src/MeetingAIReview.tsx
+src/renderer/src/MeetingDetail.tsx
+src/renderer/src/MeetingHistory.tsx
+src/renderer/src/MeetingSessionControls.tsx
+src/renderer/src/MeetingSharing.tsx
+src/renderer/src/main.tsx
+src/renderer/src/styles.css
+src/renderer/src/useMeetings.ts
+src/shared/ai.ts
+src/shared/contracts.ts
+src/shared/meeting-ai.ts
+src/shared/meeting-bridge.ts
+src/shared/meeting-edits.ts
+src/shared/meeting-sharing.ts
+src/shared/meetings.ts
+src/shared/navigation.ts
+tests/meeting-ai-helpers.ts
+tests/meeting-ai.test.ts
+tests/meeting-controller.test.ts
+tests/meeting-history.test.ts
+tests/meeting-post-notes.test.ts
+tests/meeting-sharing.test.ts
+tests/meeting-storage.test.ts
+tests/meeting-worker-host.test.ts
+tests/product-spec.test.ts
+```
+
+---
+
+## Historical P7 delivery
+
 # P7 delivery — Automatic Conversation Intelligence
 
 Implemented on `e68bfe7`, preserving the P1–P6 capture/transcription/AI controllers and EverySession red/Poppins/Inter themes/layouts. P7.1 detection/correlation and P7.2 reviewed actions/UI passed their gates before P7.3 scoped Live scheduling. Version remains 0.4.0; no dependency or model download was added. P8 is unstarted.

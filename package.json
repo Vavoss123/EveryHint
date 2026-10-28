@@ -33,7 +33,9 @@
     "smoke:speech": "node scripts/smoke-transcription.mjs",
     "test:ai-sdk": "vitest run --config vitest.sdk.config.ts",
     "smoke:ai": "node scripts/smoke-ai.mjs",
-    "test:plan": "vitest run --config vitest.plan.config.ts"
+    "test:plan": "vitest run --config vitest.plan.config.ts",
+    "test:meetings": "node scripts/test-meeting-storage.mjs",
+    "smoke:meetings": "node scripts/smoke-meetings.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.311",

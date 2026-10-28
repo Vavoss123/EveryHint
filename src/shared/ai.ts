@@ -156,6 +156,7 @@ export interface ConversationTurn {
   answer: string;
 }
 export interface AIRequest {
+  meetingContext?: import("./meeting-ai").MeetingAIContext;
   automatic?: boolean;
   action?: ContextualAction;
   replacesRequestId?: string;
@@ -199,6 +200,7 @@ export interface AIUsage {
   estimatedUsd?: number;
 }
 export interface AIResponse {
+  meetingPurpose?: import("./meeting-ai").MeetingPurpose;
   contextNotices?: string[];
   action?: ContextualAction;
   automatic?: boolean;

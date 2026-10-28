@@ -138,7 +138,6 @@ try {
   );
   await shot("dashboard-light");
   for (const [name, milestone] of [
-    ["Meetings", "P8"],
     ["Knowledge", "P9"],
     ["Calendar", "P10"],
     ["People", "P10"],
@@ -156,6 +155,16 @@ try {
       `${name} is an honest planned destination`,
     );
   }
+  await page
+    .getByRole("navigation", { name: "Main navigation" })
+    .getByRole("button", { name: "Meetings", exact: true })
+    .click();
+  check(
+    await page
+      .getByLabel("Locked meeting history", { exact: true })
+      .isVisible(),
+    "Meetings opens real opt-in locked history without capture or fabricated records",
+  );
   await page
     .getByRole("navigation")
     .getByRole("button", { name: "Assistant", exact: true })
@@ -438,7 +447,7 @@ try {
     await page
       .getByRole("button", { name: "Cancel remote request", exact: true })
       .isVisible(),
-    "planned destinations cannot hide an active request cancellation control",
+    "meeting navigation cannot hide an active request cancellation control",
   );
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>

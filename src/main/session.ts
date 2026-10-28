@@ -65,6 +65,9 @@ export class CaptureSessionController {
   get value(): SessionSnapshot {
     return structuredClone(this.snapshot);
   }
+  get metadata(): SessionSnapshot {
+    return structuredClone({ ...this.snapshot, frame: null });
+  }
   get indicator(): Pick<SessionSnapshot, "state" | "sources"> {
     return structuredClone({
       state: this.snapshot.state,

@@ -3,7 +3,17 @@ import react from "@vitejs/plugin-react";
 import { resolve } from "node:path";
 
 export default defineConfig({
-  main: {},
+  main: {
+    build: {
+      rolldownOptions: {
+        input: {
+          index: resolve("src/main/index.ts"),
+          "meetings-worker": resolve("src/main/meetings/worker.ts"),
+        },
+        output: { entryFileNames: "[name].js" },
+      },
+    },
+  },
   preload: {
     build: {
       rolldownOptions: {

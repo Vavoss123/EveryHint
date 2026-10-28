@@ -109,6 +109,7 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  meetings: import("./meeting-bridge").MeetingBridge;
   authoriseLive(
     input: import("./intelligence").LiveConsentInput,
   ): Promise<Result<void>>;

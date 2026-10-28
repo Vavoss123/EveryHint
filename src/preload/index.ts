@@ -6,6 +6,161 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  meetings: Object.freeze({
+    export: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["export"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-export", input),
+    copy: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["copy"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-copy", input),
+    email: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["email"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-email", input),
+    findTranscript: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["findTranscript"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-find-transcript", input),
+    reference: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["reference"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-reference", input),
+    getState: () => ipcRenderer.invoke("everyhint:meetings-state"),
+    onState: (
+      listener: (value: import("../shared/meetings").MeetingState) => void,
+    ) => {
+      const wrapped = (
+        _event: Electron.IpcRendererEvent,
+        value: import("../shared/meetings").MeetingState,
+      ) => listener(value);
+      ipcRenderer.on("everyhint:meetings-state", wrapped);
+      return () =>
+        ipcRenderer.removeListener("everyhint:meetings-state", wrapped);
+    },
+    getAI: () => ipcRenderer.invoke("everyhint:meeting-ai-state"),
+    onAI: (
+      listener: (value: import("../shared/meeting-ai").MeetingAIState) => void,
+    ) => {
+      const wrapped = (
+        _event: Electron.IpcRendererEvent,
+        value: import("../shared/meeting-ai").MeetingAIState,
+      ) => listener(value);
+      ipcRenderer.on("everyhint:meeting-ai-state", wrapped);
+      return () =>
+        ipcRenderer.removeListener("everyhint:meeting-ai-state", wrapped);
+    },
+    unlock: (input: import("../shared/meeting-bridge").MeetingScope<void>) =>
+      ipcRenderer.invoke("everyhint:meetings-unlock", input),
+    lock: (input: import("../shared/meeting-bridge").MeetingScope<void>) =>
+      ipcRenderer.invoke("everyhint:meetings-lock", input),
+    configure: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["configure"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-configure", input),
+    create: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["create"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-create", input),
+    saveSession: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["saveSession"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-save-session", input),
+    list: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["list"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-list", input),
+    get: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["get"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-get", input),
+    transcript: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["transcript"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-transcript", input),
+    temporary: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["temporary"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-temporary", input),
+    edit: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["edit"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-edit", input),
+    speakerLabels: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["speakerLabels"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-speaker-labels", input),
+    operation: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["operation"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-operation", input),
+    deleteAll: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["deleteAll"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-delete-all", input),
+    resume: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["resume"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-resume", input),
+    cancelResume: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["cancelResume"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-cancel-resume", input),
+    end: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["end"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-end", input),
+    prepareAI: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["prepareAI"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-ai-prepare", input),
+    askAI: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["askAI"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-ai-ask", input),
+    applyAI: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["applyAI"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-ai-apply", input),
+    cancelAI: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["cancelAI"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-ai-cancel", input),
+    authorisePost: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["authorisePost"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-post-authorise", input),
+    cancelPost: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["cancelPost"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-post-cancel", input),
+  }),
   authoriseLive: (input) =>
     ipcRenderer.invoke("everyhint:intelligence-authorise", input),
   pauseLive: () => ipcRenderer.invoke("everyhint:intelligence-pause"),
