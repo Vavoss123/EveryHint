@@ -1,3 +1,5 @@
+> Current P4.2: [ChatGPT plan inference decision](P4.2-chatgpt-plan.md) supersedes the old native Codex login/inference wiring below. Claude distribution restrictions remain in force. The following is a historical research record.
+
 # P4 provider and permission decision — 2026-10-27
 
 ## Account sign-in follow-up

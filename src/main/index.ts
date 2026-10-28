@@ -10,6 +10,7 @@ import {
   powerMonitor,
   protocol,
   screen,
+  shell,
   session,
   Tray,
 } from "electron";
@@ -40,9 +41,10 @@ import { ElectronAudioCapture } from "./audio-host";
 import { SpeechInstallation } from "./transcription/models";
 import { TranscriptionController } from "./transcription/controller";
 import { AssistantController } from "./ai/controller";
-import { CodexProvider } from "./ai/codex";
+import { ChatGptProvider } from "./ai/plan/provider";
 import { ClaudeProvider } from "./ai/claude";
-import { AccountConnections } from "./ai/accounts";
+import { ChatGptAccounts } from "./ai/plan/accounts";
+import { ProviderError, providerError } from "./ai/errors";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -63,7 +65,8 @@ let store: SettingsStore;
 let controller: CaptureSessionController;
 let speech: TranscriptionController | undefined;
 let assistant: AssistantController | undefined;
-let accounts: AccountConnections | undefined;
+let accounts: ChatGptAccounts | undefined;
+let chatgpt: ChatGptProvider | undefined;
 let shortcuts: HotkeyController;
 let hotkeys: HotkeyStatus[] = [];
 const warnings: string[] = [];
@@ -328,21 +331,32 @@ async function initialise(): Promise<void> {
     process.platform === "win32",
   );
 
-  accounts = new AccountConnections(
-    join(app.getPath("userData"), "chatgpt"),
+  let accountBinding = "";
+  accounts = new ChatGptAccounts(
+    join(app.getPath("userData"), "chatgpt-plan"),
     (value) => {
+      const binding = `${value.selectedAccount}:${value.planUsage}:${value.accounts?.find((item) => item.id === value.selectedAccount)?.signedIn}`;
+      if (binding !== accountBinding) {
+        accountBinding = binding;
+        chatgpt?.invalidate();
+        assistant?.clear();
+      }
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:account", value);
+      void assistant?.inspect();
     },
+    (url) => shell.openExternal(url),
   );
+  chatgpt = new ChatGptProvider(accounts);
   assistant = new AssistantController(
-    [new CodexProvider(() => accounts!.status()), new ClaudeProvider()],
+    [chatgpt, new ClaudeProvider()],
     () => ({ capture: controller.value, events: speech?.value.events ?? [] }),
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:assistant", value);
     },
   );
+  await accounts.restore();
 
   const saved = store.bounds;
   const area = screen.getDisplayMatching(
@@ -395,11 +409,13 @@ async function initialise(): Promise<void> {
   );
   window.webContents.on("did-start-loading", () => {
     accounts?.cancel();
+    chatgpt?.invalidate();
     assistant?.clear();
     if (controller.value.state !== "IDLE") controller.stop();
   });
   window.webContents.on("render-process-gone", (_event, details) => {
     accounts?.cancel();
+    chatgpt?.invalidate();
     assistant?.clear();
     controller.fail(
       `EveryHint's interface stopped (${details.reason}). Capture has been stopped. Restart EveryHint.`,
@@ -407,6 +423,7 @@ async function initialise(): Promise<void> {
   });
   window.webContents.on("unresponsive", () => {
     accounts?.cancel();
+    chatgpt?.invalidate();
     assistant?.clear();
     controller.fail("EveryHint is unresponsive. Capture has been stopped.");
   });
@@ -453,14 +470,22 @@ async function initialise(): Promise<void> {
   handle("everyhint:get", () => snapshot());
   handle("everyhint:account-get", () => accounts!.value);
   handle("everyhint:account-action", async (input) => {
-    if (input !== "sign-in" && input !== "sign-out" && input !== "cancel")
+    if (
+      input !== "sign-in" &&
+      input !== "sign-out" &&
+      input !== "cancel" &&
+      input !== "grant-plan"
+    )
       throw new Error("Unknown account action.");
     assistant!.clear();
+    chatgpt!.invalidate();
     if (input === "cancel") {
       accounts!.cancel();
+      await assistant!.inspect();
       return;
     }
-    if (input === "sign-in") await accounts!.signIn();
+    if (input === "sign-in" || input === "grant-plan")
+      await accounts!.signIn(input === "grant-plan");
     else await accounts!.signOut();
     if (
       accounts!.value.state !== "error" &&
@@ -468,11 +493,39 @@ async function initialise(): Promise<void> {
     )
       await assistant!.inspect();
   });
+  handle("everyhint:account-select", async (input) => {
+    await accounts!.select(input);
+    chatgpt!.invalidate();
+    assistant!.clear();
+    await assistant!.inspect();
+  });
+  handle("everyhint:ai-models", async (input) => {
+    if (input !== undefined || assistant!.value.selected !== "codex")
+      throw new Error("Select ChatGPT before refreshing models.");
+    assistant!.clear();
+    try {
+      await chatgpt!.discoverModels();
+    } catch (error) {
+      throw new ProviderError(
+        providerError(error).code,
+        providerError(error).message,
+      );
+    } finally {
+      await assistant!.inspect();
+    }
+  });
+  handle("everyhint:ai-model-select", async (input) => {
+    chatgpt!.selectModel(input);
+    assistant!.clear();
+    await assistant!.inspect();
+  });
   handle("everyhint:ai-get", () => assistant!.value);
   handle("everyhint:ai-inspect", () => assistant!.inspect());
-  handle("everyhint:ai-select", (input) => {
+  handle("everyhint:ai-select", async (input) => {
     assistant!.select(input);
     accounts?.cancel();
+    if (input !== "codex") chatgpt?.invalidate();
+    await assistant!.inspect();
   });
   handle("everyhint:ai-billing", (input) => assistant!.billing(input));
   handle("everyhint:ai-review", (input) => assistant!.prepare(input));
@@ -534,11 +587,13 @@ async function initialise(): Promise<void> {
   });
   powerMonitor.on("suspend", () => {
     accounts?.cancel();
+    chatgpt?.invalidate();
     assistant?.clear();
     controller.stop();
   });
   powerMonitor.on("lock-screen", () => {
     accounts?.cancel();
+    chatgpt?.invalidate();
     assistant?.clear();
     controller.stop();
   });

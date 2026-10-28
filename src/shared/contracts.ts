@@ -107,6 +107,9 @@ export interface EveryHintBridge {
     Result<import("./accounts").AccountConnection>
   >;
   account(action: import("./accounts").AccountAction): Promise<Result<void>>;
+  selectChatgptAccount(id: string): Promise<Result<void>>;
+  discoverModels(): Promise<Result<void>>;
+  selectModel(id: string): Promise<Result<void>>;
   onAccountConnection(
     listener: (value: import("./accounts").AccountConnection) => void,
   ): () => void;

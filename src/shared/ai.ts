@@ -4,7 +4,7 @@ import type { AudioSourceId, ScreenFrame } from "./contracts";
 export type ProviderId = "codex" | "claude";
 export function providerId(value: unknown): ProviderId {
   if (value !== "codex" && value !== "claude")
-    throw new Error("Choose Codex or Claude.");
+    throw new Error("Choose ChatGPT or Claude.");
   return value;
 }
 export interface ProviderStatus {
@@ -14,6 +14,13 @@ export interface ProviderStatus {
   message: string;
   capabilities: { text: boolean; images: boolean; tools: false };
   models: string[];
+  modelDetails?: AIModel[];
+  selectedModel?: string | null;
+}
+export interface AIModel {
+  id: string;
+  name: string;
+  images: boolean;
 }
 export interface ContextOptions {
   microphone: boolean;
@@ -82,6 +89,7 @@ export interface ConversationTurn {
   answer: string;
 }
 export interface AIRequest {
+  model?: string;
   requestId: string;
   sessionId: string;
   captureSessionId: string | null;

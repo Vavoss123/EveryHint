@@ -77,7 +77,7 @@ try {
   );
   check(
     await page
-      .getByRole("button", { name: "Sign in with ChatGPT", exact: true })
+      .getByRole("button", { name: "Continue with ChatGPT", exact: true })
       .isEnabled(),
     "official ChatGPT sign-in can be started from the app",
   );
@@ -96,7 +96,17 @@ try {
   check(
     initial.providers.find((provider) => provider.id === "codex").ready ===
       false,
-    "Codex inference is blocked by the permission limitation",
+    "ChatGPT inference requires an app-owned plan grant and selected model",
+  );
+  check(
+    await page.getByLabel("ChatGPT model", { exact: true }).isDisabled(),
+    "model selection waits for an explicit authorised catalog request",
+  );
+  check(
+    await page
+      .getByRole("button", { name: "Refresh ChatGPT models", exact: true })
+      .isDisabled(),
+    "model discovery cannot start without account sign-in",
   );
   check(
     await page.getByLabel("AI provider").isEnabled(),
@@ -116,6 +126,11 @@ try {
       action: "sign-in",
       apiKey: "invalid",
     }),
+    model: await window.everyhint.selectModel("unlisted-model"),
+    accountSelect: await window.everyhint.selectChatgptAccount({
+      token: "invalid",
+    }),
+    models: await window.everyhint.discoverModels(),
   }));
   check(
     Object.values(rejected).every((value) => !value.ok),
@@ -338,7 +353,7 @@ try {
   );
   check(
     await page
-      .getByRole("button", { name: "Sign in with ChatGPT", exact: true })
+      .getByRole("button", { name: "Continue with ChatGPT", exact: true })
       .isDisabled(),
     "pending sign-in prevents repeated clicks",
   );
@@ -356,16 +371,44 @@ try {
       revision: accountFixture.revision + 1,
       state: "signed-in",
       message: "Local signed-in rendering fixture.",
+      planUsage: false,
+      selectedAccount: "fixture-account",
+      accounts: [
+        {
+          id: "fixture-account",
+          label: "Local account rendering fixture",
+          signedIn: true,
+        },
+      ],
     },
+  );
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll("button")).some(
+      (button) =>
+        button.textContent.trim() === "Sign out of ChatGPT" && !button.disabled,
+    ),
   );
   check(
     (await page
-      .getByRole("button", { name: "Switch ChatGPT account", exact: true })
+      .getByRole("button", { name: "Continue with ChatGPT", exact: true })
       .isEnabled()) &&
       (await page
         .getByRole("button", { name: "Sign out of ChatGPT", exact: true })
         .isEnabled()),
     "signed-in controls expose account switching and sign-out",
+  );
+  check(
+    await page
+      .getByRole("button", {
+        name: "Grant ChatGPT plan permission",
+        exact: true,
+      })
+      .isEnabled(),
+    "identity-only sign-in exposes explicit plan consent",
+  );
+  check(
+    await page.getByLabel("ChatGPT registration", { exact: true }).isEnabled(),
+    "saved registration picker is available",
   );
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
@@ -410,8 +453,9 @@ try {
         reviewMs,
         idleRssBytes,
         reviewedRssBytes,
-        codexAuth: initial.providers.find((provider) => provider.id === "codex")
-          .auth,
+        chatgptAuth: initial.providers.find(
+          (provider) => provider.id === "codex",
+        ).auth,
         liveProviderRequests: 0,
         paidRequests: 0,
       },
@@ -420,7 +464,7 @@ try {
     ),
   );
   console.log(
-    `AI Electron smoke passed: ${assertions} assertions. Codex auth=${initial.providers.find((provider) => provider.id === "codex").auth}. No remote inference or paid requests. Renderer streaming used labelled fixtures.`,
+    `AI Electron smoke passed: ${assertions} assertions. ChatGPT auth=${initial.providers.find((provider) => provider.id === "codex").auth}. No remote inference or paid requests. Renderer streaming used labelled fixtures.`,
   );
 } finally {
   if (desktop) await desktop.close();

@@ -52,7 +52,7 @@ export class AssistantController {
       new Set(providers.map((provider) => provider.id)).size !== 2 ||
       providers.length !== 2
     )
-      throw new Error("Register exactly one Codex and one Claude provider.");
+      throw new Error("Register exactly one ChatGPT and one Claude provider.");
     this.statuses = providers.map((provider) => ({
       id: provider.id,
       auth: "unknown",
@@ -136,6 +136,7 @@ export class AssistantController {
       this.history,
       this.now(),
     );
+    if (status.selectedModel) review.model = status.selectedModel;
     if (
       review.screenshot &&
       this.sentImages.has(imageHash(review.screenshot.dataUrl))
@@ -227,6 +228,11 @@ export class AssistantController {
                 : "billing",
             status.message,
           );
+        if (request.model && request.model !== status.selectedModel)
+          throw new ProviderError(
+            "permissions",
+            "The selected model changed. Review this question again.",
+          );
         if (request.screenshot) {
           this.sentImages.add(imageHash(request.screenshot.dataUrl));
           if (this.sentImages.size > 32)
@@ -265,6 +271,19 @@ export class AssistantController {
             )
               this.history.shift();
             this.expireHistory();
+            if (request.model) {
+              // Reflect verified model access after completion. Inspection is
+              // local metadata only; its failure cannot undo a completed answer.
+              try {
+                const inspected = await provider.inspect(this.claudeApiBilling);
+                if (!this.current(response)) break;
+                this.statuses = this.statuses.map((item) =>
+                  item.id === inspected.id ? inspected : item,
+                );
+              } catch {
+                /* Keep the completed response if local inspection fails. */
+              }
+            }
           }
           this.publish();
           if (event.type === "complete") break;

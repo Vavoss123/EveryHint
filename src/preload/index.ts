@@ -8,6 +8,10 @@ import type {
 const bridge: EveryHintBridge = {
   getAccountConnection: () => ipcRenderer.invoke("everyhint:account-get"),
   account: (action) => ipcRenderer.invoke("everyhint:account-action", action),
+  selectChatgptAccount: (id) =>
+    ipcRenderer.invoke("everyhint:account-select", id),
+  discoverModels: () => ipcRenderer.invoke("everyhint:ai-models"),
+  selectModel: (id) => ipcRenderer.invoke("everyhint:ai-model-select", id),
   onAccountConnection: (listener) => {
     const wrapped = (
       _event: Electron.IpcRendererEvent,

@@ -44,27 +44,26 @@ Current P3 baseline: **157 unit tests across 17 files**, **47 core + 11 speech E
 
 Remaining acceptance: real microphone and Windows loopback transcription; consented calls; base.en quality/switching; ARM64/older CPU builds; a 15-minute conversation with CPU/RSS/stability measurements. Current energy VAD can react to noise, chunked inference can revise words, overload deliberately drops queued audio, and overlap deduplication is approximate. Keep all P1/P2 physical checks open. See [Testing](TESTING.md).
 
-## P4 — AI Provider Integration
+## P4.2 -- ChatGPT plan AI responses
 
-Distribution scope confirmed: **other people will use the app**. Claude's private SDK-use exception does not apply; subscription login requires Anthropic approval. Before release, replace/validate the local Codex-client login prototype against the applicable official Sign in with ChatGPT registration path. Open-source/local versus paid/hosted deployment eligibility is not yet established; do not assume commercial approval. This is a release dependency, not permission to enable API billing. See the [decision record](DECISIONS/P4-providers.md#confirmed-distribution-scope).
-
-Follow-up: **in-app ChatGPT account controls implemented** (Sign in, Switch account, Cancel, Sign out). Native browser OAuth and OS-keyring storage use an isolated app profile; no credentials are hardcoded or copied from the shared Codex login. Actual browser login acceptance is pending. Claude subscription sign-in still requires Anthropic approval; its unavailable control explains this. Codex inference remains blocked independently of authentication. No paid request was made.
-
-**Restricted implementation delivered; live acceptance remains open.** No paid/live inference was performed. The user explicitly chose to leave Claude live verification pending. The app now checks its own ChatGPT profile; the shared Codex login is not imported. Inference remains blocked because SDK 0.164.0 cannot establish a response-only tool boundary. Do not label this milestone fully accepted or claim a successful live provider integration.
+**Implemented and live-verified for one account/model.** On 2026-10-28, gpt-6.1-sol returned **EveryHint is connected.** using EveryHint's signed ChatGPT plan grant. The initial authorised attempt failed at an overly strict MIME gate; a frame-based fix passed new tests and the separately authorised second attempt completed. No API-key fallback or paid Claude request occurred. Other models/accounts, real captured-context transfer, hardware and release acceptance remain open. See [decision](DECISIONS/P4.2-chatgpt-plan.md), [testing](TESTING.md) and [delivery](DELIVERY.md).
 
 | Checkpoint | State |
 | --- | --- |
-| Official SDK/auth research and billing policy | Documented with primary sources in `DECISIONS/P4-providers.md` |
-| Shared provider contracts, registry and narrow IPC | Implemented; validated inputs and real untrusted-renderer rejection tested |
-| Codex subscription/API login detection | Official local CLI; app-specific OS-keyring profile; browser account login awaits user verification |
-| Codex text/image inference | **Disabled** pending supported fail-closed tool restrictions; no API fallback |
-| Claude API-only adapter | Implemented; disabled by default; session-only billing opt-in; no subscription reuse |
-| Claude streaming/images/cancel/errors | Unit and actual SDK loopback verification; **live API authentication/answer unverified** |
-| Tool restrictions | Actual installed Claude SDK rejects generated Bash/Read/Write/MCP calls against loopback fixtures |
-| Explicit context selection/review/Ask | Immutable bounded review, separate sources, fresh transfer acknowledgement, no raw audio |
-| Conversations and UI | Provider/capture isolation, bounded memory, expiry, cancel/clear, safe code display/copy and compact status |
-| P1–P3 software regression | Retained; see TESTING.md for current results |
-| Live/manual acceptance | Open: Codex permission capability; authorised Claude API test; real devices/screens/calls and combined long-run performance |
+| Original restriction diagnosed | Codex CLI session was not an EveryHint direct-plan registration; SDK 0.164.0 lacks fail-closed deny-all tools |
+| Official pathway | SIWC dynamic registration/returning issued client, stable host identity, plan scopes; public Responses API avoids agent tools |
+| OAuth validation/credentials | PKCE/state/nonce, RS256/JWKS claims, callback binding, OS-native chunked atomic vault; no plaintext or shared-Codex token reuse |
+| Account lifecycle | Saved registration picker, explicit consent, switch/cancel/sign-out/revocation, serialized rotating refresh; real browser sign-in/plan grant and restart verified; switch/sign-out acceptance open |
+| Model selection | Explicit account-specific model discovery; five-minute memory catalog; selectable visible slugs; entitlement unverified until completion |
+| Real transport | Streaming Responses POST with storage off and no tools; actual loopback HTTP verified; gpt-6.1-sol completed a genuine plan-backed response after the MIME parser fix |
+| Images/context | Frozen model and independently selected transcripts/screenshot/question/history; unknown image support blocks screenshot; no raw audio |
+| Errors/cancellation | Auth/permission/unavailable model/rate limit/service failures, failed/incomplete streams, abort, no retries or billing fallback |
+| UI/IPC/privacy | Current transport labels, narrow validated routes, safe code/copy, bounded memory, stale-result protection, no automatic requests |
+| Claude | Existing abstraction preserved, API opt-in off, subscription login disabled pending Anthropic approval; no paid test |
+| Regression | P1-P3 retained; unit, native-vault/local HTTP, SDK, Electron and real tiny.en checks recorded in TESTING.md |
+| Release/manual acceptance | Other account/model entitlements and real Windows devices/screens/calls, restart/account switching/revocation, 15-minute performance, base.en/ARM64/older CPUs pending |
+
+Distribution remains an eventual goal. This is a private-use prototype; eligibility for the documented open-source/local route must be established for release, and paid/hosted registration or approval requirements must be resolved. No commercial or Anthropic subscription approval is claimed. P4.1's legacy Codex modules remain restricted and unused by application startup. P5 is not started.
 
 ## Later milestones — deferred
 
@@ -75,4 +74,4 @@ Follow-up: **in-app ChatGPT account controls implemented** (Sign in, Switch acco
 
 ## Dependencies
 
-Version is **0.4.0**. P4 adds pinned `@openai/codex-sdk` **0.164.0** and `@anthropic-ai/claude-agent-sdk` **0.3.311**, including their upstream dependencies/platform binaries. No credentials were added. The native helper remains official whisper.cpp **v1.9.5**, pinned to `d1be6fde11ac6e0407606b4e42fe72d34add8037`; source/model/runtime files remain outside Git. Existing React/Electron/Vite/TypeScript/Vitest/ESLint/Playwright versions are unchanged. Node 24 LTS and Visual Studio C++/CMake support development. P5 is not started.
+Version is **0.4.0**. P4 adds pinned `@openai/codex-sdk` **0.164.0** and `@anthropic-ai/claude-agent-sdk` **0.3.311**, including their upstream dependencies/platform binaries. P4.2 also adds pinned `jose` **6.2.13** and `@napi-rs/keyring` **2.1.2** for signed OAuth validation and native OS storage. No credentials were added. The native helper remains official whisper.cpp **v1.9.5**, pinned to `d1be6fde11ac6e0407606b4e42fe72d34add8037`; source/model/runtime files remain outside Git. Existing React/Electron/Vite/TypeScript/Vitest/ESLint/Playwright versions are unchanged. Node 24 LTS and Visual Studio C++/CMake support development. P5 is not started.

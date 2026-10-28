@@ -125,7 +125,7 @@ export function AssistantPanel({
         >
           {latest
             ? `${labels[latest.status]} · ${latest.text.slice(-90) || latest.error?.message || snapshot.selected}`
-            : `${snapshot.selected === "codex" ? "Codex" : "Claude"} · ${selected.ready ? "Ready" : "Not connected"} · Expand to ask`}
+            : `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${selected.ready ? "Ready" : "Not connected"} · Expand to ask`}
         </button>
         {active && (
           <button
@@ -165,7 +165,7 @@ export function AssistantPanel({
             );
           }}
         >
-          <option value="codex">Codex · ChatGPT</option>
+          <option value="codex">ChatGPT · plan usage</option>
           <option value="claude">Claude · API billing</option>
         </select>
       </div>
@@ -174,6 +174,51 @@ export function AssistantPanel({
         {selected.message}
       </p>
       <AccountPanel provider={snapshot.selected} />
+      {snapshot.selected === "codex" && (
+        <div className="context-review">
+          <button
+            className="secondary"
+            disabled={busy || active || selected.auth !== "chatgpt"}
+            onClick={() =>
+              void run(async () =>
+                unwrap(await window.everyhint.discoverModels()),
+              )
+            }
+          >
+            Refresh ChatGPT models
+          </button>
+          <small>
+            Refresh sends an authorised model-list request to OpenAI. It does
+            not submit a question. Model access can still be denied when asking.
+          </small>
+          <label>
+            ChatGPT model
+            <select
+              aria-label="ChatGPT model"
+              value={selected.selectedModel ?? ""}
+              disabled={busy || active || !selected.modelDetails?.length}
+              onChange={(event) => {
+                const id = event.target.value;
+                void run(async () =>
+                  unwrap(await window.everyhint.selectModel(id)),
+                );
+              }}
+            >
+              <option value="" disabled>
+                Choose a model
+              </option>
+              {selected.modelDetails?.map((model) => (
+                <option key={model.id} value={model.id}>
+                  {model.name}
+                  {model.images
+                    ? " · images supported"
+                    : " · image support unconfirmed"}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
       <button
         className="secondary"
         disabled={busy || active}
@@ -244,8 +289,8 @@ export function AssistantPanel({
         </div>
         {!selected.capabilities.images && (
           <small>
-            Screenshots are unavailable for this restricted provider
-            integration.
+            Screenshots require explicit image-input support in the selected
+            model’s current metadata.
           </small>
         )}
         <details className="ai-limits">
@@ -325,7 +370,9 @@ export function AssistantPanel({
       {review && (
         <div className="context-review" aria-label="Context review">
           <strong>
-            Frozen request to {review.provider === "codex" ? "Codex" : "Claude"}
+            Frozen request to{" "}
+            {review.provider === "codex" ? "ChatGPT" : "Claude"}
+            {review.model ? ` · ${review.model}` : ""}
           </strong>
           <small>
             {review.textChars.toLocaleString()} text characters ·{" "}
@@ -369,7 +416,7 @@ export function AssistantPanel({
               onChange={(event) => setAcknowledged(event.target.checked)}
             />
             I reviewed this payload and authorise sending it to{" "}
-            {review.provider}.{" "}
+            {review.provider === "codex" ? "ChatGPT" : "Claude"}.{" "}
             {review.provider === "claude"
               ? "Anthropic API charges may apply."
               : "Subscription usage limits may apply."}
@@ -389,7 +436,7 @@ export function AssistantPanel({
               })
             }
           >
-            Ask {review.provider === "codex" ? "Codex" : "Claude"}
+            Ask {review.provider === "codex" ? "ChatGPT" : "Claude"}
           </button>
         </div>
       )}
@@ -412,7 +459,8 @@ export function AssistantPanel({
           <article className="ai-response" key={response.requestId}>
             <strong>{response.question}</strong>
             <small>
-              {response.provider} · {labels[response.status]}
+              {response.provider === "codex" ? "ChatGPT" : "Claude"} ·{" "}
+              {labels[response.status]}
               {response.model ? ` · ${response.model}` : ""}
             </small>
             <ResponseText text={response.text} />

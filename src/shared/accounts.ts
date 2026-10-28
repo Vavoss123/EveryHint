@@ -8,5 +8,8 @@ export interface AccountConnection {
     | "cancelled"
     | "error";
   message: string;
+  planUsage?: boolean;
+  selectedAccount?: string | null;
+  accounts?: { id: string; label: string; signedIn: boolean }[];
 }
-export type AccountAction = "sign-in" | "cancel" | "sign-out";
+export type AccountAction = "sign-in" | "cancel" | "sign-out" | "grant-plan";

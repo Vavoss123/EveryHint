@@ -62,26 +62,66 @@ export function AccountPanel({ provider }: { provider: ProviderId }) {
       <p role="status">
         {connection?.message ?? "Reading account connection…"}
       </p>
+      <label>
+        ChatGPT registration
+        <select
+          aria-label="ChatGPT registration"
+          value={connection?.selectedAccount ?? "new"}
+          disabled={working || pending || !connection}
+          onChange={(event) => {
+            const id = event.target.value;
+            setWorking(true);
+            setError(null);
+            void window.everyhint
+              .selectChatgptAccount(id)
+              .then((result) => {
+                if (!result.ok) setError(result.error);
+              })
+              .catch(() => setError("Could not select this account."))
+              .finally(() => setWorking(false));
+          }}
+        >
+          <option value="new">Add account</option>
+          {connection?.accounts?.map((account) => (
+            <option key={account.id} value={account.id}>
+              {account.label}
+              {account.signedIn ? " · connected" : " · signed out"}
+            </option>
+          ))}
+        </select>
+      </label>
       <div className="ai-actions">
         <button
           className="primary"
           disabled={working || pending || !connection}
           onClick={() => void act("sign-in")}
         >
-          {connection?.state === "signed-in"
-            ? "Switch ChatGPT account"
-            : "Sign in with ChatGPT"}
+          Continue with ChatGPT
         </button>
-        {pending ? (
+        {connection?.state === "signed-in" && !connection.planUsage && (
+          <button
+            className="secondary"
+            disabled={working}
+            onClick={() => void act("grant-plan")}
+          >
+            Grant ChatGPT plan permission
+          </button>
+        )}
+        {connection?.state === "signing-in" ? (
           <button className="secondary" onClick={() => void act("cancel")}>
-            {connection?.state === "signing-out"
-              ? "Cancel sign-out"
-              : "Cancel sign-in"}
+            Cancel sign-in
           </button>
         ) : (
           <button
             className="secondary"
-            disabled={working || connection?.state !== "signed-in"}
+            disabled={
+              working ||
+              pending ||
+              !connection?.accounts?.some(
+                (account) =>
+                  account.id === connection.selectedAccount && account.signedIn,
+              )
+            }
             onClick={() => void act("sign-out")}
           >
             Sign out of ChatGPT
@@ -89,13 +129,13 @@ export function AccountPanel({ provider }: { provider: ProviderId }) {
         )}
       </div>
       <small>
-        Your browser handles sign-in. Credentials are saved by the official
-        Codex client in your operating-system credential store for EveryHint
-        only. Signing in does not send a question or enable API billing.
+        Your browser handles OpenAI sign-in and ChatGPT plan consent. EveryHint
+        keeps credentials in your operating-system credential store. Signing in
+        does not send a question or enable separately billed API requests.
       </small>
       <p className="muted">
-        ChatGPT sign-in connects your account. Answers through Codex are still
-        unavailable until its response-only permission limitation is resolved.
+        Sign-out removes this registration’s tokens and retains its identity for
+        your next sign-in. Select Add account to connect another account.
       </p>
       {(error || connection?.state === "error") && (
         <p className="error-message" role="alert">

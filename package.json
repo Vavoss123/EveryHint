@@ -24,11 +24,14 @@
     "speech:test": "node --experimental-transform-types scripts/test-inference.mjs",
     "smoke:speech": "node scripts/smoke-transcription.mjs",
     "test:ai-sdk": "vitest run --config vitest.sdk.config.ts",
-    "smoke:ai": "node scripts/smoke-ai.mjs"
+    "smoke:ai": "node scripts/smoke-ai.mjs",
+    "test:plan": "vitest run --config vitest.plan.config.ts"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.311",
+    "@napi-rs/keyring": "2.1.2",
     "@openai/codex-sdk": "0.164.0",
+    "jose": "6.2.13",
     "react": "19.3.1",
     "react-dom": "19.3.1"
   },

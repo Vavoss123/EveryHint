@@ -1,3 +1,45 @@
+# EveryHint -- P4.2 verification, 2026-10-28
+
+Live verification on **2026-10-28 succeeded** with **gpt-6.1-sol** using EveryHint's own SIWC ChatGPT plan grant and the public Responses endpoint. The approved question was **Reply exactly: EveryHint is connected.** The actual completed answer was **EveryHint is connected.** No screenshot, transcript, history or raw audio was sent. The response reported **167 input / 9 output tokens**, first text in **4.214 s** and completion in **4.299 s**. No API-key/provider fallback or paid Claude request was made. These are a single observation, not a latency guarantee, quota balance or dollar-cost estimate.
+
+Two plan requests were made, each separately authorised. The first was rejected by an overly strict SSE MIME check before any text was displayed. The corrected parser validates bounded SSE data frames independently of MIME metadata, still requires response.completed, rejects non-streaming JSON as completion and cleans up its reader. Three regression cases cover this. The second authorised request completed genuinely; no automatic inference retry occurred. Either attempt may consume the user's plan allowance.
+
+| Check | P4.2 result |
+| --- | --- |
+| TypeScript / zero-warning lint / production build | Passed |
+| Unit/regression suite | **298 tests in 25 files**; original 234 retained, 64 new plan cases |
+| Native OS vault + real loopback HTTP | **5 passed** via npm run test:plan; actual Windows credentials and four OAuth/JWT -> models -> frozen review -> HTTP/SSE pipelines |
+| Installed Claude SDK/CLI loopback | **6 passed**; no paid/remote provider endpoint |
+| Core Electron smoke | **47 assertions passed**; synthetic media; hotkeys correctly reported unavailable while the separate interactive EveryHint window held them |
+| Assistant Electron smoke | **37 assertions passed**; fresh app vault, auth/model IPC rejection, consent/model controls, safe rendering/copy and reviewed transfer gates |
+| Speech Electron smoke | **11 assertions passed**, actual tiny.en through both synthetic P2 sources |
+| Standalone speech fixture | Actual tiny.en JFK recognition passed twice with one loaded model; cached/offline |
+| Genuine ChatGPT plan response | **Passed**; gpt-6.1-sol, signed EveryHint plan grant, response.completed and exact approved answer |
+| Claude live authentication/inference | **Not performed**, per the user's no-paid-request instruction |
+| Real Windows devices/calls/15-minute run | Still pending; earlier P1-P3 manual checklists retained below |
+
+Electron assertions total **95**. The successful live reply is distinct from the synthetic fixtures. Safe evidence lives under ignored artifacts/p42-live-result.json; the failed attempt is recorded separately. No token, browser URL, raw provider body or captured context is in those reports or Git. The saved OS connection survived app restarts. The actual account catalog returned eight visible models: gpt-6.1-sol, gpt-6-astra, gpt-6.1-terra, gpt-6-sol, gpt-6-luna, gpt-5.6-sol, gpt-5.6-terra and gpt-5.6-luna. All advertised image input. Only gpt-6.1-sol text inference was verified; other models, real image requests, other accounts/workspaces/regions and future limits remain unverified.
+
+New tests cover registration/client/host/state/nonce/PKCE/callback binding, RS256/JWKS/issuer/audience/subject/client/scope validation, identity-only consent, invalid signatures, fresh ID tokens, refresh/rotation/revocation, safe HTTP diagnostics, atomic native vault failures/bounds, account isolation/cancellation, model ordering/TTL/stale discovery, image support, exact request construction, split UTF-8, MIME-independent valid SSE, JSON errors, failed/incomplete streams, permission/rate limits, rejected tools and aborted readers. Existing context/controller tests retain independent sources, selection/bounds, screenshots, fresh consent, late events and conversation/session guards. Completion now refreshes local model verification status without another remote request.
+
+Reproduce:
+
+```powershell
+npm run check
+npm run test:plan
+npm run test:ai-sdk
+npm run smoke
+npm run smoke:ai
+npm run speech:test
+npm run smoke:speech
+```
+
+The native-vault integration test uses a unique OS namespace with synthetic credentials and removes it afterwards. Local HTTP tests inject a test transport; production endpoints cannot be overridden through renderer input or environment variables. Real tiny.en/runtime/JFK files were previously downloaded with authorisation and are cached; no new download is needed. Native keyring loading was verified in actual Electron. Real provider tests are never part of these automatic scripts and require separate, explicit authorisation.
+
+Remaining manual checks: similarly labelled account switching, sign-out/revocation/reconnect, browser denial/timeout/OS-store/proxy failures, real screenshot and captured-transcript transfer, physical screens/windows/microphone/Windows playback, consented calls, base.en, older CPU/ARM64, 15-minute CPU/RSS/stability and combined capture/transcription/live AI performance. The user previously confirmed P1 manual checks were not completed. Commercial/distribution eligibility is separate from this successful personal account test. P5 is not started.
+
+## Historical P4/P4.1 verification (superseded where described above)
+
 # EveryHint testing — P4 (P1–P3 acceptance retained)
 
 ## Account sign-in follow-up — 2026-10-27
