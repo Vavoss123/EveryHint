@@ -54,6 +54,8 @@ node scripts/verify-context-ai.mjs --dry-run
 
 The smoke uses actual Electron/preload/encrypted workers/native vault with explicit Google HTTP/browser/notification fixtures. Dry-run makes **zero** model requests. The genuine one-request script is excluded from routine checks and requires a fresh scoped grant; P9 grants are consumed. See [evidence/manual checklist](docs/TESTING.md), [privacy/retention](docs/ARCHITECTURE.md) and [delivery manifest](docs/DELIVERY.md).
 
+One separately authorised genuine P10 `gpt-6.1-sol` brief passed in **14.124 seconds** (978 input / 723 output tokens), preserving the Thursday/Wednesday details and a supplied source citation while excluding unrelated test context. It used only a synthetic event/person and approved memory from a new encrypted synthetic saved note. Temporary records were removed and preferences untouched; the grant is consumed. Genuine Google testing stays pending by user choice, and automatic Live with P10 context remains unverified.
+
 ## Personal modes, knowledge and templates (P9)
 
 Open Modes or Knowledge and **Unlock local library**. General, Coding, Interview, Sales and Meeting plus legacy Conversation share one mode selector across all layouts. Create/edit/rename/duplicate/delete custom modes, reset protected built-ins, choose instructions/length/format/language/context/actions, and associate documents/templates. Editing stays local; **Preview / test** prepares the normal review and only acknowledged Ask sends inference. Changes cannot grant capture, sharing, tools or billing.

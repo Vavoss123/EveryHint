@@ -834,11 +834,11 @@
       "description": "User-triggered pre-call brief via existing Responses controller; bounded event/people/reviewed-memory/saved-note/knowledge sources, exact removable preview, ephemeral draft and chosen encrypted save/export.",
       "workflow": "Select upcoming meeting; approve research and context.",
       "milestone": "P10",
-      "status": "IMPLEMENTED",
+      "status": "MANUAL VERIFIED",
       "dependencies": "Calendar; permitted research; memory",
       "acceptance": "Ground brief in cited evidence, dates and uncertainty; no invented attendee facts.",
-      "automated": "CONTEXT source/consent/provider/cancel/persistence units and compiled Electron payload review; genuine result separately in TESTING.md",
-      "manual": "Genuine AI request pending fresh explicit permission; genuine Google context and real-call brief quality pending",
+      "automated": "CONTEXT source/consent/provider/cancel/persistence units and compiled Electron payload review; one separately authorised genuine gpt-6.1-sol brief with synthetic Google context (14.124 s, 978 input / 723 output tokens), details in TESTING.md",
+      "manual": "One scoped genuine manual brief passed: supplied citation and Thursday/Wednesday checks, unrelated fixture excluded, temporary records removed; grant consumed. Real Google context, Windows UI/real-call quality and automatic Live remain pending.",
       "reference": "PRECALL",
       "referenceState": "CURRENT"
     },
@@ -922,7 +922,7 @@
       "dependencies": "Calendar; briefs; people; memory",
       "acceptance": "Prepare grounded context without capturing or sending before approval.",
       "automated": "CONTEXT 36 actual Electron assertions with Google fixtures; provider/Live scope/cooldown/cap and no-unrelated-context tests; genuine outcome in TESTING.md",
-      "manual": "Pending genuine Google/AI combined workflow, live real-call quality, accessibility/DPI and hardware acceptance",
+      "manual": "One genuine gpt-6.1-sol preparation brief passed with synthetic event/person and approved saved-note memory; genuine Google/AI combined workflow, live real-call quality, accessibility/DPI and hardware acceptance remain pending.",
       "reference": "PRECALL",
       "referenceState": "CURRENT"
     },
