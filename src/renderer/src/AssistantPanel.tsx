@@ -10,6 +10,12 @@ import { AccountPanel } from "./AccountPanel";
 import { ResponseText } from "./ResponseText";
 import { ACTION_LABELS, type OperatingMode } from "../../shared/intelligence";
 import { usePersonal } from "./PersonalPages";
+import { useWorkspace, workspaceCommand } from "./WorkspacePages";
+import {
+  WorkspaceChoices,
+  emptyWorkspaceSelection,
+} from "./WorkspaceSelection";
+import { WorkspaceSources } from "./BriefPanel";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -32,6 +38,10 @@ export function AssistantPanel({
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
   const personal = usePersonal();
+  const workspace = useWorkspace();
+  const [workspaceSelection, setWorkspaceSelection] = useState(
+    emptyWorkspaceSelection(),
+  );
   const [knowledgeIds, setKnowledgeIds] = useState<string[]>([]);
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<ContextOptions>({
@@ -61,6 +71,7 @@ export function AssistantPanel({
     setQuestion("");
     setOptions({ ...DEFAULT_CONTEXT });
     setKnowledgeIds([]);
+    setWorkspaceSelection(emptyWorkspaceSelection());
   }, [snapshot?.sessionId]);
   async function run(task: () => Promise<unknown>): Promise<void> {
     if (operation.current) return;
@@ -106,13 +117,19 @@ export function AssistantPanel({
           question,
           options,
           knowledgeIds,
+          ...(workspaceSelection.eventId ||
+          workspaceSelection.personIds.length ||
+          workspaceSelection.memoryIds.length ||
+          workspaceSelection.meetingIds.length
+            ? { workspaceSelection }
+            : {}),
         }),
       );
     });
   }
   function removeContext(
     reviewId: string,
-    kind: "transcripts" | "history" | "screenshot",
+    kind: "transcripts" | "history" | "screenshot" | "workspace" | "knowledge",
     index: number,
   ): void {
     setAcknowledged(false);
@@ -464,6 +481,44 @@ export function AssistantPanel({
           </button>
         )}
       </div>
+      {workspace?.unlocked && (
+        <details>
+          <summary>Optional Calendar, People and memory context</summary>
+          <WorkspaceChoices
+            key={workspace.scopeId}
+            state={workspace}
+            value={workspaceSelection}
+            change={(v) => {
+              invalidate();
+              setWorkspaceSelection(v);
+            }}
+          />
+          <button
+            onClick={() =>
+              void run(async () => {
+                await workspaceCommand(workspace, "stage-live-context", {
+                  ...workspaceSelection,
+                  purpose: "live",
+                });
+                invalidate();
+              })
+            }
+          >
+            Review chosen sources for optional Live sharing
+          </button>
+          <button
+            onClick={() =>
+              void run(() => workspaceCommand(workspace, "clear-live-context"))
+            }
+          >
+            Clear staged Live context
+          </button>
+          <p>
+            Live needs its own session permission after staging these exact
+            sources.
+          </p>
+        </details>
+      )}
       {review && (
         <div className="context-review" aria-label="Context review">
           <strong>
@@ -488,6 +543,14 @@ export function AssistantPanel({
             </p>
           ))}
           {review.knowledge && <KnowledgeSources sources={review.knowledge} />}
+          {review.workspaceContext && (
+            <WorkspaceSources
+              context={review.workspaceContext}
+              remove={(index) =>
+                removeContext(review.requestId, "workspace", index)
+              }
+            />
+          )}
           {review.meetingContext && (
             <div className="panel-stack">
               <strong>
@@ -686,6 +749,9 @@ export function AssistantPanel({
               </>
             ) : (
               <ResponseText text={response.text} />
+            )}
+            {response.workspaceContext && (
+              <WorkspaceSources context={response.workspaceContext} />
             )}
             {response.knowledge && (
               <KnowledgeSources

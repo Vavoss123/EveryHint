@@ -66,6 +66,13 @@ export class AssistantController {
       excerpts: import("../../shared/knowledge").KnowledgeExcerpt[];
       valid: () => boolean;
     }>,
+    private readonly retrieveWorkspace?: (
+      query: string,
+      selection: import("../../shared/workspace").WorkspaceSelection,
+    ) => Promise<{
+      context: import("../../shared/workspace").WorkspaceAIContext;
+      valid: () => boolean;
+    }>,
   ) {
     if (
       new Set(providers.map((provider) => provider.id)).size !== 2 ||
@@ -169,6 +176,7 @@ export class AssistantController {
     automatic = false,
     reference?: { context: MeetingAIContext; valid: () => boolean },
     automaticKnowledgeIds?: string[],
+    automaticWorkspaceSelection?: import("../../shared/workspace").WorkspaceSelection,
   ): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     if (this.active)
@@ -178,6 +186,23 @@ export class AssistantController {
         "A manual review is pending. Automatic preparation is unavailable.",
       );
     const input = parseReview(value);
+    if (automatic && input.workspaceSelection)
+      throw new Error(
+        "Automatic workspace context must come from the scoped Live grant.",
+      );
+    const workspaceSelection = automatic
+      ? automaticWorkspaceSelection
+      : input.workspaceSelection;
+    if (workspaceSelection && !this.retrieveWorkspace)
+      throw new Error("Workspace context is unavailable.");
+    if (workspaceSelection?.purpose === "brief" && this.selected !== "codex")
+      throw new Error("Pre-call briefs require ChatGPT plan inference.");
+    let workspace:
+      | {
+          context: import("../../shared/workspace").WorkspaceAIContext;
+          valid: () => boolean;
+        }
+      | undefined;
     const modeContext = this.modeContext?.();
     if (automatic && input.knowledgeIds?.length)
       throw new Error(
@@ -338,6 +363,24 @@ export class AssistantController {
             "Knowledge and mode context exceed the selected total text limit. Select less context or increase the limit.",
           );
       }
+      if (workspace) {
+        if (!workspace.valid())
+          throw new Error("Workspace source changed. Review again.");
+        review.workspaceContext = structuredClone(workspace.context);
+        review.notices.push(...workspace.context.notices);
+        const previous = this.referenceGuard?.valid,
+          valid = workspace.valid;
+        this.referenceGuard = {
+          requestId: review.requestId,
+          valid: () => valid() && (!previous || previous()),
+        };
+        review.prompt = contextPrompt(review);
+        review.textChars = review.prompt.length;
+        if (review.textChars > input.options.totalChars)
+          throw new Error(
+            "Workspace context exceeds the selected text budget. Select fewer sources.",
+          );
+      }
       this.review = review;
       this.reviewTimer = setTimeout(
         () => this.discardReview(),
@@ -350,13 +393,20 @@ export class AssistantController {
         return this.freshCapture().then(finish);
       finish(this.sources().capture);
     };
-    if (knowledgeIds.length)
-      return this.retrieveKnowledge!(input.question, knowledgeIds).then(
-        (result) => {
-          knowledge = result;
-          return captureAndFinish();
-        },
-      );
+    if (knowledgeIds.length || workspaceSelection)
+      return (async () => {
+        if (knowledgeIds.length)
+          knowledge = await this.retrieveKnowledge!(
+            input.question,
+            knowledgeIds,
+          );
+        if (workspaceSelection)
+          workspace = await this.retrieveWorkspace!(
+            input.question,
+            workspaceSelection,
+          );
+        return captureAndFinish();
+      })();
     return captureAndFinish();
   }
   discardReview(): void {
@@ -403,6 +453,22 @@ export class AssistantController {
         );
       }
       review[input.kind].splice(input.index as number, 1);
+    } else if (
+      input.kind === "workspace" &&
+      review.workspaceContext &&
+      Number.isInteger(input.index) &&
+      (input.index as number) >= 0 &&
+      (input.index as number) < review.workspaceContext.entries.length
+    ) {
+      review.workspaceContext.entries.splice(input.index as number, 1);
+    } else if (
+      input.kind === "knowledge" &&
+      review.knowledge &&
+      Number.isInteger(input.index) &&
+      (input.index as number) >= 0 &&
+      (input.index as number) < review.knowledge.length
+    ) {
+      review.knowledge.splice(input.index as number, 1);
     } else throw new Error("Choose a context item in this review.");
     if (
       !review.question &&
@@ -463,6 +529,8 @@ export class AssistantController {
       throw new Error(
         "Knowledge must be prepared through a current local-source review.",
       );
+    if (request.workspaceContext && !referenceGuard)
+      throw new Error("Workspace context requires a current source review.");
     if (permission && !permission())
       throw new Error(
         "Live Assist permission expired or changed before transmission.",
@@ -473,6 +541,9 @@ export class AssistantController {
     const response: AIResponse = {
       ...(request.knowledge?.length
         ? { knowledge: structuredClone(request.knowledge) }
+        : {}),
+      ...(request.workspaceContext
+        ? { workspaceContext: structuredClone(request.workspaceContext) }
         : {}),
       ...(request.modeContext
         ? { modeName: request.modeContext.mode.name }
@@ -580,7 +651,7 @@ export class AssistantController {
               this.history = this.history.filter(
                 (turn) => turn.requestId !== request.replacesRequestId,
               );
-            if (!request.meetingContext)
+            if (!request.meetingContext && !request.workspaceContext)
               this.history.push({
                 requestId: request.requestId,
                 question: request.question,

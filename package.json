@@ -3,7 +3,7 @@
   "productName": "EveryHint",
   "version": "0.4.0",
   "private": true,
-  "description": "EveryHint — Intelligence when you need it.",
+  "description": "EveryHint \u00e2\u20ac\u201d Intelligence when you need it.",
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {
@@ -37,7 +37,9 @@
     "test:meetings": "node scripts/test-meeting-storage.mjs",
     "smoke:meetings": "node scripts/smoke-meetings.mjs",
     "smoke:personal": "node scripts/smoke-personal.mjs",
-    "personal:bench": "node scripts/benchmark-personal.mjs"
+    "personal:bench": "node scripts/benchmark-personal.mjs",
+    "smoke:context": "node scripts/smoke-context.mjs",
+    "context:bench": "node scripts/benchmark-context.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.311",

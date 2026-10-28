@@ -16,6 +16,33 @@ parentPort!.on(
     try {
       let result: unknown;
       if (method === "config") result = db.config();
+      else if (method === "workspaceGet") {
+        const input = value as {
+          kind: import("../../shared/workspace").WorkspaceKind;
+          id: string;
+        };
+        result = db.workspaceGet(input.kind, input.id);
+      } else if (method === "workspaceBatch") {
+        const input = value as {
+          rows: import("../../shared/workspace").WorkspaceRow[];
+          remove?: {
+            kind: import("../../shared/workspace").WorkspaceKind;
+            id: string;
+          }[];
+        };
+        result = db.workspaceBatch(input.rows, input.remove);
+      } else if (method === "workspaceList") {
+        const input = value as {
+          kind: import("../../shared/workspace").WorkspaceKind;
+          offset?: number;
+          limit?: number;
+        };
+        result = db.workspaceList(input.kind, input.offset, input.limit);
+      } else if (method === "workspaceCounts") result = db.workspaceCounts();
+      else if (method === "workspaceQuery")
+        result = db.workspaceQuery(
+          value as import("../../shared/workspace").WorkspaceQuery,
+        );
       else if (method === "metrics")
         result = {
           memory: process.memoryUsage(),

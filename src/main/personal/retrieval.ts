@@ -16,6 +16,7 @@ export function rankSections(
   query: string,
   documents: { document: KnowledgeDocument; sections: KnowledgeSection[] }[],
   maxChars = 4800,
+  maxResults = 4,
 ): KnowledgeExcerpt[] {
   const stopwords = new Set([
     "the",
@@ -114,7 +115,11 @@ export function rankSections(
     selected.push({ ...excerpt, text });
     seen.add(key);
     chars += text.length;
-    if (selected.length >= 4 || chars >= maxChars) break;
+    if (
+      selected.length >= Math.min(1000, Math.max(1, maxResults)) ||
+      chars >= maxChars
+    )
+      break;
   }
   return selected;
 }

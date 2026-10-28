@@ -41,6 +41,7 @@ export class IntelligenceController extends LocalIntelligence {
       modeId?: string;
       modeName?: string;
       knowledgeSources?: { id: string; name: string }[];
+      workspaceSources?: LiveContext["workspaceSources"];
     } = () => ({ accountId: null, transcribing: false }),
     monotonic: () => number = () => performance.now(),
   ) {
@@ -117,6 +118,9 @@ export class IntelligenceController extends LocalIntelligence {
     const sources = this.snapshot.settings.sources;
     return {
       captureSessionId: capture.sessionId,
+      ...(connection.workspaceSources
+        ? { workspaceSources: connection.workspaceSources }
+        : {}),
       ...(connection.modeId
         ? {
             modeId: connection.modeId,

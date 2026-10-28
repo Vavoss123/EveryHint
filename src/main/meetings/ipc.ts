@@ -24,6 +24,7 @@ export function registerMeetingIPC(ports: {
   cancelContent: () => void;
   revokeLive: () => void;
   changed: () => void;
+  sourcesChanged?: () => Promise<void> | undefined;
 }): void {
   const { handle, meetings, ai, post } = ports;
   const none = (value: unknown) => {
@@ -43,6 +44,21 @@ export function registerMeetingIPC(ports: {
           "The history profile changed. Refresh the view before continuing.",
         );
       const result = await action(envelope.input);
+      if (!changesScope && envelope.scopeId !== meetings.value.scopeId)
+        throw new Error(
+          "History was locked or its profile changed during the operation. No old-profile content or context cleanup was applied.",
+        );
+      if (
+        [
+          "configure",
+          "edit",
+          "speaker-labels",
+          "operation",
+          "delete-all",
+          "ai-apply",
+        ].includes(name)
+      )
+        await ports.sourcesChanged?.();
       if (!changesScope && envelope.scopeId !== meetings.value.scopeId)
         throw new Error(
           "History was locked or its profile changed during the operation. No old-profile content was returned.",

@@ -2,6 +2,11 @@ import { exactKeys, record } from "./validation";
 import type { AudioSourceId, ScreenFrame } from "./contracts";
 import type { ContextualAction } from "./intelligence";
 import { ACTION_LABELS } from "./intelligence";
+import {
+  parseWorkspaceSelection,
+  type WorkspaceSelection,
+  type WorkspaceAIContext,
+} from "./workspace";
 
 export type ProviderId = "codex" | "claude";
 export function providerId(value: unknown): ProviderId {
@@ -63,6 +68,7 @@ export const DEFAULT_CONTEXT: ContextOptions = {
   imageBytes: 1500000,
 };
 export interface ReviewInput {
+  workspaceSelection?: WorkspaceSelection;
   knowledgeIds?: string[];
   transcriptIds?: string[];
   action?: ContextualAction;
@@ -81,6 +87,7 @@ export function parseReview(value: unknown): ReviewInput {
     "action",
     "transcriptIds",
     "knowledgeIds",
+    "workspaceSelection",
   ]);
   if (
     input.knowledgeIds !== undefined &&
@@ -140,6 +147,11 @@ export function parseReview(value: unknown): ReviewInput {
     )
       throw new Error(`Invalid context limit: ${key}.`);
   return {
+    ...(input.workspaceSelection === undefined
+      ? {}
+      : {
+          workspaceSelection: parseWorkspaceSelection(input.workspaceSelection),
+        }),
     question: input.question.trim(),
     ...(input.knowledgeIds === undefined
       ? {}
@@ -170,6 +182,7 @@ export interface ConversationTurn {
   answer: string;
 }
 export interface AIRequest {
+  workspaceContext?: WorkspaceAIContext;
   knowledge?: import("./knowledge").KnowledgeExcerpt[];
   modeContext?: import("./personal").ModeContext;
   meetingContext?: import("./meeting-ai").MeetingAIContext;
@@ -216,6 +229,7 @@ export interface AIUsage {
   estimatedUsd?: number;
 }
 export interface AIResponse {
+  workspaceContext?: WorkspaceAIContext;
   knowledge?: import("./knowledge").KnowledgeExcerpt[];
   modeName?: string;
   meetingPurpose?: import("./meeting-ai").MeetingPurpose;

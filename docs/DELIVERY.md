@@ -1,3 +1,90 @@
+# P10 delivery — Calendar, People and memory
+
+Implemented P10.1–P10.5 on baseline `153846c`. Version remains 0.4.0; no dependency/provider was added. [Design/checkpoint gates](DECISIONS/P10-context.md), [setup/privacy](ARCHITECTURE.md), [full testing/manual checklist](TESTING.md). P11/P12/P13 are not started.
+
+- **Calendar:** official public-client desktop Google OAuth, system browser/PKCE/state/nonce/loopback/JWT, native vault/refresh/revoke, exact read-only scopes, selected finite paginated event window, recurrence/cancellation/time zones/DST/backoff/stale state; functional Calendar views/search/details/preparation status/links and opt-in deduplicated local reminders. Detection suggests preparation/capture choice using calendar timing only.
+- **People:** optional manual facts/notes/CRUD/search, separate imported snapshots/provenance/retrieval dates, saved-meeting links/commitments, exact verified email matching; separately consented selected Contacts import and additionally acknowledged manual full-book paged/delta sync with deletion/expiry/reset. External professional research remains deferred.
+- **Memory:** source-selected saved P8/P9 literal extraction, authenticated encrypted structured records/evidence/revisions, pending/approved review, edits/manual notes, topic/person/meeting/P9 ranking, exclusions/retention/rebuild/individual/all deletion and source/profile/expiry guards. No temporary session, hidden profile or voice identity is indexed.
+- **Preparation/integration:** bounded removable event/people/memory/previous-note/Knowledge review through the existing ChatGPT Responses route and active mode; fresh acknowledgement, cancellation, no tools/paid fallback. Drafts stay ephemeral until explicitly saved under a chosen retention policy; deliberate copy/exclusive-file plaintext export/link opening. P8/recurring associations preserve independent history. Optional Live needs exact-source staging, enablement and separate remote consent within existing session/cooldown/cap guards. Google cache updates preserve unrelated P6 manual reviews.
+
+Verification: **688 unit/regression tests / 53 files**, including all 610 baseline cases; **5 plan + 6 SDK integration tests**; **12 actual compiled storage/native-key assertions**; **286 Electron assertions** (47 core + 44 AI + 11 speech + 44 UI + 28 intelligence + 42 meetings + 34 personal + 36 context). Theme/spec generation checks, strict TypeScript, zero-warning lint and production build pass. Actual cached tiny.en/JFK inference passed (**329.880 / 325.840 ms**) and real Whisper through both synthetic P2 sources passed. No physical microphone/system playback was captured, no runtime/model download or paid request occurred.
+
+**Real Google:** pending configured Cloud Desktop client and explicit test-account/data permission. OAuth/browser/HTTP/toast fixtures are labelled; real loopback/JWT/native-vault/worker paths are exercised, but no genuine Google sign-in/event/contact/revocation is claimed. No Google event/contact was created or modified. Production consent/branding/domain/privacy/sensitive-scope/verification/limited-use approval remains a distribution prerequisite, not an acquired approval.
+
+**Genuine P10 AI:** pending a fresh scoped user grant. The separately opt-in one-request harness is ready; dry-run uses zero network/model requests. It prepares an isolated synthetic event/person and approved source-grounded memory from an actual encrypted synthetic saved note, excludes an unrelated canary and checks refs/Thursday/Wednesday. It never reads personal documents/capture or reuses consumed P9 authorisations. No P10 genuine request has been consumed. Even a later successful manual brief will not establish genuine Google integration or automatic Live with P10 context.
+
+**Encryption/performance:** actual compiled P8/P9/P10 workers and native credential restart tested; marker scans find no fixture private text/email/notes in SQLite; source deletion, retained manual facts, retention and profile guards pass. One 3,000-record local benchmark produced a **1,392,640-byte** encrypted database. Latest local means: People **9.33 ms**, memory **15.44 ms**; 1,000-event cache plus empty schema **389,120 bytes**. Fixture Calendar refresh **13.59 ms / two requests**, saved-document memory extraction **11.81 ms**. These are local fixtures, not internet/endurance measurements; Calendar incremental latency is N/A because bounded refresh is implemented. Detailed heap/RSS, limits and ignored reports are in TESTING.
+
+All 23 P10 Windows scenarios and earlier P1–P9 hardware/real-call/DPI/accessibility/account/endurance/P7 acceptance remain open. Multilingual Whisper/OCR/semantic retrieval, external research, foreground app detection, unbounded Calendar incremental history, background AI, hosted sharing/mail and enterprise/mobile/packaging remain deferred. Original files, exported/clipboard/provider copies and SSD remnants are not erased by local deletion. Locked-source derivatives cannot be shared and reconcile when source stores become available. Restricted P6 profiles and the blocked historical P8 temporary folder remain untouched.
+
+## P10 changed-file manifest
+
+59 changed/new files:
+
+- [README.md](../README.md)
+- [docs/ARCHITECTURE.md](../docs/ARCHITECTURE.md)
+- [docs/BACKLOG.md](../docs/BACKLOG.md)
+- [docs/DECISIONS/P10-context.md](../docs/DECISIONS/P10-context.md)
+- [docs/DELIVERY.md](../docs/DELIVERY.md)
+- [docs/DESIGN_SYSTEM.md](../docs/DESIGN_SYSTEM.md)
+- [docs/FEATURE_MATRIX.md](../docs/FEATURE_MATRIX.md)
+- [docs/PRODUCT_SPEC.md](../docs/PRODUCT_SPEC.md)
+- [docs/TESTING.md](../docs/TESTING.md)
+- [package.json](../package.json)
+- [resources/feature-inventory.json](../resources/feature-inventory.json)
+- [scripts/benchmark-context.mjs](../scripts/benchmark-context.mjs)
+- [scripts/build-feature-matrix.mjs](../scripts/build-feature-matrix.mjs)
+- [scripts/context-smoke-key.mjs](../scripts/context-smoke-key.mjs)
+- [scripts/context-verification-entry.ts](../scripts/context-verification-entry.ts)
+- [scripts/smoke-context.mjs](../scripts/smoke-context.mjs)
+- [scripts/smoke-ui.mjs](../scripts/smoke-ui.mjs)
+- [scripts/verify-context-ai.mjs](../scripts/verify-context-ai.mjs)
+- [src/main/ai/context.ts](../src/main/ai/context.ts)
+- [src/main/ai/controller.ts](../src/main/ai/controller.ts)
+- [src/main/google/accounts.ts](../src/main/google/accounts.ts)
+- [src/main/google/calendar.ts](../src/main/google/calendar.ts)
+- [src/main/google/contacts.ts](../src/main/google/contacts.ts)
+- [src/main/google/http.ts](../src/main/google/http.ts)
+- [src/main/google/oauth.ts](../src/main/google/oauth.ts)
+- [src/main/index.ts](../src/main/index.ts)
+- [src/main/intelligence/controller.ts](../src/main/intelligence/controller.ts)
+- [src/main/intelligence/live.ts](../src/main/intelligence/live.ts)
+- [src/main/meetings/ipc.ts](../src/main/meetings/ipc.ts)
+- [src/main/personal/database.ts](../src/main/personal/database.ts)
+- [src/main/personal/retrieval.ts](../src/main/personal/retrieval.ts)
+- [src/main/personal/worker.ts](../src/main/personal/worker.ts)
+- [src/main/workspace/controller.ts](../src/main/workspace/controller.ts)
+- [src/main/workspace/export.ts](../src/main/workspace/export.ts)
+- [src/main/workspace/memory.ts](../src/main/workspace/memory.ts)
+- [src/main/workspace/reminders.ts](../src/main/workspace/reminders.ts)
+- [src/main/workspace/resume.ts](../src/main/workspace/resume.ts)
+- [src/preload/index.ts](../src/preload/index.ts)
+- [src/renderer/src/AssistantPanel.tsx](../src/renderer/src/AssistantPanel.tsx)
+- [src/renderer/src/BriefPanel.tsx](../src/renderer/src/BriefPanel.tsx)
+- [src/renderer/src/LiveConsent.tsx](../src/renderer/src/LiveConsent.tsx)
+- [src/renderer/src/MemoryPanel.tsx](../src/renderer/src/MemoryPanel.tsx)
+- [src/renderer/src/WorkspacePages.tsx](../src/renderer/src/WorkspacePages.tsx)
+- [src/renderer/src/WorkspaceSelection.tsx](../src/renderer/src/WorkspaceSelection.tsx)
+- [src/renderer/src/main.tsx](../src/renderer/src/main.tsx)
+- [src/shared/ai.ts](../src/shared/ai.ts)
+- [src/shared/contracts.ts](../src/shared/contracts.ts)
+- [src/shared/intelligence.ts](../src/shared/intelligence.ts)
+- [src/shared/navigation.ts](../src/shared/navigation.ts)
+- [src/shared/workspace.ts](../src/shared/workspace.ts)
+- [tests/calendar.test.ts](../tests/calendar.test.ts)
+- [tests/google-oauth.test.ts](../tests/google-oauth.test.ts)
+- [tests/meeting-history.test.ts](../tests/meeting-history.test.ts)
+- [tests/memory.test.ts](../tests/memory.test.ts)
+- [tests/people.test.ts](../tests/people.test.ts)
+- [tests/product-spec.test.ts](../tests/product-spec.test.ts)
+- [tests/workspace-ai.test.ts](../tests/workspace-ai.test.ts)
+- [tests/workspace-export.test.ts](../tests/workspace-export.test.ts)
+- [tests/workspace-helpers.ts](../tests/workspace-helpers.ts)
+
+Ignored local evidence includes `artifacts/p10/`, `p10-smoke.json`, `p10-performance.json`, `p10-brief-dry-run.json` and the build-only verification adapter. No credentials, model/runtime binaries, database/key files or generated screenshots are committed. Intended commit: `feat: add EveryHint calendar people and memory`, without attribution trailers.
+
+## Historical P9 delivery
+
 # P9 delivery — custom AI modes and personal knowledge
 
 Implemented P9.1–P9.5 on `bf92396`, preserving P1–P8. Five checkpoint gates are in [P9-personalisation.md](DECISIONS/P9-personalisation.md). No P10/P11/P12 work was started. Version remains 0.4.0.

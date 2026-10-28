@@ -42,7 +42,7 @@ export const DESTINATIONS = [
     glyph: "people",
     milestone: "P10",
     description:
-      "Permission-based research and context from past conversations.",
+      "Local people, authorised contacts and saved conversation context.",
   },
   {
     id: "modes",
@@ -61,6 +61,13 @@ export const DESTINATIONS = [
 ] as const;
 export type Destination = (typeof DESTINATIONS)[number]["id"];
 export const plannedDestination = (id: Destination): boolean =>
-  !["home", "assistant", "meetings", "modes", "knowledge", "settings"].includes(
-    id,
-  );
+  ![
+    "home",
+    "assistant",
+    "meetings",
+    "modes",
+    "knowledge",
+    "settings",
+    "calendar",
+    "people",
+  ].includes(id);

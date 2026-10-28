@@ -6,6 +6,37 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  workspace: Object.freeze({
+    get: () => ipcRenderer.invoke("everyhint:workspace-get"),
+    command: (
+      input: Parameters<
+        import("../shared/workspace").WorkspaceBridge["command"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:workspace-command", input),
+    query: (
+      input: Parameters<
+        import("../shared/workspace").WorkspaceBridge["query"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:workspace-query", input),
+    onState: (
+      listener: (state: import("../shared/workspace").WorkspaceState) => void,
+    ) => {
+      const wrapped = (
+        _event: Electron.IpcRendererEvent,
+        value: import("../shared/workspace").WorkspaceState,
+      ) => listener(value);
+      ipcRenderer.on("everyhint:workspace-state", wrapped);
+      return () =>
+        ipcRenderer.removeListener("everyhint:workspace-state", wrapped);
+    },
+    onNavigate: (listener: (eventId: string) => void) => {
+      const wrapped = (_event: Electron.IpcRendererEvent, id: string) =>
+        listener(id);
+      ipcRenderer.on("everyhint:workspace-navigate", wrapped);
+      return () =>
+        ipcRenderer.removeListener("everyhint:workspace-navigate", wrapped);
+    },
+  }),
   personal: Object.freeze({
     inspect: (
       input: Parameters<

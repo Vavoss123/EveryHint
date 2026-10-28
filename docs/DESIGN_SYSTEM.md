@@ -1,5 +1,13 @@
 # EveryHint design system — source audit, 2026-10-28
 
+## P10 Calendar, People, memory and pre-call surfaces
+
+Calendar/People reuse existing dashboard navigation, semantic surfaces, brand #E01A34, Poppins/Inter, cards, pill actions, forms/checkboxes/focus and scroll conventions. No EverySession source, palette, font, token, icon dependency or theme generator changed. Calendar has real locked/disconnected/empty/stale/cache states, day/seven-day/upcoming filters and supplied event/preparation/reminder details. People separates imported snapshots/manual overrides; saved choices show real titles/dates. Memory lives on People; privacy preferences live in Settings.
+
+Preparation follows source selection → exact removable payload → fresh remote acknowledgement → streamed draft → deliberate copy/export/optional save. Source provenance/evidence and missing facts remain visible. Optional Live context lists staged source text with separate disabled-by-default enable/remote controls. Calendar suggestions and notification copy offer preparation/capture choice without joining/recording. Notification titles are generic unless chosen.
+
+The compiled fixture-backed screenshots are in `artifacts/p10/`, produced by `scripts/smoke-context.mjs`; normal UI ships no sample records. Existing appearance/minimum-width/draft/focus regression smoke remains. Machine checks/screenshots do not replace human DPI, multi-monitor, keyboard, screen-reader, contrast/opacity or Windows-toast acceptance.
+
 ## Authentic source
 
 EverySession was located locally at `C:\Users\Victor\OneDrive\Documents\mmaapp\MMAsyncApp`. `app.json` identifies the app as **EverySession**, version 1.1.0. Its repository HEAD at inspection was `1256e54dffebfd7b839d8b4b849dd62d22f372e5`; the working tree was clean. This source is read-only throughout this milestone. No EverySession component, configuration, asset or Git state is changed.

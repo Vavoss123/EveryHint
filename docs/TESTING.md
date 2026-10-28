@@ -1,3 +1,71 @@
+# P10 Calendar, People, memory and preparation verification — 2026-10-28
+
+Baseline `153846c`. [Architecture/checkpoints](DECISIONS/P10-context.md). P10 preserves P1–P9 tests; historical evidence below keeps its original scope. P11/P12/P13 are not started. No Google production approval is claimed.
+
+| Check | P10 evidence |
+| --- | --- |
+| Strict TypeScript, zero-warning lint, production build | Passed during implementation; final combined gate recorded in DELIVERY |
+| Unit/regression suite | **688 cases / 53 files**, 78 added cases retain all 610 baseline cases |
+| Actual Electron P10 | **36 assertions**: real app/preload/IPC/encrypted worker/Windows key vault, explicit mocked Google HTTP/browser/native-toast delivery; zero genuine Google/AI requests |
+| Genuine Google Calendar/Contacts | **Pending** configured Desktop client + explicit test-account/data permission; no real account/events/contacts accessed |
+| Genuine P10 ChatGPT brief | **Pending fresh scoped user authorisation**; one-request harness ready, excluded from ordinary checks; P9 authorisations are consumed |
+| Brief dry-run | Passed, zero network/model requests: synthetic event/person plus approved memory from an actual encrypted synthetic saved note; unrelated canary omitted; exact refs/guards preserved |
+| Performance | Actual compiled worker: 1,000 events + 1,000 people + 1,000 memories; measurements below; no real Google/network latency |
+
+### P10 automated coverage
+
+`google-oauth` tests actual random loopback HTTP, S256/state/denial/nonce/signed JWT/issuer/audience/scopes, refresh/revoke/invalid grant, cached signing-key rotation and independent native-vault contracts. `calendar` covers complete bounded pages/multiple calendars, recurrence/cancellation, DST fold/all-day dates, explicit-offset refusal, unsafe links, 410 window restart, rate failures and receipt-before-toast dedup/restart/reschedule/in-flight cancellation. Calendar incremental sync is intentionally not implemented; Contacts deltas are tested with stable parameters, expiry and 410 reset.
+
+`people` covers separate consent, search warmup/selected batch/completeness, optional whole-book pages/deltas/deleted contacts/backoff, manual/imported provenance, exact verified email, actual encrypted CRUD and old-profile response refusal. `memory` uses real P8/P10 encrypted stores to test explicitly saved ended sources, literal extraction/unsupported-claim omission, pending review, edits/optimistic versions, source mutation/deletion, topic/person/meeting retrieval, exclusions, retention, local disablement, delete-all, document refs, profile isolation and post-interface-load restore.
+
+`workspace-ai` tests exact selected context/default omission, acknowledgement/removal/new review IDs, missing/excluded/changed sources before and after provider inspection, cancelled retrieval, no ordinary follow-up reuse, event-bound ephemeral briefs/chosen save, independent associations and staged Live default-off/remote/exact-ID/scope/cooldown. Existing P7 cap/expiry/auth/stream cancellation tests remain. `workspace-export` verifies exclusive new-file export, native cancellation, scope change and cleanup of its incomplete plaintext file. Fixture providers never establish genuine inference or factual quality.
+
+The compiled smoke completes mock Google browser → real bound callback → signed JWT validation → native token vault → official transport fixture → atomic encrypted cache. It exercises Calendar/details/links, People notes/import provenance/attendee matching, actual P9 document extraction → P10 pending/approved memory, exact removable brief preview/refused unacknowledged Ask, no automatic Live/capture, restart/native-key restore, SQLite plaintext-marker absence, document cascade and disconnect preserving manual notes. The meeting mutation IPC also rejects an old-profile completion before derivative cleanup, so it cannot clear the next profile's records. Google refresh preserves unrelated P6 reviews. Initial restore raced the initial page-load safety lock; restore now runs after initial load and the restart regression passes. Native browser interaction/Google service and Windows notification delivery are mocked. Screenshots: ignored `artifacts/p10/calendar.png`, `people-memory.png`.
+
+### P10 performance and resource limits
+
+One local run, Node 24.22.0/Electron 45 actual compiled worker, synthetic 3,000-record database: worker open **33.03 ms**; encrypted 1,000-record batches event/person/memory **20.03 / 15.76 / 18.48 ms**. Seven samples: People search **9.33 ms mean / 12.31 ms max**; keyword memory retrieval **15.44 / 21.85 ms**; person-filtered memory **9.34 / 10.62 ms**. Queries scan one bounded category and return at most 25. After 1,000 events the cache plus schema is **389,120 bytes**; empty/full SQLite **40,960 / 1,392,640 bytes**, encrypted growth **1,351,680 bytes**; worker heap **5,841,628 → 7,715,316 bytes**; shared test process RSS **94,203,904 bytes**. RSS includes process/worker and is not an endurance peak.
+
+Fixture-backed compiled initial Calendar refresh: **13.59 ms / 2 requests** (one calendar-list + one event page); actual saved-document memory extraction **11.81 ms**. The zero-network brief dry-run is not a genuine latency measurement. Calendar incremental latency is **N/A by design**; genuine Google initial/delta/network/backoff timing and genuine pre-call generation timing remain pending. These short local samples do not establish long-run UI/capture/Whisper coexistence or internet performance. Reports: ignored `artifacts/p10-smoke.json`, `p10-performance.json`, `p10-brief-dry-run.json`.
+
+No background all-book import or AI occurs. Google refresh defaults manual; optional Calendar polling is about 15 minutes with minimum interval/backoff. Event cache/People/memory/associations each cap at 1,000, briefs at 30, workspace serialization at 14,000 characters, total brief review at 30,000. Expiry filters and guards reject unavailable sources. P8/P9 encryption/key-loss/deletion limitations remain; marker absence is evidence against plaintext storage, not a physical secure-erasure guarantee.
+
+### P10 genuine verification procedure and current limits
+
+For Google, follow [configuration](ARCHITECTURE.md#p10-google-setup-and-distribution), obtain explicit permission for a test account and selected harmless existing data, connect Calendar, select calendars, compare real dates/offsets/recurrence/cancellation, refresh/offline/revoke, then separately authorise Contacts search/selected import and optional full-book deltas/deletions. Do not create real events/contacts without permission. Record exact observed requests/results and keep other scopes pending. No configured client/test grant was supplied during local verification.
+
+`node scripts/verify-context-ai.mjs --dry-run` bundles existing production controllers/provider exports and runs isolated compiled encrypted P8/P10 workers without network. The separate `--authorised-one-request` path requires a new explicit chat grant, reads the existing EveryHint native ChatGPT registration without copying credential files, discovers/selects gpt-6.1-sol and permits **one** exact reviewed Responses POST. It asserts `store:false`, `stream:true`, no tools, exact input/model, selected event/person/memory only, omitted unrelated saved-note canary and a supplied source citation plus Thursday/Wednesday. The harmless memory is extracted from an isolated synthetic previous saved note; no real calendar/contact/history/document/capture is read. Temporary encrypted test records are removed, app preferences untouched. A reserved `artifacts/p10-genuine-brief.json` prevents automatic reruns; a failed/uncertain attempt consumes the test's one-request budget. Never infer permission from the flag or a previous milestone's grant. Genuine automatic Live with P10 context remains pending even if this manual request later passes.
+
+### P10 Windows manual acceptance — all pending unless separately recorded
+
+1. **Calendar sign-in:** use a configured Desktop test client; observe only system-browser Google consent/read-only scopes, decline/cancel/timeout/wrong-state refusal and no ChatGPT change.
+2. **Calendar selection:** load multiple authorised calendars, choose up to five, refresh, unselect and confirm cache removal. Never change Google events.
+3. **Upcoming display:** compare existing real event title/location/attendees/duration/platform and day/week/upcoming/search/filter/empty/stale states.
+4. **Recurrence:** inspect real recurring instances/overrides and original-start provenance across the window and DST boundaries.
+5. **Cancellation:** owner/test account changes an existing test event only with separate permission; refresh and confirm disappearance without deleting independent P8 history.
+6. **Reminders:** authorise Windows notifications; try disabled/5/10/15/30, generic/title option, cancellation/reschedule/dismiss/catch-up/restart and duplicate suppression. Toast click opens preparation only.
+7. **Quick Join link:** explicitly open a supported HTTPS meeting link; confirm it only opens the link, without enabling EveryHint capture/Live/saving.
+8. **Contacts:** separately consent, search, select import; reject whole-book import until separately acknowledged; test refresh/delta/delete/expired token/revoke. Google is never written.
+9. **People Search:** search actual local records, inspect provenance, confirm exact verified-email matches; aliases/names/voices must not be treated as identity.
+10. **Manual editing:** edit optional facts/notes, retain imported snapshot separation, remove association/delete local record, confirm no Google write.
+11. **Saved associations:** link an existing ended saved meeting, open real notes/actions from an upcoming/recurring event, unlink; titles/history remain independent.
+12. **Cross-meeting memory:** enable explicitly, select saved sources, rebuild and inspect exact source/revision/quote. Temporary/active sessions must be rejected.
+13. **Commitments:** inspect open/done states, missing owners/deadlines, pending/approved review and person/topic/meeting search; no unsupported claim becomes a known fact.
+14. **Memory deletion:** exercise edits/stale edit, individual/all deletion, source deletion, exclusions, shortened retention and rebuild; source unavailable/changed must revoke sharing.
+15. **AI brief:** under a separate scoped request grant, inspect overview/participants/history/actions/documents/questions/checklist, missing-information statements, cited support, timing and cancellation.
+16. **Brief sources:** remove event description/person/memory/meeting/knowledge before approval; review ID/ack reset; ensure unrelated histories/contact book never enter prompt. Test ephemeral/copy/export/explicit save/retention.
+17. **Modes:** switch built-in/custom modes/output preferences; verify subordinate instructions and independently selected Knowledge. Switching must revoke pending sharing.
+18. **Live:** explicitly stage exact context, inspect text, enable/remote-authorise for that session, then test existing spoken trigger/cooldown/cap/expiry/cancel. Google/memory enablement cannot grant Live.
+19. **Account lifecycle:** switch/revoke Google subjects and local ChatGPT registrations; check scope/key/token/cache isolation, imported/manual separation and project-wide Google revocation effects.
+20. **Offline:** disconnect network during pages/token refresh/brief stream; retain visibly stale complete cache, no partial delta token or silent retries/fallback.
+21. **Restart/Windows lock:** selected restore resumes local cache/reminder policy only; default remains locked, OS lock/suspend/reload clears sharing, no capture/AI/join resumes.
+22. **DPI/multi-monitor:** inspect Calendar/People/brief/editor/consent at supported scaling/window sizes, scrolling, focus, contrast and persistent capture cancellation.
+23. **Accessibility:** keyboard-only traversal, names/labels/checkboxes/native dialogs and Narrator at minimum width; verify errors/updates and source/evidence text are reachable.
+
+Carry forward every unresolved P1–P9 physical microphone/system playback/real calls, P5 visual/DPI, accessibility, account lifecycle, P7 genuine automatic acceptance, ARM64/base.en/older CPUs and long-duration CPU/RSS checks. Multilingual Whisper, OCR, semantic retrieval and external professional research remain deferred. The restricted historical P8 folder/four P6 profiles were not touched.
+
+## Historical P9 verification
+
 # P9 modes, knowledge, language and template verification — 2026-10-28
 
 Baseline `bf92396`. [P9 architecture/checkpoints](DECISIONS/P9-personalisation.md). P9.1–P9.5 preserve the existing P1–P8 capture, Whisper, reviewed/Live provider and meeting gates. Historical results below remain bounded evidence, not blanket acceptance. No P10/P11/P12 work was started.

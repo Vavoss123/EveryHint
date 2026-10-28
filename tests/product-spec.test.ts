@@ -72,6 +72,8 @@ describe("product specification coverage", () => {
       "assistant",
       "meetings",
       "knowledge",
+      "calendar",
+      "people",
       "modes",
       "settings",
     ]);

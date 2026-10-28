@@ -137,24 +137,10 @@ try {
     "dashboard expands the native window",
   );
   await shot("dashboard-light");
-  for (const [name, milestone] of [
-    ["Calendar", "P10"],
-    ["People", "P10"],
-  ]) {
-    await page
-      .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name, exact: true })
-      .click();
-    const content = await page
-      .getByLabel(`${name} roadmap`, { exact: true })
-      .innerText();
-    check(
-      content.includes("Not available yet") && content.includes(milestone),
-      `${name} is an honest planned destination`,
-    );
-  }
   for (const [name, label] of [
     ["Knowledge", "Knowledge library"],
+    ["Calendar", "Calendar dashboard"],
+    ["People", "People dashboard"],
     ["Modes", "AI Modes"],
   ]) {
     await page

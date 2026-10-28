@@ -1,6 +1,16 @@
 # EveryHint milestones
 
-## P9 — Modes, personal knowledge, languages and templates (current delivery)
+## P10 — Calendar, People, memory and preparation (current delivery)
+
+Implemented on `153846c` through five checkpoints; [design/gates](DECISIONS/P10-context.md), [verification/manual scenarios](TESTING.md), [delivery/changed files](DELIVERY.md). Official read-only Google desktop OAuth and finite selected-calendar cache/reminders; working Calendar/People; separate optional Contacts consent/import/deltas; source-grounded opt-in encrypted memory/review/exclusions/retention; exact-source briefs using existing ChatGPT/modes/knowledge; P8/recurring associations and optional scoped Live context. Local/capture/Google/remote permissions remain separate. No dependency/provider was added.
+
+External gates: configured Google Cloud Desktop client, APIs/consent/test users plus explicit test permission for genuine Calendar/Contacts lifecycle; public OAuth brand/domain/privacy/sensitive-scope verification and distribution review. Genuine P10 brief inference requires fresh scoped authorisation; dry-run is not real inference. Current status is in TESTING. No feature is marked COMPLETE and no Google event/contact was created or modified.
+
+Open: all 23 P10 Windows scenarios and unresolved P1–P9 real audio/hardware/calls, P5 visual/DPI/multi-monitor, accessibility/keyboard/Narrator, account switching/sign-out/OS permission lifecycle, long-duration CPU/RSS/capture/Whisper coexistence, P7 genuine automatic acceptance and broad multilingual/output/source quality. Restricted P6 profiles and the blocked historical P8 Temp directory remain untouched.
+
+Deferred: approved external professional research; foreground/conferencing-app detection; Calendar incremental/unbounded historical sync (finite window delivered); automatic background AI briefs; semantic retrieval; multilingual Whisper/OCR; hosted sharing/mail/CRM/ATS/cloud sync; P11 enterprise, P12 mobile and P13 packaging. Stop after P10. Commit: `feat: add EveryHint calendar people and memory`.
+
+## P9 — Modes, personal knowledge, languages and templates (historical delivery)
 
 Implemented on `bf92396` in checkpoint order; [architecture and gates](DECISIONS/P9-personalisation.md), [verification](TESTING.md), [delivery](DELIVERY.md). Typed shared modes/legacy mapping, functional editors and profile-encrypted persistence; native PDF/DOCX/TXT/MD extraction and local bounded retrieval; independent global/mode output languages; honest English-only Whisper model management; grounded ordered custom meeting templates and prior-summary preservation; manual/Live source-review/permission integration. Two expressly authorised genuine gpt-6.1-sol requests passed without retries or paid fallback. Prior P1–P8 automated coverage remains enabled.
 

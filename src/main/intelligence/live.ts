@@ -14,6 +14,7 @@ import { exactKeys, record } from "../../shared/validation";
 import { AssistantController } from "../ai/controller";
 import { actionReview } from "./actions";
 import { normalizeQuestion, similarity } from "./question";
+import { parseWorkspaceSelection } from "../../shared/workspace";
 
 interface LivePorts {
   assistant: AssistantController;
@@ -76,9 +77,35 @@ export class LiveScheduler {
       "screenshot",
       "history",
       "knowledge",
+      "workspace",
     ]);
     let knowledge:
       { enabled: boolean; remote: boolean; ids: string[] } | undefined;
+    let workspace: import("../../shared/intelligence").LiveSharing["workspace"];
+    if (sharing.workspace !== undefined) {
+      const raw = record(sharing.workspace);
+      exactKeys(raw, ["enabled", "remote", "scopeId", "selection"]);
+      if (
+        typeof raw.enabled !== "boolean" ||
+        typeof raw.remote !== "boolean" ||
+        typeof raw.scopeId !== "string" ||
+        raw.scopeId.length > 80
+      )
+        throw new Error("Choose explicit bounded Live workspace sharing.");
+      const selection = parseWorkspaceSelection(raw.selection);
+      if (selection.purpose !== "live")
+        throw new Error("Live workspace purpose is required.");
+      workspace = {
+        enabled: raw.enabled,
+        remote: raw.remote,
+        scopeId: raw.scopeId,
+        selection,
+      };
+      if (workspace.enabled && !workspace.remote)
+        throw new Error(
+          "Live calendar, People and memory require separate remote-sharing permission.",
+        );
+    }
     if (sharing.knowledge !== undefined) {
       const inputKnowledge = record(sharing.knowledge);
       exactKeys(inputKnowledge, ["enabled", "remote", "ids"]);
@@ -123,6 +150,7 @@ export class LiveScheduler {
       "modeId",
       "modeName",
       "knowledgeSources",
+      "workspaceSources",
     ]);
     for (const key of [
       "captureSessionId",
@@ -202,6 +230,16 @@ export class LiveScheduler {
           "Enable local speech transcription before authorising Live Assist.",
         );
       if (
+        workspace?.enabled &&
+        (!context.workspaceSources ||
+          workspace.scopeId !== context.workspaceSources.scopeId ||
+          JSON.stringify(workspace.selection) !==
+            JSON.stringify(context.workspaceSources.selection))
+      )
+        throw new Error(
+          "Live workspace sources changed or were not explicitly staged and reviewed.",
+        );
+      if (
         knowledge?.enabled &&
         knowledge.ids.some(
           (id) => !context.knowledgeSources?.some((source) => source.id === id),
@@ -233,6 +271,7 @@ export class LiveScheduler {
         sourceId: context.sourceId,
         sourceName: context.sourceName,
         sharing: {
+          ...(workspace ? { workspace: structuredClone(workspace) } : {}),
           ...(knowledge ? { knowledge: structuredClone(knowledge) } : {}),
           microphone: sharing.microphone as boolean,
           systemAudio: sharing.systemAudio as boolean,
@@ -289,6 +328,12 @@ export class LiveScheduler {
       context.model === grant.model &&
       context.sourceId === grant.sourceId &&
       context.modeId === grant.modeId &&
+      (!grant.sharing.workspace?.enabled ||
+        (grant.sharing.workspace.remote &&
+          context.workspaceSources?.scopeId ===
+            grant.sharing.workspace.scopeId &&
+          JSON.stringify(context.workspaceSources.selection) ===
+            JSON.stringify(grant.sharing.workspace.selection))) &&
       (!grant.sharing.knowledge?.enabled ||
         (grant.sharing.knowledge.remote &&
           grant.sharing.knowledge.ids.every((id) =>
@@ -440,6 +485,9 @@ export class LiveScheduler {
         grant.sharing.knowledge?.enabled && grant.sharing.knowledge.remote
           ? grant.sharing.knowledge.ids
           : [],
+        grant.sharing.workspace?.enabled && grant.sharing.workspace.remote
+          ? grant.sharing.workspace.selection
+          : undefined,
       );
       if (
         this.slot !== slot ||

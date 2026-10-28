@@ -6,6 +6,7 @@ import {
   globalShortcut,
   ipcMain,
   Menu,
+  Notification,
   nativeImage,
   nativeTheme,
   powerMonitor,
@@ -61,6 +62,12 @@ import { MeetingSharing } from "./meetings/sharing";
 import { PersonalController } from "./personal/controller";
 import { PersonalStore } from "./personal/store";
 import { defaultConfig, migratePreset } from "../shared/modes";
+import { WorkspaceController } from "./workspace/controller";
+import { WorkspaceResume } from "./workspace/resume";
+import { GoogleAccount } from "./google/accounts";
+import { MeetingKeys } from "./meetings/keys";
+import { AsyncEntry } from "@napi-rs/keyring";
+import { exportBrief } from "./workspace/export";
 import { parseReview } from "../shared/ai";
 import { record } from "../shared/validation";
 import design from "../../resources/design-tokens.json";
@@ -99,6 +106,7 @@ let meetingAI: MeetingAIController | undefined;
 let postNotes: PostMeetingNotes | undefined;
 let meetingProfile = "";
 let personal: PersonalController | undefined;
+let workspace: WorkspaceController | undefined;
 let meetingAIRevision = 0;
 let meetingCompactRow = false;
 let lastMeetingAIState = "";
@@ -175,6 +183,7 @@ function stopCapture(): void {
   controller?.stop();
 }
 function lockMeetingHistory(reason: string): void {
+  workspace?.lock();
   personal?.lock();
   postNotes?.revoke(reason);
   meetingAI?.resetProfile();
@@ -191,6 +200,7 @@ function updateMeetingProfile(): void {
   if (profile === meetingProfile) return;
   meetingProfile = profile;
   personal?.switchProfile(profile);
+  workspace?.switchProfile(profile);
   cancelMeetingWork();
   meetingAI?.resetProfile();
   meetings.switchProfile(
@@ -570,6 +580,7 @@ async function initialise(): Promise<void> {
         outputLanguage: "default",
       },
     (query, ids) => personal!.knowledgeContext(query, ids),
+    (query, selection) => workspace!.buildContext(query, selection),
   );
   intelligence = new IntelligenceController(
     assistant,
@@ -584,6 +595,9 @@ async function initialise(): Promise<void> {
       accountId: accounts?.identity ?? null,
       accountLabel: currentAccountLabel,
       transcribing: transcriptionListening,
+      ...(workspace?.liveContext
+        ? { workspaceSources: workspace.liveContext }
+        : {}),
       ...(personal
         ? {
             modeId: personal.modeContext.mode.id,
@@ -614,6 +628,7 @@ async function initialise(): Promise<void> {
         window.webContents.send("everyhint:personal-state", value);
     },
     () => {
+      workspace?.invalidate();
       intelligence?.revoke(
         "AI mode or personal knowledge changed. Renew sharing explicitly.",
       );
@@ -676,6 +691,80 @@ async function initialise(): Promise<void> {
       transcribing: transcriptionListening,
     }),
     publishMeetingAI,
+  );
+  workspace = new WorkspaceController(
+    {
+      store: (profile) =>
+        new PersonalStore(
+          join(meetingRoot, "context"),
+          profile,
+          new MeetingKeys((p) => new AsyncEntry("EveryHint.Context.v1", p)),
+        ),
+      google: (profile, service, changed) =>
+        GoogleAccount.forProfile(
+          profile,
+          service,
+          (url) => shell.openExternal(url),
+          changed,
+        ),
+      changed: (value) => {
+        if (
+          window &&
+          !window.isDestroyed() &&
+          !window.webContents.isDestroyed()
+        )
+          window.webContents.send("everyhint:workspace-state", value);
+      },
+      invalidate: () => {
+        if (intelligence?.value.live?.sharing.workspace?.enabled)
+          intelligence.revoke(
+            "Calendar, People or memory context changed. Renew sharing explicitly.",
+          );
+        const current = assistant?.value;
+        if (
+          current?.review?.workspaceContext ||
+          current?.responses.some((response) => response.workspaceContext)
+        )
+          assistant?.clear();
+      },
+      notify: (event, titles) => {
+        if (!Notification.isSupported()) return () => {};
+        const toast = new Notification({
+          title: titles ? event.title : "Upcoming meeting",
+          body: "View preparation in EveryHint. Opening this notification never joins or starts capture.",
+          silent: false,
+        });
+        toast.on("click", () => {
+          if (window && !window.isDestroyed()) {
+            show();
+            window.webContents.send("everyhint:workspace-navigate", event.id);
+          }
+        });
+        toast.show();
+        return () => toast.close();
+      },
+      openURL: (url) => shell.openExternal(url),
+      assistant,
+      meetings,
+      personal,
+      captureIdle: () =>
+        ["IDLE", "STOPPED"].includes(controller.metadata.state),
+      exportText: (name, text, valid) =>
+        exportBrief(
+          async (suggested) => {
+            const result = await dialog.showSaveDialog(window!, {
+              title: "Export unencrypted pre-call brief",
+              defaultPath: suggested,
+              filters: [{ name: "Text brief", extensions: ["txt"] }],
+            });
+            return result.canceled ? null : (result.filePath ?? null);
+          },
+          name,
+          text,
+          valid,
+        ),
+    },
+    new WorkspaceResume(join(meetingRoot, "context-resume")),
   );
   updateMeetingProfile();
   await accounts.restore();
@@ -817,6 +906,7 @@ async function initialise(): Promise<void> {
   handle("everyhint:get", () => snapshot());
   registerMeetingIPC({
     snapshotAI: meetingAISnapshot,
+    sourcesChanged: () => workspace?.sourceChanged("meeting"),
     handle,
     meetings,
     sharing: new MeetingSharing(meetings, {
@@ -937,7 +1027,30 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-get", () => assistant!.value);
   handle("everyhint:personal-get", () => personal!.value);
-  handle("everyhint:personal-command", (input) => personal!.command(input));
+  handle("everyhint:workspace-get", (input) => {
+    if (input !== undefined)
+      throw new Error("Workspace status takes no payload.");
+    return workspace!.value;
+  });
+  handle("everyhint:workspace-command", (input) => workspace!.command(input));
+  handle("everyhint:workspace-query", (input) => workspace!.query(input));
+  handle("everyhint:personal-command", async (input) => {
+    const result = await personal!.command(input);
+    if (result.scopeId !== personal!.value.scopeId)
+      throw new Error(
+        "Personal profile changed before context reconciliation.",
+      );
+    const command = (input as { value?: { type?: string; id?: string } })
+      ?.value;
+    if (command?.type === "document" || command?.type === "delete-document")
+      await workspace?.sourceChanged("document", command.id);
+    else await workspace?.reconcileSources();
+    if (result.scopeId !== personal!.value.scopeId)
+      throw new Error(
+        "Personal profile changed during context reconciliation.",
+      );
+    return result;
+  });
   handle("everyhint:personal-inspect", (input) => personal!.inspect(input));
   handle("everyhint:personal-search", (input) => personal!.search(input));
   handle("everyhint:ai-inspect", () => assistant!.inspect());
@@ -1080,6 +1193,7 @@ async function initialise(): Promise<void> {
     stopCapture();
   });
   await window.loadURL(documentUrl);
+  await workspace.restoreChosen();
   show();
   void assistant
     .inspect()
@@ -1111,6 +1225,7 @@ app.on("before-quit", (event) => {
   event.preventDefault();
   quitting = true;
   personal?.lock();
+  void workspace?.dispose();
   postNotes?.dispose();
   meetingAI?.cancel();
   accounts?.dispose();

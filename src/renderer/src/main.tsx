@@ -34,6 +34,12 @@ import {
 } from "./MeetingSessionControls";
 import { MeetingHistory } from "./MeetingHistory";
 import {
+  CalendarPage,
+  WorkspaceSettings,
+  PeoplePage,
+  useWorkspace,
+} from "./WorkspacePages";
+import {
   ModesPage,
   ModeSelector,
   PersonalSettings,
@@ -46,11 +52,31 @@ function unwrap<T>(result: Result<T>): T {
 }
 
 function App() {
+  const contextualWorkspace = useWorkspace();
   const intelligence = useIntelligenceSnapshot();
   const assistant = useAssistantSnapshot();
   const meetings = useMeetings();
   const [requestedMeetingId, setRequestedMeetingId] = useState<string | null>(
     null,
+  );
+  const [requestedEventId, setRequestedEventId] = useState<string | null>(null);
+  useEffect(
+    () =>
+      window.everyhint.workspace.onNavigate((id) => {
+        setRequestedEventId(id);
+        setDestination("calendar");
+        setSettingsOpen(false);
+        setPreparing(false);
+        void window.everyhint.getSnapshot().then((result) => {
+          if (result.ok)
+            void window.everyhint.saveSettings({
+              ...result.value.settings,
+              compact: false,
+              layout: "dashboard",
+            });
+        });
+      }),
+    [],
   );
   const [app, setApp] = useState<AppSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -512,6 +538,23 @@ function App() {
         </div>
       )}
       <div className="workspace">
+        {contextualWorkspace?.suggestion && (
+          <aside className="card" role="status">
+            <p>
+              Upcoming calendar meeting: {contextualWorkspace.suggestion.title}.
+              EveryHint can help you prepare.
+            </p>
+            <button
+              onClick={() => {
+                setRequestedEventId(contextualWorkspace.suggestion!.eventId);
+                navigate("calendar");
+              }}
+            >
+              View meeting preparation
+            </button>
+            <button onClick={meetingCapture}>Choose capture sources</button>
+          </aside>
+        )}
         {dashboard && (
           <DashboardNav
             selected={settingsOpen ? "settings" : destination}
@@ -519,6 +562,26 @@ function App() {
           />
         )}
         <section className="content" id="workspace-content" tabIndex={-1}>
+          {dashboard &&
+            !settingsOpen &&
+            !preparing &&
+            destination === "calendar" && (
+              <CalendarPage
+                key={contextualWorkspace?.scopeId}
+                requestedEventId={requestedEventId}
+                prepareCapture={meetingCapture}
+                openMeeting={openMeetings}
+              />
+            )}
+          {dashboard &&
+            !settingsOpen &&
+            !preparing &&
+            destination === "people" && (
+              <PeoplePage
+                key={contextualWorkspace?.scopeId}
+                openMeeting={openMeetings}
+              />
+            )}
           {dashboard &&
             !settingsOpen &&
             !preparing &&
@@ -713,6 +776,7 @@ function App() {
                 )}
                 <ShortcutSettings settings={settings} save={save} />
                 <PersonalSettings />
+                <WorkspaceSettings />
                 <TranscriptionPanel settings canEnable={active} />
                 {app.hotkeys.map((hotkey) => (
                   <div className="shortcut" key={hotkey.action}>

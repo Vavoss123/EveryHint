@@ -3,6 +3,7 @@ import type {
   IntelligenceSnapshot,
   LiveSharing,
 } from "../../shared/intelligence";
+import { WorkspaceSources } from "./BriefPanel";
 
 export function LiveConsent({ snapshot }: { snapshot: IntelligenceSnapshot }) {
   const [sharing, setSharing] = useState<LiveSharing>({
@@ -29,6 +30,7 @@ export function LiveConsent({ snapshot }: { snapshot: IntelligenceSnapshot }) {
         ? structuredClone(snapshot.live.sharing)
         : {
             ...previous,
+            workspace: undefined,
             microphone:
               previous.microphone && Boolean(context?.available.microphone),
             systemAudio:
@@ -232,6 +234,60 @@ export function LiveConsent({ snapshot }: { snapshot: IntelligenceSnapshot }) {
             <p>
               At most four relevant excerpts / 4,800 text characters per
               request. Sent excerpts remain inspectable on each answer.
+            </p>
+          </fieldset>
+        )}
+        {context?.workspaceSources && (
+          <fieldset>
+            <legend>
+              Optional staged Calendar, People and cross-meeting context
+            </legend>
+            <WorkspaceSources context={context.workspaceSources.context} />
+            <label className="ai-choice">
+              <input
+                type="checkbox"
+                checked={sharing.workspace?.enabled ?? false}
+                onChange={(e) => {
+                  setAcknowledged(false);
+                  setSharing({
+                    ...sharing,
+                    workspace: {
+                      enabled: e.target.checked,
+                      remote: false,
+                      scopeId: context.workspaceSources!.scopeId,
+                      selection: context.workspaceSources!.selection,
+                    },
+                  });
+                }}
+              />
+              Enable only these displayed workspace sources for this Live
+              session
+            </label>
+            <label className="ai-choice">
+              <input
+                type="checkbox"
+                checked={sharing.workspace?.remote ?? false}
+                disabled={!sharing.workspace?.enabled}
+                onChange={(e) => {
+                  setAcknowledged(false);
+                  if (sharing.workspace)
+                    setSharing({
+                      ...sharing,
+                      workspace: {
+                        ...sharing.workspace,
+                        remote: e.target.checked,
+                      },
+                    });
+                }}
+              />
+              Separately authorise these displayed event details, selected
+              contact facts, approved memories and saved notes to leave this
+              device for bounded automatic ChatGPT requests.
+            </label>
+            <p>
+              Change or remove sources in the assistant's optional context
+              selector, stage again and renew this grant. Connecting Google or
+              enabling memory never grants Live sharing.
             </p>
           </fieldset>
         )}

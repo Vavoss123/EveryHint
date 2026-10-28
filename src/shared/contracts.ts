@@ -104,6 +104,7 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  workspace: import("./workspace").WorkspaceBridge;
   personal: import("./personal").PersonalBridge;
   meetings: import("./meeting-bridge").MeetingBridge;
   authoriseLive(
@@ -146,7 +147,7 @@ export interface EveryHintBridge {
   reviewContext(input: import("./ai").ReviewInput): Promise<Result<void>>;
   removeContext(input: {
     reviewId: string;
-    kind: "transcripts" | "history" | "screenshot";
+    kind: "transcripts" | "history" | "screenshot" | "workspace" | "knowledge";
     index: number;
   }): Promise<Result<void>>;
   onAssist(listener: () => void): () => void;

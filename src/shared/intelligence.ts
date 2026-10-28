@@ -108,6 +108,12 @@ export interface IntelligenceDiagnostics {
   responseLatencyMs: number | null;
 }
 export interface LiveSharing {
+  workspace?: {
+    enabled: boolean;
+    remote: boolean;
+    scopeId: string;
+    selection: import("./workspace").WorkspaceSelection;
+  };
   knowledge?: { enabled: boolean; remote: boolean; ids: string[] };
   microphone: boolean;
   systemAudio: boolean;
@@ -134,6 +140,11 @@ export interface LiveAuthorisation {
   confidenceThreshold: number;
 }
 export interface LiveContext {
+  workspaceSources?: {
+    scopeId: string;
+    selection: import("./workspace").WorkspaceSelection;
+    context: import("./workspace").WorkspaceAIContext;
+  };
   modeId?: string;
   modeName?: string;
   knowledgeSources?: { id: string; name: string }[];

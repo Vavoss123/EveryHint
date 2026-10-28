@@ -444,7 +444,8 @@ async function ipcSetup(saved = true) {
   harnesses.push(s);
   const routes = new Map<string, (value: unknown) => unknown>(),
     cancel = vi.fn(() => s.ai.cancel()),
-    changed = vi.fn();
+    changed = vi.fn(),
+    sourcesChanged = vi.fn(async () => {});
   registerMeetingIPC({
     snapshotAI: () => ({ ...s.ai.value, ...s.post.value }),
     handle: (name, action) => {
@@ -462,10 +463,12 @@ async function ipcSetup(saved = true) {
     cancelContent: cancel,
     revokeLive: vi.fn(),
     changed,
+    sourcesChanged,
   });
   return {
     ...s,
     routes,
+    sourcesChanged,
     cancel,
     changed,
     call: (name: string, input: unknown, scope = s.recorder.value.scopeId) =>
@@ -475,6 +478,25 @@ async function ipcSetup(saved = true) {
   };
 }
 describe("P8.3 trusted route payload/scope and lifecycle guards", () => {
+  it("does not run derived-context cleanup in a new profile after an old edit completes", async () => {
+    const s = await ipcSetup();
+    s.stop();
+    await s.recorder.flush();
+    const store = s.recorder.requireStore(),
+      doc = await store.get(s.saved!.id),
+      pending = deferred<MeetingDocument>(),
+      update = vi.spyOn(store, "update").mockReturnValueOnce(pending.promise);
+    const write = s.call("edit", {
+      id: doc.id,
+      expectedRevision: doc.revision,
+      notes: "Explicit test edit",
+    });
+    await vi.waitFor(() => expect(update).toHaveBeenCalled());
+    s.recorder.lock();
+    pending.resolve({ ...doc, revision: doc.revision + 1 });
+    await expect(write).rejects.toThrow("No old-profile content");
+    expect(s.sourcesChanged).not.toHaveBeenCalled();
+  });
   it("rejects stale-profile commands before reading or deleting another profile", async () => {
     const s = await ipcSetup(),
       scope = s.recorder.value.scopeId;
