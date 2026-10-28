@@ -22,6 +22,24 @@ export interface AIModel {
   name: string;
   images: boolean;
 }
+export const ASSIST_PRESETS = {
+  general: {
+    name: "General Assist",
+    instruction:
+      "Give concise, useful help based only on the selected context.",
+  },
+  code: {
+    name: "Code Assist",
+    instruction:
+      "Explain visible code, identify possible errors and suggest improvements as text. State uncertainty when code is missing or unreadable.",
+  },
+  conversation: {
+    name: "Conversation Assist",
+    instruction:
+      "Use selected conversation excerpts to suggest a relevant response or explanation. Audio source labels do not establish speaker identities.",
+  },
+} as const;
+export type AssistPreset = keyof typeof ASSIST_PRESETS;
 export interface ContextOptions {
   microphone: boolean;
   systemAudio: boolean;
@@ -37,7 +55,7 @@ export const DEFAULT_CONTEXT: ContextOptions = {
   systemAudio: false,
   screenshot: false,
   history: true,
-  recentSeconds: 120,
+  recentSeconds: 60,
   transcriptChars: 6000,
   totalChars: 20000,
   imageBytes: 1500000,
@@ -45,16 +63,27 @@ export const DEFAULT_CONTEXT: ContextOptions = {
 export interface ReviewInput {
   question: string;
   options: ContextOptions;
+  preset?: AssistPreset;
+  regenerateId?: string;
 }
 export function parseReview(value: unknown): ReviewInput {
   const input = record(value);
-  exactKeys(input, ["question", "options"]);
+  exactKeys(input, ["question", "options", "preset", "regenerateId"]);
+  if (typeof input.question !== "string" || input.question.length > 6000)
+    throw new Error("The optional question must be at most 6,000 characters.");
   if (
-    typeof input.question !== "string" ||
-    !input.question.trim() ||
-    input.question.length > 6000
+    input.preset !== undefined &&
+    (typeof input.preset !== "string" ||
+      !Object.hasOwn(ASSIST_PRESETS, input.preset))
   )
-    throw new Error("Enter a question of 1–6,000 characters.");
+    throw new Error("Choose a built-in Assist preset.");
+  if (
+    input.regenerateId !== undefined &&
+    (typeof input.regenerateId !== "string" ||
+      input.regenerateId.length > 64 ||
+      !input.regenerateId)
+  )
+    throw new Error("Invalid response to regenerate.");
   const options = record(input.options);
   exactKeys(options, Object.keys(DEFAULT_CONTEXT));
   for (const key of ["microphone", "systemAudio", "screenshot", "history"])
@@ -76,19 +105,28 @@ export function parseReview(value: unknown): ReviewInput {
   return {
     question: input.question.trim(),
     options: { ...options } as unknown as ContextOptions,
+    preset: (input.preset ?? "general") as AssistPreset,
+    ...(input.regenerateId === undefined
+      ? {}
+      : { regenerateId: input.regenerateId as string }),
   };
 }
 export interface TranscriptExcerpt {
+  id?: string;
   source: AudioSourceId;
   startMs: number;
   endMs: number;
   text: string;
 }
 export interface ConversationTurn {
+  requestId?: string;
   question: string;
   answer: string;
 }
 export interface AIRequest {
+  replacesRequestId?: string;
+  preset?: AssistPreset;
+  sourceName?: string;
   model?: string;
   requestId: string;
   sessionId: string;
@@ -127,6 +165,7 @@ export interface AIUsage {
   estimatedUsd?: number;
 }
 export interface AIResponse {
+  preset?: AssistPreset;
   requestId: string;
   sessionId: string;
   provider: ProviderId;

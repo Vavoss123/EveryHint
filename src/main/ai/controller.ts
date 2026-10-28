@@ -12,7 +12,12 @@ import { parseReview, providerId } from "../../shared/ai";
 import type { SessionSnapshot } from "../../shared/contracts";
 import type { TranscriptEvent } from "../../shared/transcription";
 import { exactKeys, record } from "../../shared/validation";
-import { buildReview, imageHash } from "./context";
+import {
+  buildReview,
+  contextPrompt,
+  imageHash,
+  validateScreenshot,
+} from "./context";
 import { providerError, ProviderError } from "./errors";
 
 const maxResponseChars = 32000;
@@ -26,6 +31,7 @@ export class AssistantController {
   private responses: AIResponse[] = [];
   private history: ConversationTurn[] = [];
   private sentImages = new Set<string>();
+  private excludedTranscripts = new Set<string>();
   private active:
     | {
         id: string;
@@ -38,6 +44,7 @@ export class AssistantController {
   private historyTimer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
   private captureSession: string | null = null;
+  private preparation = 0;
   constructor(
     private readonly providers: readonly AIProvider[],
     private readonly sources: () => {
@@ -47,6 +54,7 @@ export class AssistantController {
     private readonly changed: (value: AssistantSnapshot) => void,
     private readonly timeoutMs = 90000,
     private readonly now: () => number = Date.now,
+    private readonly freshCapture?: () => Promise<SessionSnapshot>,
   ) {
     if (
       new Set(providers.map((provider) => provider.id)).size !== 2 ||
@@ -116,7 +124,7 @@ export class AssistantController {
     if (this.inspecting) await this.inspecting;
     await this.inspect();
   }
-  prepare(value: unknown): void {
+  prepare(value: unknown): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     if (this.active)
       throw new Error("Cancel the active request before reviewing another.");
@@ -126,36 +134,111 @@ export class AssistantController {
       throw new Error(
         "This provider cannot accept screenshots through the current restricted integration.",
       );
-    const { capture, events } = this.sources();
-    const review = buildReview(
-      input,
-      this.selected,
-      this.sessionId,
-      capture,
-      events,
-      this.history,
-      this.now(),
-    );
-    if (status.selectedModel) review.model = status.selectedModel;
-    if (
-      review.screenshot &&
-      this.sentImages.has(imageHash(review.screenshot.dataUrl))
-    )
-      throw new Error(
-        "This unchanged screenshot was already submitted. Uncheck screenshot or capture an updated image.",
-      );
+    let history = this.history;
+    if (input.regenerateId) {
+      const previous = this.responses.at(-1);
+      if (
+        !previous ||
+        previous.requestId !== input.regenerateId ||
+        previous.question !== input.question
+      )
+        throw new Error(
+          "Only the latest response in this conversation can be regenerated.",
+        );
+      history = history.filter((turn) => turn.requestId !== input.regenerateId);
+    }
     this.discardReview();
-    this.review = review;
-    this.reviewTimer = setTimeout(() => this.discardReview(), 120000);
-    this.publish();
+    const generation = this.preparation;
+    const finish = (capture: SessionSnapshot): void => {
+      if (generation !== this.preparation || this.closed || this.active)
+        throw new Error("Assist preparation was cancelled. Get Answer again.");
+      const { events } = this.sources();
+      const review = buildReview(
+        input,
+        this.selected,
+        this.sessionId,
+        capture,
+        events.filter((event) => !this.excludedTranscripts.has(event.id)),
+        history,
+        this.now(),
+      );
+      if (status.selectedModel) review.model = status.selectedModel;
+      if (input.regenerateId) review.replacesRequestId = input.regenerateId;
+      if (
+        review.screenshot &&
+        this.sentImages.has(imageHash(review.screenshot.dataUrl))
+      )
+        throw new Error(
+          "This unchanged screenshot was already submitted. Uncheck screenshot or capture an updated image.",
+        );
+      this.review = review;
+      this.reviewTimer = setTimeout(
+        () => this.discardReview(),
+        Math.max(0, review.expiresAt - this.now()),
+      );
+      this.publish();
+    };
+    if (input.options.screenshot && this.freshCapture)
+      return this.freshCapture().then(finish);
+    finish(this.sources().capture);
   }
   discardReview(): void {
+    this.preparation++;
     if (this.reviewTimer) clearTimeout(this.reviewTimer);
     this.reviewTimer = undefined;
     if (this.review) {
       this.review = null;
       this.publish();
     }
+  }
+  removeContext(value: unknown): void {
+    const input = record(value);
+    exactKeys(input, ["reviewId", "kind", "index"]);
+    const review = this.review;
+    if (
+      !review ||
+      review.requestId !== input.reviewId ||
+      review.expiresAt <= this.now()
+    )
+      throw new Error(
+        "Review the selected context again before removing an item.",
+      );
+    if (input.kind === "screenshot" && input.index === 0) {
+      review.screenshot = null;
+      review.imageBytes = 0;
+      delete review.sourceName;
+    } else if (
+      (input.kind === "transcripts" || input.kind === "history") &&
+      Number.isInteger(input.index) &&
+      (input.index as number) >= 0 &&
+      (input.index as number) < review[input.kind].length
+    ) {
+      if (input.kind === "transcripts") {
+        const id = review.transcripts[input.index as number]!.id;
+        if (this.excludedTranscripts.size >= 5000)
+          throw new Error("Clear conversation before removing more context.");
+        if (id) this.excludedTranscripts.add(id);
+      } else {
+        const removed = review.history[input.index as number]!;
+        this.history = this.history.filter(
+          (turn) => turn.requestId !== removed.requestId,
+        );
+      }
+      review[input.kind].splice(input.index as number, 1);
+    } else throw new Error("Choose a context item in this review.");
+    if (
+      !review.question &&
+      !review.screenshot &&
+      !review.transcripts.length &&
+      !review.history.length
+    ) {
+      this.discardReview();
+      return;
+    }
+    review.requestId = randomUUID();
+    review.prompt = contextPrompt(review);
+    review.textChars = review.prompt.length;
+    this.publish();
   }
   async ask(value: unknown): Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
@@ -178,12 +261,15 @@ export class AssistantController {
     const provider = this.providers.find(
       (provider) => provider.id === this.selected,
     )!;
+    if (request.screenshot)
+      validateScreenshot(request.screenshot, this.now(), 120000);
     const abort = new AbortController();
     const response: AIResponse = {
       requestId: request.requestId,
       sessionId: this.sessionId,
       provider: request.provider,
       question: request.question,
+      preset: request.preset,
       text: "",
       status: "sending",
       startedAt: this.now(),
@@ -258,7 +344,12 @@ export class AssistantController {
             response.endedAt = this.now();
             response.usage = event.usage ?? null;
             response.model = event.model ?? null;
+            if (request.replacesRequestId)
+              this.history = this.history.filter(
+                (turn) => turn.requestId !== request.replacesRequestId,
+              );
             this.history.push({
+              requestId: request.requestId,
               question: request.question,
               answer: response.text,
             });
@@ -363,10 +454,12 @@ export class AssistantController {
     this.history = [];
     this.responses = [];
     this.sentImages.clear();
+    this.excludedTranscripts.clear();
     this.sessionId = randomUUID();
     this.publish();
   }
   captureChanged(capture: SessionSnapshot): void {
+    if (capture.state !== "ACTIVE") this.preparation++;
     if (this.captureSession !== capture.sessionId) {
       this.captureSession = capture.sessionId;
       this.clear();

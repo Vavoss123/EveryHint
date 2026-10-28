@@ -1,4 +1,5 @@
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import { ShortcutSettings } from "./ShortcutSettings";
 import { createRoot } from "react-dom/client";
 import type {
   AppSnapshot,
@@ -136,6 +137,7 @@ function App() {
     setSettingsOpen(id === "settings");
     if (id === "assistant") focusComposer.current = true;
   }
+  useEffect(() => window.everyhint.onAssist(openAssistant));
   useEffect(() => {
     document.documentElement.dataset.theme = app?.settings.theme ?? "light";
   }, [app?.settings.theme]);
@@ -578,6 +580,7 @@ function App() {
                   </select>
                 </label>
                 <h2>Global shortcuts</h2>
+                <ShortcutSettings settings={settings} save={save} />
                 <TranscriptionPanel settings canEnable={active} />
                 {app.hotkeys.map((hotkey) => (
                   <div className="shortcut" key={hotkey.action}>
@@ -586,7 +589,11 @@ function App() {
                         ? "Show / hide"
                         : hotkey.action === "pause"
                           ? "Pause / resume"
-                          : "Stop all capture"}
+                          : hotkey.action === "stop"
+                            ? "Stop all capture"
+                            : hotkey.action === "assist"
+                              ? "Assist"
+                              : "Clear context"}
                       {!hotkey.registered && (
                         <small className="unavailable">Unavailable</small>
                       )}
@@ -599,8 +606,7 @@ function App() {
                   </div>
                 ))}
                 <p className="muted">
-                  Shortcut customisation is planned. Pause/resume only affects
-                  an authorised session.
+                  Pause/resume only affects an authorised session.
                 </p>
                 <h2>Privacy by default</h2>
                 <p className="muted">
@@ -813,25 +819,15 @@ function App() {
                   badge="MANUAL"
                   compact={settings.compact}
                 >
-                  {!settings.compact && (
-                    <div className="mode-row">
-                      <label>
-                        Assistant mode{" "}
-                        <select
-                          aria-label="Assistant mode"
-                          disabled
-                          value="general"
-                        >
-                          <option value="general">General · answer only</option>
-                        </select>
-                      </label>
-                      <small>Custom modes are planned for P9.</small>
-                    </div>
-                  )}
                   <AssistantPanel
                     compact={settings.compact}
                     hideImage={active && session.source?.kind === "screen"}
                     expand={openAssistant}
+                    sourceName={
+                      session.source
+                        ? `${session.source.name} · ${session.state}`
+                        : "No screen source selected"
+                    }
                   />
                 </Panel>
               </div>

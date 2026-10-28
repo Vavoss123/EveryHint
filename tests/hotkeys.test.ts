@@ -11,23 +11,36 @@ describe("global hotkeys", () => {
       }),
       unregister: vi.fn(),
     };
-    const handlers = { toggle: vi.fn(), pause: vi.fn(), stop: vi.fn() };
+    const handlers = {
+      toggle: vi.fn(),
+      pause: vi.fn(),
+      stop: vi.fn(),
+      assist: vi.fn(),
+      clear: vi.fn(),
+    };
     const controller = new HotkeyController(registry);
     expect(controller.register(handlers).every((key) => key.registered)).toBe(
       true,
     );
-    for (const action of ["toggle", "pause", "stop"] as const) {
+    for (const action of [
+      "toggle",
+      "pause",
+      "stop",
+      "assist",
+      "clear",
+    ] as const) {
       callbacks.get(DEFAULT_HOTKEYS[action])!();
       expect(handlers[action]).toHaveBeenCalledTimes(1);
     }
     controller.dispose();
     controller.dispose();
-    expect(registry.unregister).toHaveBeenCalledTimes(3);
+    expect(registry.unregister).toHaveBeenCalledTimes(5);
   });
   it("reports conflicts and thrown registration errors, preserving successful shortcuts", () => {
     const registry = {
       register: vi
         .fn()
+        .mockReturnValue(false)
         .mockReturnValueOnce(false)
         .mockImplementationOnce(() => {
           throw new Error("OS error");
@@ -40,11 +53,15 @@ describe("global hotkeys", () => {
       toggle: vi.fn(),
       pause: vi.fn(),
       stop: vi.fn(),
+      assist: vi.fn(),
+      clear: vi.fn(),
     });
     expect(statuses.map((status) => status.registered)).toEqual([
       false,
       false,
       true,
+      false,
+      false,
     ]);
     controller.dispose();
     expect(registry.unregister).toHaveBeenCalledExactlyOnceWith(
@@ -54,13 +71,19 @@ describe("global hotkeys", () => {
   it("accepts future bindings and unregisters old bindings before replacing them", () => {
     const registry = { register: vi.fn(() => true), unregister: vi.fn() };
     const controller = new HotkeyController(registry);
-    const handlers = { toggle: vi.fn(), pause: vi.fn(), stop: vi.fn() };
+    const handlers = {
+      toggle: vi.fn(),
+      pause: vi.fn(),
+      stop: vi.fn(),
+      assist: vi.fn(),
+      clear: vi.fn(),
+    };
     controller.register(handlers);
     controller.register(handlers, {
       ...DEFAULT_HOTKEYS,
       toggle: "Control+Shift+Space",
     });
-    expect(registry.unregister).toHaveBeenCalledTimes(3);
+    expect(registry.unregister).toHaveBeenCalledTimes(5);
     expect(registry.register).toHaveBeenCalledWith(
       "Control+Shift+Space",
       handlers.toggle,

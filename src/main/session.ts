@@ -65,6 +65,28 @@ export class CaptureSessionController {
   get value(): SessionSnapshot {
     return structuredClone(this.snapshot);
   }
+  async freshScreenshot(): Promise<SessionSnapshot> {
+    if (
+      this.snapshot.state !== "ACTIVE" ||
+      !this.snapshot.consent?.screen ||
+      !this.snapshot.consent.acknowledged ||
+      !this.snapshot.source ||
+      this.snapshot.sources.screen.state !== "CAPTURING"
+    )
+      throw new Error(
+        "Start or resume authorised screen capture before requesting a fresh screenshot.",
+      );
+    const generation = this.generation;
+    const frame = await this.capture.snapshot(this.snapshot.source);
+    if (generation !== this.generation || this.snapshot.state !== "ACTIVE")
+      throw new Error(
+        "Screen capture changed while preparing Assist. Review again.",
+      );
+    this.snapshot.frame = frame;
+    this.snapshot.frameCount++;
+    this.changed();
+    return this.value;
+  }
   private ensureSelectionAllowed(): void {
     if (["ACTIVE", "PAUSED"].includes(this.snapshot.state))
       throw new Error("Stop the current session before choosing a new source.");

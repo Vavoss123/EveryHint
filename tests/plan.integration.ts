@@ -168,6 +168,7 @@ describe("real local HTTP and native OS credential integration (no OpenAI calls)
             () => {},
           ).value,
           sessionId: "fixture-capture",
+          state: "ACTIVE" as const,
           consent: { ...consent, microphone: true, systemAudio: true },
           frame: { ...frame, capturedAt: now },
         };

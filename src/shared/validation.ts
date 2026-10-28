@@ -1,4 +1,5 @@
 import type { Consent, Settings, WindowBounds } from "./contracts";
+import { DEFAULT_HOTKEYS, parseShortcut } from "./shortcuts";
 
 export const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop: true,
@@ -7,6 +8,8 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "light",
   layout: "assistant",
   opacity: 1,
+  assistShortcut: DEFAULT_HOTKEYS.assist,
+  clearShortcut: DEFAULT_HOTKEYS.clear,
 };
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -60,6 +63,8 @@ export function parseSettings(value: unknown): Settings {
     "theme",
     "layout",
     "opacity",
+    "assistShortcut",
+    "clearShortcut",
   ]);
   if (
     typeof input.alwaysOnTop !== "boolean" ||
@@ -89,6 +94,28 @@ export function parseSettings(value: unknown): Settings {
     opacity > 1
   )
     throw new Error("Window opacity must be between 80 and 100 percent.");
+  const assistShortcut = parseShortcut(
+    input.assistShortcut === undefined
+      ? DEFAULT_HOTKEYS.assist
+      : input.assistShortcut,
+  );
+  const clearShortcut = parseShortcut(
+    input.clearShortcut === undefined
+      ? DEFAULT_HOTKEYS.clear
+      : input.clearShortcut,
+  );
+  if (
+    new Set([
+      DEFAULT_HOTKEYS.toggle,
+      DEFAULT_HOTKEYS.pause,
+      DEFAULT_HOTKEYS.stop,
+      assistShortcut,
+      clearShortcut,
+    ]).size !== 5
+  )
+    throw new Error(
+      "Each shortcut must be different, including Show/hide, Pause and Stop.",
+    );
   return {
     alwaysOnTop: input.alwaysOnTop,
     compact: input.compact,
@@ -96,6 +123,8 @@ export function parseSettings(value: unknown): Settings {
     theme,
     layout,
     opacity,
+    assistShortcut,
+    clearShortcut,
   };
 }
 export function parseBounds(value: unknown): WindowBounds {

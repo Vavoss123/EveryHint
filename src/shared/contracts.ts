@@ -81,6 +81,8 @@ export interface Settings {
   theme?: "light" | "dark" | "system";
   layout?: "assistant" | "dashboard";
   opacity?: number;
+  assistShortcut?: string;
+  clearShortcut?: string;
 }
 export interface WindowBounds {
   x: number;
@@ -88,7 +90,7 @@ export interface WindowBounds {
   width: number;
   height: number;
 }
-export type HotkeyAction = "toggle" | "pause" | "stop";
+export type HotkeyAction = "toggle" | "pause" | "stop" | "assist" | "clear";
 export type HotkeyBindings = Record<HotkeyAction, string>;
 export interface HotkeyStatus {
   action: HotkeyAction;
@@ -121,6 +123,12 @@ export interface EveryHintBridge {
   selectProvider(provider: import("./ai").ProviderId): Promise<Result<void>>;
   setClaudeApiBilling(enabled: boolean): Promise<Result<void>>;
   reviewContext(input: import("./ai").ReviewInput): Promise<Result<void>>;
+  removeContext(input: {
+    reviewId: string;
+    kind: "transcripts" | "history" | "screenshot";
+    index: number;
+  }): Promise<Result<void>>;
+  onAssist(listener: () => void): () => void;
   ask(input: {
     reviewId: string;
     acknowledged: boolean;

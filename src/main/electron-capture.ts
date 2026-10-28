@@ -49,7 +49,7 @@ export class ElectronScreenCapture implements ScreenCaptureBackend {
       throw new Error("EveryHint cannot capture its own windows.");
     const sources = await desktopCapturer.getSources({
       types: [source.kind],
-      thumbnailSize: { width: 960, height: 540 },
+      thumbnailSize: { width: 1600, height: 900 },
       fetchWindowIcons: false,
     });
     const selected = sources.find((candidate) => candidate.id === source.id);
@@ -61,9 +61,18 @@ export class ElectronScreenCapture implements ScreenCaptureBackend {
       throw new Error(
         "No frame is available. Restore the selected window or check screen capture permissions.",
       );
-    const size = selected.thumbnail.getSize();
+    let image = selected.thumbnail;
+    const original = image.getSize();
+    const scale = Math.min(1, 1600 / original.width, 900 / original.height);
+    if (scale < 1)
+      image = image.resize({
+        width: Math.max(1, Math.floor(original.width * scale)),
+        height: Math.max(1, Math.floor(original.height * scale)),
+        quality: "best",
+      });
+    const size = image.getSize();
     return {
-      dataUrl: `data:image/jpeg;base64,${selected.thumbnail.toJPEG(75).toString("base64")}`,
+      dataUrl: `data:image/jpeg;base64,${image.toJPEG(75).toString("base64")}`,
       width: size.width,
       height: size.height,
       capturedAt: Date.now(),

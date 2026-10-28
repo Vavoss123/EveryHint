@@ -117,7 +117,7 @@ try {
     .getByLabel("Your question", { exact: true })
     .fill("UI foundation synthetic draft");
   await page
-    .getByRole("button", { name: "Review selected context", exact: true })
+    .getByRole("button", { name: "Get Answer · review context", exact: true })
     .click();
   await page.getByLabel("Context review", { exact: true }).waitFor();
   const reviewId = (await ai()).review.requestId;
@@ -254,9 +254,9 @@ try {
   await page.locator(".is-compact").waitFor();
   check(
     await page
-      .getByRole("button", { name: "Quick Ask", exact: false })
+      .getByRole("button", { name: "Get Answer", exact: false })
       .isVisible(),
-    "compact overlay keeps Quick Ask accessible",
+    "compact overlay keeps Get Answer accessible",
   );
   check(
     await page.getByLabel("Capture source states").isVisible(),
@@ -272,7 +272,7 @@ try {
         content = document.querySelector(".content").getBoundingClientRect();
       return ask.top >= content.top && ask.bottom <= content.bottom;
     }),
-    "compact Quick Ask is fully inside the visible viewport",
+    "compact Get Answer is fully inside the visible viewport",
   );
   check(
     await desktop.evaluate(
@@ -282,14 +282,31 @@ try {
     "compact layout preserves the small native overlay",
   );
   await shot("compact-light");
-  await page.getByRole("button", { name: "Quick Ask", exact: false }).click();
+  await page.getByRole("button", { name: "Get Answer", exact: false }).click();
   await settled(
     () =>
       document.activeElement?.getAttribute("aria-label") === "Your question",
   );
   check(
     !(await app()).settings.compact && (await ai()).responses.length === 0,
-    "Quick Ask expands and focuses without transmitting anything",
+    "Get Answer expands and focuses without transmitting anything",
+  );
+  await page.getByRole("button", { name: "Compact mode", exact: true }).click();
+  await page.locator(".is-compact").waitFor();
+  const beforeGlobalAssist = (await ai()).review.requestId;
+  await desktop.evaluate(({ BrowserWindow }) =>
+    BrowserWindow.getAllWindows()[0].webContents.send("everyhint:assist"),
+  );
+  await settled(
+    () =>
+      !document.querySelector(".is-compact") &&
+      document.activeElement?.getAttribute("aria-label") === "Your question",
+  );
+  check(
+    (await ai()).responses.length === 0 &&
+      (await ai()).review.requestId !== beforeGlobalAssist &&
+      (await ai()).review.question === "UI foundation synthetic draft",
+    "global Assist event expands and prepares a fresh selected-context review without inference",
   );
   await page
     .getByRole("button", { name: "Open dashboard", exact: true })
@@ -301,6 +318,37 @@ try {
     .getByRole("navigation")
     .getByRole("button", { name: "Settings", exact: true })
     .click();
+  const originalShortcut = (await app()).settings.assistShortcut;
+  await page
+    .getByLabel("Assist shortcut", { exact: true })
+    .fill("Control+Alt+P");
+  await page
+    .getByRole("button", { name: "Apply shortcuts", exact: true })
+    .click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Each shortcut must be different" })
+    .waitFor();
+  check(
+    (await app()).settings.assistShortcut === originalShortcut,
+    "conflicting Assist shortcut cannot replace Pause or Stop",
+  );
+  await page
+    .getByLabel("Assist shortcut", { exact: true })
+    .fill("Control+Alt+K");
+  await page
+    .getByRole("button", { name: "Apply shortcuts", exact: true })
+    .click();
+  await page.waitForFunction(
+    async () =>
+      (await window.everyhint.getSnapshot()).value.settings.assistShortcut ===
+      "Control+Alt+K",
+  );
+  check(
+    (await app()).hotkeys.find((key) => key.action === "assist").accelerator ===
+      "Control+Alt+K",
+    "saved custom shortcut is passed to the native registry and exposes its registration result",
+  );
   await shot("narrow-settings-light");
   check(
     await page.evaluate(

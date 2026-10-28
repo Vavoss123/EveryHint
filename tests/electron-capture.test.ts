@@ -52,7 +52,7 @@ describe("Electron native snapshot adapter", () => {
     );
     expect(native.getSources).toHaveBeenCalledWith({
       types: ["screen"],
-      thumbnailSize: { width: 960, height: 540 },
+      thumbnailSize: { width: 1600, height: 900 },
       fetchWindowIcons: false,
     });
   });
@@ -61,6 +61,30 @@ describe("Electron native snapshot adapter", () => {
     await expect(new ElectronScreenCapture().capture(source)).rejects.toThrow(
       "no longer available",
     );
+  });
+  it("fits oversized native thumbnails into the request resolution bound", async () => {
+    const resized = {
+      ...thumbnail(),
+      getSize: () => ({ width: 1600, height: 900 }),
+    };
+    const resize = vi.fn(() => resized);
+    native.getSources.mockResolvedValue([
+      {
+        id: source.id,
+        thumbnail: {
+          ...thumbnail(),
+          getSize: () => ({ width: 3840, height: 2160 }),
+          resize,
+        },
+      },
+    ]);
+    const result = await new ElectronScreenCapture().capture(source);
+    expect(resize).toHaveBeenCalledWith({
+      width: 1600,
+      height: 900,
+      quality: "best",
+    });
+    expect([result.width, result.height]).toEqual([1600, 900]);
   });
   it("reports blank/minimised sources", async () => {
     native.getSources.mockResolvedValue([

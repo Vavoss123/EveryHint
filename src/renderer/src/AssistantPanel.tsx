@@ -1,49 +1,33 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type {
   AssistantSnapshot,
   ContextOptions,
   ProviderId,
+  AssistPreset,
 } from "../../shared/ai";
-import { DEFAULT_CONTEXT } from "../../shared/ai";
+import { ASSIST_PRESETS, DEFAULT_CONTEXT } from "../../shared/ai";
 import type { Result } from "../../shared/contracts";
 import { AccountPanel } from "./AccountPanel";
+import { ResponseText } from "./ResponseText";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
   return result.value;
 }
-function ResponseText({ text }: { text: string }) {
-  // React escapes every string. No HTML, links, images or provider-created actions.
-  return (
-    <div className="answer-text">
-      {text
-        .split(/(```[\s\S]*?(?:```|$))/g)
-        .filter(Boolean)
-        .map((part, index) =>
-          part.startsWith("```") ? (
-            <pre key={index}>
-              <code>
-                {part.replace(/^```[^\n]*\n?/, "").replace(/```$/, "")}
-              </code>
-            </pre>
-          ) : (
-            <div key={index}>{part}</div>
-          ),
-        )}
-    </div>
-  );
-}
 export function AssistantPanel({
   compact,
   hideImage,
   expand,
+  sourceName,
 }: {
   compact: boolean;
   hideImage: boolean;
   expand: () => void;
+  sourceName: string;
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
   const [question, setQuestion] = useState("");
+  const [preset, setPreset] = useState<AssistPreset>("general");
   const [options, setOptions] = useState<ContextOptions>({
     ...DEFAULT_CONTEXT,
   });
@@ -51,6 +35,7 @@ export function AssistantPanel({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const operation = useRef(false);
   useEffect(() => {
     const accept = (value: AssistantSnapshot): void =>
       setSnapshot((previous) =>
@@ -68,9 +53,12 @@ export function AssistantPanel({
   }, [snapshot?.review?.requestId, snapshot?.sessionId]);
   useEffect(() => {
     setQuestion("");
+    setPreset("general");
     setOptions({ ...DEFAULT_CONTEXT });
   }, [snapshot?.sessionId]);
   async function run(task: () => Promise<unknown>): Promise<void> {
+    if (operation.current) return;
+    operation.current = true;
     setBusy(true);
     setError(null);
     setCopied(false);
@@ -81,15 +69,13 @@ export function AssistantPanel({
         error instanceof Error ? error.message : "Assistant action failed.",
       );
     } finally {
+      operation.current = false;
       setBusy(false);
     }
   }
   function invalidate(): void {
     setAcknowledged(false);
-    if (snapshot?.review)
-      void run(async () =>
-        unwrap(await window.everyhint.assistant("discard-review")),
-      );
+    void window.everyhint.assistant("discard-review");
   }
   function changeOption<K extends keyof ContextOptions>(
     key: K,
@@ -98,6 +84,37 @@ export function AssistantPanel({
     invalidate();
     setOptions((previous) => ({ ...previous, [key]: value }));
   }
+  function prepareReview(): Promise<void> {
+    if (
+      !snapshot ||
+      snapshot.responses.some(
+        (response) =>
+          response.status === "sending" || response.status === "generating",
+      )
+    )
+      return Promise.resolve();
+    return run(async () => {
+      setAcknowledged(false);
+      unwrap(
+        await window.everyhint.reviewContext({ question, options, preset }),
+      );
+    });
+  }
+  function removeContext(
+    reviewId: string,
+    kind: "transcripts" | "history" | "screenshot",
+    index: number,
+  ): void {
+    setAcknowledged(false);
+    void run(async () =>
+      unwrap(await window.everyhint.removeContext({ reviewId, kind, index })),
+    );
+  }
+  useEffect(() =>
+    window.everyhint.onAssist(() => {
+      void prepareReview();
+    }),
+  );
   if (!snapshot)
     return <div className="muted">Connecting to local assistant controls…</div>;
   const selected = snapshot.providers.find(
@@ -129,10 +146,13 @@ export function AssistantPanel({
         </button>
         <button
           className="secondary quick-ask"
-          onClick={expand}
-          title="Open the question composer. Ctrl+Enter works while EveryHint is focused; no request is sent."
+          onClick={() => {
+            expand();
+            void prepareReview();
+          }}
+          title="Expand and review selected context. Acknowledgement and Ask are required before transmission."
         >
-          Quick Ask <kbd>Ctrl+Enter</kbd>
+          Get Answer
         </button>
         {active && (
           <button
@@ -152,119 +172,146 @@ export function AssistantPanel({
       className="assistant-panel panel-stack"
       aria-label="EveryHint assistant"
     >
-      <div className="provider-row">
-        <label htmlFor="ai-provider">AI provider</label>
-        <select
-          id="ai-provider"
-          aria-label="AI provider"
-          value={snapshot.selected}
-          disabled={busy}
-          onChange={(event) => {
-            setAcknowledged(false);
-            setQuestion("");
-            setOptions({ ...DEFAULT_CONTEXT });
-            void run(async () =>
-              unwrap(
-                await window.everyhint.selectProvider(
-                  event.target.value as ProviderId,
-                ),
-              ),
-            );
-          }}
-        >
-          <option value="codex">ChatGPT · plan usage</option>
-          <option value="claude">Claude · API billing</option>
-        </select>
-      </div>
-      <p className="provider-status" role="status">
-        <strong>{selected.ready ? "Ready" : "Not connected"}</strong> ·{" "}
-        {selected.message}
-      </p>
-      <AccountPanel provider={snapshot.selected} />
-      {snapshot.selected === "codex" && (
-        <div className="context-review">
-          <button
-            className="secondary"
-            disabled={busy || active || selected.auth !== "chatgpt"}
-            onClick={() =>
-              void run(async () =>
-                unwrap(await window.everyhint.discoverModels()),
-              )
-            }
-          >
-            Refresh ChatGPT models
-          </button>
-          <small>
-            Refresh sends an authorised model-list request to OpenAI. It does
-            not submit a question. Model access can still be denied when asking.
-          </small>
-          <label>
-            ChatGPT model
-            <select
-              aria-label="ChatGPT model"
-              value={selected.selectedModel ?? ""}
-              disabled={busy || active || !selected.modelDetails?.length}
-              onChange={(event) => {
-                const id = event.target.value;
-                void run(async () =>
-                  unwrap(await window.everyhint.selectModel(id)),
-                );
-              }}
-            >
-              <option value="" disabled>
-                Choose a model
-              </option>
-              {selected.modelDetails?.map((model) => (
-                <option key={model.id} value={model.id}>
-                  {model.name}
-                  {model.images
-                    ? " · images supported"
-                    : " · image support unconfirmed"}
-                </option>
-              ))}
-            </select>
-          </label>
-        </div>
-      )}
-      <button
-        className="secondary"
-        disabled={busy || active}
-        onClick={() =>
-          void run(async () =>
-            unwrap(await window.everyhint.inspectProviders()),
-          )
-        }
-      >
-        Check connection
-      </button>
-      {snapshot.selected === "claude" && (
-        <label className="ai-choice billing-choice">
-          <input
-            type="checkbox"
-            checked={snapshot.claudeApiBilling}
+      <details className="assistant-connection" open={!selected.ready}>
+        <summary>
+          {snapshot.selected === "codex" ? "ChatGPT plan" : "Claude API"} ·{" "}
+          {selected.ready ? "Ready" : "Connection settings"}
+        </summary>
+        <div className="provider-row">
+          <label htmlFor="ai-provider">AI provider</label>
+          <select
+            id="ai-provider"
+            aria-label="AI provider"
+            value={snapshot.selected}
             disabled={busy}
             onChange={(event) => {
-              const enabled = event.target.checked;
+              setAcknowledged(false);
+              setQuestion("");
+              setOptions({ ...DEFAULT_CONTEXT });
               void run(async () =>
-                unwrap(await window.everyhint.setClaudeApiBilling(enabled)),
+                unwrap(
+                  await window.everyhint.selectProvider(
+                    event.target.value as ProviderId,
+                  ),
+                ),
               );
             }}
-          />
-          <span>
-            Enable separately billed Claude API requests for this app session.
-            My Claude subscription is not used.
-          </span>
-        </label>
-      )}
+          >
+            <option value="codex">ChatGPT · plan usage</option>
+            <option value="claude">Claude · API billing</option>
+          </select>
+        </div>
+        <p className="provider-status" role="status">
+          <strong>{selected.ready ? "Ready" : "Not connected"}</strong> ·{" "}
+          {selected.message}
+        </p>
+        <AccountPanel provider={snapshot.selected} />
+        {snapshot.selected === "codex" && (
+          <div className="context-review">
+            <button
+              className="secondary"
+              disabled={busy || active || selected.auth !== "chatgpt"}
+              onClick={() =>
+                void run(async () =>
+                  unwrap(await window.everyhint.discoverModels()),
+                )
+              }
+            >
+              Refresh ChatGPT models
+            </button>
+            <small>
+              Refresh sends an authorised model-list request to OpenAI. It does
+              not submit a question. Model access can still be denied when
+              asking.
+            </small>
+            <label>
+              ChatGPT model
+              <select
+                aria-label="ChatGPT model"
+                value={selected.selectedModel ?? ""}
+                disabled={busy || active || !selected.modelDetails?.length}
+                onChange={(event) => {
+                  const id = event.target.value;
+                  void run(async () =>
+                    unwrap(await window.everyhint.selectModel(id)),
+                  );
+                }}
+              >
+                <option value="" disabled>
+                  Choose a model
+                </option>
+                {selected.modelDetails?.map((model) => (
+                  <option key={model.id} value={model.id}>
+                    {model.name}
+                    {model.images
+                      ? " · images supported"
+                      : " · image support unconfirmed"}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+        )}
+        <button
+          className="secondary"
+          disabled={busy || active}
+          onClick={() =>
+            void run(async () =>
+              unwrap(await window.everyhint.inspectProviders()),
+            )
+          }
+        >
+          Check connection
+        </button>
+        {snapshot.selected === "claude" && (
+          <label className="ai-choice billing-choice">
+            <input
+              type="checkbox"
+              checked={snapshot.claudeApiBilling}
+              disabled={busy}
+              onChange={(event) => {
+                const enabled = event.target.checked;
+                void run(async () =>
+                  unwrap(await window.everyhint.setClaudeApiBilling(enabled)),
+                );
+              }}
+            />
+            <span>
+              Enable separately billed Claude API requests for this app session.
+              My Claude subscription is not used.
+            </span>
+          </label>
+        )}
+      </details>
+      <label>
+        Assist preset
+        <select
+          aria-label="Assist preset"
+          value={preset}
+          disabled={active || busy}
+          onChange={(event) => {
+            invalidate();
+            setPreset(event.target.value as AssistPreset);
+          }}
+        >
+          {Object.entries(ASSIST_PRESETS).map(([id, item]) => (
+            <option key={id} value={id}>
+              {item.name}
+            </option>
+          ))}
+        </select>
+      </label>
       <label className="ai-question">
-        Your question
+        {latest
+          ? "Question or follow-up (optional)"
+          : "Your question (optional)"}
         <textarea
           aria-label="Your question"
           value={question}
           rows={3}
           maxLength={6000}
           disabled={active || busy}
-          placeholder="Ask about the context you choose…"
+          placeholder="Ask a question, or leave blank for help with selected context…"
           onChange={(event) => {
             invalidate();
             setQuestion(event.target.value);
@@ -274,12 +321,12 @@ export function AssistantPanel({
       <fieldset className="ai-context" disabled={active || busy}>
         <legend>Include in this request</legend>
         <div className="ai-choices">
-          <span>Question text is included.</span>
+          <span>{sourceName}</span>
           {(
             [
               ["microphone", "Recent microphone transcript"],
               ["systemAudio", "Recent system-audio transcript"],
-              ["screenshot", "Latest authorised screenshot"],
+              ["screenshot", "Fresh authorised screenshot"],
               ["history", "Previous question and answer text"],
             ] as const
           ).map(([key, label]) => (
@@ -294,6 +341,21 @@ export function AssistantPanel({
             </label>
           ))}
         </div>
+        <label>
+          Transcript time window
+          <select
+            aria-label="Transcript time window"
+            value={options.recentSeconds}
+            onChange={(event) =>
+              changeOption("recentSeconds", Number(event.target.value))
+            }
+          >
+            <option value={30}>30 seconds</option>
+            <option value={60}>1 minute</option>
+            <option value={180}>3 minutes</option>
+            <option value={300}>5 minutes</option>
+          </select>
+        </label>
         {!selected.capabilities.images && (
           <small>
             Screenshots require explicit image-input support in the selected
@@ -304,7 +366,6 @@ export function AssistantPanel({
           <summary>Context limits</summary>
           {(
             [
-              ["recentSeconds", "Recent transcript seconds", 10, 600],
               ["transcriptChars", "Transcript characters", 100, 12000],
               ["totalChars", "Total text characters", 1000, 40000],
               ["imageBytes", "Maximum image bytes", 50000, 4000000],
@@ -335,17 +396,10 @@ export function AssistantPanel({
       <div className="ai-actions">
         <button
           className="secondary"
-          disabled={busy || active || !question.trim()}
-          onClick={() =>
-            void run(async () => {
-              setAcknowledged(false);
-              unwrap(
-                await window.everyhint.reviewContext({ question, options }),
-              );
-            })
-          }
+          disabled={busy || active}
+          onClick={() => void prepareReview()}
         >
-          Review selected context
+          Get Answer · review context
         </button>
         <button
           className="secondary"
@@ -382,6 +436,10 @@ export function AssistantPanel({
             {review.model ? ` · ${review.model}` : ""}
           </strong>
           <small>
+            {ASSIST_PRESETS[review.preset ?? "general"].name}
+            {review.sourceName ? ` · ${review.sourceName}` : ""}
+          </small>
+          <small>
             {review.textChars.toLocaleString()} text characters ·{" "}
             {review.imageBytes.toLocaleString()} image bytes · Expires{" "}
             {new Date(review.expiresAt).toLocaleTimeString()}
@@ -391,6 +449,60 @@ export function AssistantPanel({
               {notice}
             </p>
           ))}
+          {review.transcripts.map((excerpt, index) => (
+            <div
+              className="review-item"
+              key={`${review.requestId}-transcript-${index}`}
+            >
+              <small>
+                {excerpt.source === "microphone"
+                  ? "Microphone"
+                  : "System audio · participant unknown"}{" "}
+                · {new Date(excerpt.startMs).toLocaleTimeString()}–
+                {new Date(excerpt.endMs).toLocaleTimeString()}
+              </small>
+              <p>{excerpt.text}</p>
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() =>
+                  removeContext(review.requestId, "transcripts", index)
+                }
+              >
+                Remove excerpt {index + 1}
+              </button>
+            </div>
+          ))}
+          {review.history.map((turn, index) => (
+            <div
+              className="review-item"
+              key={`${review.requestId}-history-${index}`}
+            >
+              <small>Previous exchange {index + 1}</small>
+              <p>{turn.question || "Contextual assistance"}</p>
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() =>
+                  removeContext(review.requestId, "history", index)
+                }
+              >
+                Remove exchange {index + 1}
+              </button>
+            </div>
+          ))}
+          {review.screenshot && (
+            <button
+              className="text-button"
+              disabled={busy}
+              onClick={() => {
+                setOptions((previous) => ({ ...previous, screenshot: false }));
+                removeContext(review.requestId, "screenshot", 0);
+              }}
+            >
+              Remove screenshot
+            </button>
+          )}
           <details open>
             <summary>Exact question, transcripts and conversation text</summary>
             <pre className="review-text">{review.prompt}</pre>
@@ -440,6 +552,18 @@ export function AssistantPanel({
                     acknowledged: true,
                   }),
                 );
+                setQuestion("");
+                setOptions((previous) => ({
+                  ...previous,
+                  screenshot: false,
+                  microphone: false,
+                  systemAudio: false,
+                }));
+                requestAnimationFrame(() =>
+                  document
+                    .querySelector(".ai-responses")
+                    ?.scrollIntoView({ block: "start" }),
+                );
               })
             }
           >
@@ -464,7 +588,7 @@ export function AssistantPanel({
         )}
         {snapshot.responses.map((response) => (
           <article className="ai-response" key={response.requestId}>
-            <strong>{response.question}</strong>
+            <strong>{response.question || "Help with selected context"}</strong>
             <small>
               {response.provider === "codex" ? "ChatGPT" : "Claude"} ·{" "}
               {labels[response.status]}
@@ -499,11 +623,61 @@ export function AssistantPanel({
             >
               Copy response
             </button>
+            {response === latest && !active && (
+              <>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => {
+                    setQuestion("");
+                    document
+                      .querySelector<HTMLTextAreaElement>(
+                        '[aria-label="Your question"]',
+                      )
+                      ?.focus();
+                  }}
+                >
+                  Ask follow-up
+                </button>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      const nextOptions = { ...DEFAULT_CONTEXT };
+                      setQuestion(response.question);
+                      setPreset(response.preset ?? "general");
+                      setOptions(nextOptions);
+                      setAcknowledged(false);
+                      unwrap(
+                        await window.everyhint.reviewContext({
+                          question: response.question,
+                          options: nextOptions,
+                          preset: response.preset ?? "general",
+                          regenerateId: response.requestId,
+                        }),
+                      );
+                      requestAnimationFrame(() =>
+                        document
+                          .querySelector('[aria-label="Context review"]')
+                          ?.scrollIntoView({ block: "start" }),
+                      );
+                    })
+                  }
+                >
+                  Regenerate · review first
+                </button>
+              </>
+            )}
           </article>
         ))}
       </div>
       {copied && <p role="status">Response copied.</p>}
       <small>
+        Follow-ups include only selected previous question/answer text; images
+        and audio excerpts must be selected again. Regenerate reviews the
+        question and earlier exchanges without reattaching an image or
+        transcripts. Removed excerpts stay excluded until Clear conversation.
         History expires after 15 minutes and keeps at most four completed pairs
         / 12,000 characters. Clear cancels execution and clears local
         conversation memory. It does not delete provider records or recall sent

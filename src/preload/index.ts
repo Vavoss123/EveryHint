@@ -6,6 +6,12 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  removeContext: (input) => ipcRenderer.invoke("everyhint:ai-remove", input),
+  onAssist: (listener) => {
+    const wrapped = (): void => listener();
+    ipcRenderer.on("everyhint:assist", wrapped);
+    return () => ipcRenderer.removeListener("everyhint:assist", wrapped);
+  },
   getAccountConnection: () => ipcRenderer.invoke("everyhint:account-get"),
   account: (action) => ipcRenderer.invoke("everyhint:account-action", action),
   selectChatgptAccount: (id) =>

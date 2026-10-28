@@ -24,6 +24,28 @@ describe("capture sessions", () => {
     expect(capture.listSources).not.toHaveBeenCalled();
     expect(capture.capture).not.toHaveBeenCalled();
   });
+  it("takes a fresh snapshot only in an active authorised session and rejects a late result after Pause", async () => {
+    const s = setup();
+    await expect(s.session.freshScreenshot()).rejects.toThrow(
+      "Start or resume",
+    );
+    await s.prepare();
+    await expect(s.session.freshScreenshot()).rejects.toThrow(
+      "Start or resume",
+    );
+    s.session.action("start");
+    const pending = deferred<typeof frame>();
+    s.capture.capture.mockReturnValueOnce(pending.promise);
+    const fresh = s.session.freshScreenshot();
+    s.session.action("pause");
+    pending.resolve(frame);
+    await expect(fresh).rejects.toThrow("capture changed");
+    expect(s.session.value.frame).toBeNull();
+    await expect(s.session.freshScreenshot()).rejects.toThrow(
+      "Start or resume",
+    );
+    s.session.stop();
+  });
   it.each<SessionAction>(["start", "pause", "resume"])(
     "rejects %s from IDLE",
     (action) => {

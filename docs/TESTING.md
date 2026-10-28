@@ -1,4 +1,63 @@
-# P5 UI foundation verification -- 2026-10-28
+# P6 Screen-Aware Assist verification -- 2026-10-28
+
+Baseline `f00bf2a`. P5 human Windows/visual acceptance remains open. P6 extends the existing capture/context/provider pipeline; it adds no automatic inference, raw-audio transfer, paid fallback or model/tool execution. No dependency or model download was added.
+
+| Check | P6 result |
+| --- | --- |
+| `npm run check` | Passed: generated theme/spec consistency, strict TypeScript, zero-warning ESLint, **367 unit tests / 30 files**, production build |
+| `npm run test:plan` | **5 passed**, actual local OAuth/JWT/catalog/review/SSE HTTP and isolated Windows vault fixtures; no OpenAI calls |
+| `npm run test:ai-sdk` | **6 passed**, installed Claude SDK against loopback fixtures; no paid requests |
+| Electron core / AI / speech / UI | **47 / 44 / 11 / 44 assertions passed**, total **146**; synthetic capture, labelled renderer fixtures, real cached tiny.en through synthetic audio |
+| `npm run speech:test` | Real cached upstream JFK speech transcribed correctly through microphone/system fixture paths; about 514/545 ms inference in this run |
+| Production build | Passed: main about 157 kB, renderer JS about 273 kB, CSS about 24 kB; offline fonts/licences retained |
+| Genuine P6 image plus follow-up | **Both completed with gpt-6.1-sol**, separately authorised as exactly two plan-backed inference requests; details below |
+
+## Genuine image and multi-turn evidence
+
+The user explicitly authorised opening the harmless [Python sample](../examples/p6_dictionary.py) in a new VS Code window, capturing only that window and making two ChatGPT-plan inference requests. EveryHint restored its own OS-vault registration, explicitly fetched the current account catalog and selected image-capable **gpt-6.1-sol**. The test used the actual Get Answer → frozen preview → fresh acknowledgement → Ask UI, not an injected provider reply.
+
+The selected source was **p6_dictionary.py - Visual Studio Code**. Its real fresh JPEG was **1440×900 / 52,459 bytes**. The preview was visually inspected; it showed only the sample editor, no EveryHint recursion or unrelated application. Capture was paused after the review. The first approved question asked for an explanation of the visible function, function name and sample result, with no transcripts/history. It completed with **1,803 input / 321 output tokens**, first text **3.190 s**, total **9.346 s**. The real answer identified `count_colours(colours)`, explained `counts.get(colour, 0) + 1`, and derived `{'red': 3, 'blue': 2, 'green': 1}`. It correctly stated that no execution output was visible and did not claim to run the code.
+
+The second approved question was **Why did it use a dictionary?** A new review contained exactly the preceding question/answer pair, no screenshot and no transcripts; it required fresh acknowledgement. It completed with **571 input / 195 output tokens**, first text **3.142 s**, total **7.583 s**. The answer explained colour keys/count values, direct updates and average O(1) lookup; it explicitly said it relied on the previous answer because no screenshot was present. Both controller completions required the real terminal `response.completed` event. These are single observations, not latency/quality/usage guarantees for every model/account.
+
+Exactly **two inference requests** were made, with no inference retry, API-key/provider fallback, microphone, system audio, raw audio or paid Claude request. Initial test-editor startup attempts stopped before capture/inference; their explicit catalog requests did not submit questions. Capture was **STOPPED** afterwards, clearing source consent/frame/review/conversation; the temporary screenshot was deleted. Text/usage/timing evidence is ignored at `artifacts/p6-live-result.json`. No captured image, credential or live result is committed. The app remains open on the P6 build with capture stopped. Other models/accounts, real audio-backed assistance and broad human acceptance remain unverified.
+
+## Automated P6 coverage
+
+| Required area | Evidence |
+| --- | --- |
+| Manual trigger; no automatic inference; shortcuts/conflicts | `hotkeys`, `assist-context`, `ai-controller` unit suites; AI/UI Electron checks; compact Assist event is simulated, not a physical-key claim |
+| Context selection/removal/privacy; final filtering/order/deduplication; four windows and size bounds | `assist-context`, `ai-context`, `ai-controller`; removed utterance IDs stay excluded within the conversation; removal invalidates approval |
+| Screenshot state/freshness/resolution/bytes; image capability/body | `session`, `capture`, `electron-capture`, `assist-context`, `assist-plan`, `plan-provider`; actual native thumbnail fitting and current-generation shared snapshots |
+| Streaming Markdown/code/copy; cancellation/stale updates | `assist-markdown`, `ai-controller`, `plan-provider`; renderer smoke covers headings/lists/tables/labels/per-code copy/incomplete streaming safely |
+| Follow-up/regenerate; account/provider isolation | `assist-plan` runs the shared builder/controller and actual ChatGPT provider with synthetic HTTP for image→text history; controller/account suites cover clearing and stale work |
+| Rate/network/auth errors; no file/tools authority/fallback | Existing provider/SDK/security suites and actual loopback HTTP/native-vault tests retained |
+| P1–P5 regression | Core/AI/speech/UI smoke, real cached Whisper, theme/contrast/migration/spec tests and build |
+
+Strict screen-state validation exposed an old synthetic HTTP fixture marked IDLE; its selected-image case now correctly represents ACTIVE authorised capture. JPEG byte/header/dimension validation uses the documented synthetic white test fixture, not a saved user screenshot. Capture regression also verifies that a queued snapshot cannot issue a new native call after Stop. Regenerate completion replaces its original history entry. Tests use isolated profiles/vault fixtures and checked cleanup paths, with no production fixture mode or arbitrary IPC added. Test/preview artifacts stay ignored. Native enumeration may transiently thumbnail other sources of the chosen kind; only the selected frame is retained/sent, so exclusive OS acquisition is not claimed.
+
+Automatic approval review rejected deletion of the four unused isolated editor setup profiles under Windows Temp (policy block). They remain outside the repository and EveryHint credential store; automated smoke-test profiles and native-vault fixtures were cleaned normally. The live screenshot itself was deleted successfully.
+
+The final build was reopened after verifying the live-test session was idle: capture IDLE, empty review/history, its own ChatGPT plan connection restored, zero startup model discovery/inference, and all five native chords registered. Physical keyboard acceptance is still separate. Models must be explicitly refreshed/selected after restart, as before.
+
+## P6 Windows manual acceptance -- remaining human checks
+
+1. Open the rebuilt EveryHint and sign in to its own ChatGPT registration; grant plan permission. Expand connection settings, explicitly refresh models and choose a currently listed image-capable model. A restored account/model test does not replace fresh browser lifecycle acceptance.
+2. Open [examples/p6_dictionary.py](../examples/p6_dictionary.py) in VS Code at readable font size. In EveryHint enable screen-only consent, acknowledge authorisation, enumerate sources and choose that external VS Code **window**. Start capture; avoid unrelated/private sources.
+3. Expand the assistant, choose Code Assist, select Fresh authorised screenshot and ask “Explain what this Python function does.” Click Get Answer. Inspect source name, fresh timestamp, dimensions/bytes, exact text and image. For a whole-screen source, pause to inspect its frozen image; an application window avoids recursive previews. New image acquisition while paused/stopped must fail.
+4. Remove unwanted image/excerpts/exchanges; each removal must reset approval. Acknowledge the inspected remote transfer and Ask only when authorised. Verify the real answer refers to the visible `count_colours`, `.get` update and sample counts. Steps 2–4 passed once with the automated driver and genuine provider; broad human/window/DPI acceptance remains open.
+5. Click Ask follow-up and ask “Why did it use a dictionary?” Review only the selected previous exchange, with image/audio selectors off. Acknowledge and submit. This passed once genuinely as recorded above; new remote checks need their own authorisation.
+6. In a separately consented audio session enable local Whisper. Select microphone/system/both/neither; try 30/60/180/300 seconds and inspect final chronological source/time-labelled text. Remove an excerpt; it must stay excluded in later reviews. No raw audio or invented system speaker identity is permitted. Real audio/call-backed assistance remains pending.
+7. Change Assist and Clear context chords in Settings. Try a duplicate Pause/Stop chord (reject without changing preferences), a valid chord and an OS conflict (visible unavailable status). From another app and compact mode, trigger Assist: expand/focus and prepare selected context for review, with no inference. Test focus-only Ctrl+Enter. Physical chords remain pending.
+8. Read streaming headings/lists/tables/code and incomplete fences; copy one block and the whole response. HTML/links/images stay inert text. Check compact latest answer/provider/status/Expand at 100/125/150/200% Windows scaling, with Pause/Stop and remote Cancel accessible.
+9. With separately authorised requests, cancel generation; no late update may enter a cleared/new conversation. Regenerate must create a new review/approval without silently reattaching old images/transcripts. A source-only answer may need a new question/context. An unchanged submitted image is rejected; use text history, an updated source or explicit Clear for a new conversation.
+10. Clear by button and shortcut; verify draft/review/history disappear. Pause/Stop independently control capture; Stop clears consent/frame/review. Check source disappearance, resume and restart. The live test verified Pause and final Stop for one real VS Code window only.
+11. Switch model/provider/ChatGPT account, sign out/reconnect and confirm old account context cannot enter a new review. Verify no automatic request or billing fallback. Expired model catalogs require explicit refresh/selection and reset context. Broad real account lifecycle acceptance remains open.
+12. Retain the earlier P1–P5 checklist: real devices/playback/consented calls, mute/tray, Narrator/high contrast/keyboard, themes/opacity, mixed-DPI dragging/resizing, base.en, ARM64/older CPU and 15-minute CPU/RSS/stability. No fixture or single live image closes those checks. P7 has not started.
+
+---
+
+# P5 UI foundation verification -- historical record, 2026-10-28
 
 Baseline e7b3e38; this task changes product documentation, appearance and the connected desktop shell. **No new live AI/authentication request, paid API request or real desktop/audio capture was made.** Existing P4.2 genuine ChatGPT evidence below remains historical provider evidence, not a new UI-test claim. Capture/transcription/provider implementations, OS token storage and trusted IPC security boundaries are preserved.
 

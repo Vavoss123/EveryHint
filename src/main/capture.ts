@@ -13,10 +13,37 @@ export class ScreenCaptureService {
   private generation = 0;
   private busy = false;
   private active = false;
+  private pending:
+    | { sourceId: string; generation: number; frame: Promise<ScreenFrame> }
+    | undefined;
 
   constructor(private readonly backend: ScreenCaptureBackend) {}
   get running(): boolean {
     return this.active;
+  }
+  async snapshot(
+    source: CaptureSource,
+    generation = this.generation,
+  ): Promise<ScreenFrame> {
+    if (generation !== this.generation)
+      throw new Error("Screen capture changed while waiting for a snapshot.");
+    if (this.pending) {
+      if (
+        this.pending.sourceId === source.id &&
+        this.pending.generation === this.generation
+      )
+        return this.pending.frame;
+      await this.pending.frame.catch(() => {});
+      return this.snapshot(source, generation);
+    }
+    const frame = this.backend.capture(source);
+    const pending = { sourceId: source.id, generation: this.generation, frame };
+    this.pending = pending;
+    try {
+      return await frame;
+    } finally {
+      if (this.pending === pending) this.pending = undefined;
+    }
   }
 
   start(
@@ -45,7 +72,7 @@ export class ScreenCaptureService {
       }
       this.busy = true;
       try {
-        const frame = await this.backend.capture(source);
+        const frame = await this.snapshot(source);
         if (current()) onFrame(frame);
       } catch (error) {
         if (current()) {

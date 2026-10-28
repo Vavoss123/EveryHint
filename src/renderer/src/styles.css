@@ -592,10 +592,61 @@ button:active:not(:disabled) {
   border-top: 1px solid var(--color-border);
 }
 .answer-text {
-  white-space: pre-wrap;
+  white-space: normal;
   line-height: 1.65;
   user-select: text;
   margin-block: var(--space-3);
+}
+.answer-text p {
+  white-space: pre-wrap;
+}
+.answer-text h1,
+.answer-text h2,
+.answer-text h3,
+.answer-text h4,
+.answer-text h5,
+.answer-text h6 {
+  margin-block: var(--space-3) var(--space-2);
+  font-size: var(--text-body);
+}
+.answer-text ul,
+.answer-text ol {
+  padding-left: var(--space-5);
+}
+.answer-code,
+.answer-table {
+  min-width: 0;
+  max-width: 100%;
+}
+.code-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+}
+.answer-table {
+  overflow-x: auto;
+}
+.answer-table table {
+  border-collapse: collapse;
+  width: 100%;
+}
+.answer-table th,
+.answer-table td {
+  border: 1px solid var(--color-border);
+  padding: var(--space-2);
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.review-item {
+  border-top: 1px solid var(--color-border);
+  padding-top: var(--space-2);
+  overflow-wrap: anywhere;
+}
+.assistant-connection > summary {
+  cursor: pointer;
+  font-weight: 600;
+  margin-bottom: var(--space-3);
 }
 .answer-text pre {
   max-height: 420px;

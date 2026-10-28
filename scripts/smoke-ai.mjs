@@ -99,6 +99,32 @@ try {
     "ChatGPT inference requires an app-owned plan grant and selected model",
   );
   check(
+    (
+      await page.getByLabel("Assist preset").locator("option").allTextContents()
+    ).join("|") === "General Assist|Code Assist|Conversation Assist",
+    "three built-in presets are available without a custom-mode editor",
+  );
+  check(
+    (
+      await page
+        .getByLabel("Transcript time window")
+        .locator("option")
+        .evaluateAll((options) => options.map((option) => option.value))
+    ).join(",") === "30,60,180,300",
+    "transcript windows expose 30 seconds, one, three and five minutes",
+  );
+  await page
+    .getByRole("button", { name: "Get Answer · review context", exact: true })
+    .click();
+  await page
+    .getByRole("alert")
+    .filter({ hasText: "Enter a question or select available" })
+    .waitFor();
+  check(
+    (await get()).review === null && (await get()).responses.length === 0,
+    "blank Assist never invents context or triggers inference",
+  );
+  check(
     await page.getByLabel("ChatGPT model", { exact: true }).isDisabled(),
     "model selection waits for an explicit authorised catalog request",
   );
@@ -177,7 +203,7 @@ try {
     .fill("Explain this synthetic question.");
   const reviewStart = performance.now();
   await page
-    .getByRole("button", { name: "Review selected context", exact: true })
+    .getByRole("button", { name: "Get Answer · review context", exact: true })
     .click();
   await page.getByLabel("Context review").waitFor();
   const reviewMs = performance.now() - reviewStart;
@@ -226,7 +252,7 @@ try {
     "opt-in does not invent an API credential",
   );
   await page
-    .getByRole("button", { name: "Review selected context", exact: true })
+    .getByRole("button", { name: "Get Answer · review context", exact: true })
     .click();
   const id = (await get()).review.requestId;
   const denied = await page.evaluate(
@@ -242,6 +268,15 @@ try {
   check(
     (await get()).responses[0].error.code === "auth",
     "missing API key is a real error with no provider fallback",
+  );
+  await page
+    .getByRole("button", { name: "Regenerate · review first", exact: true })
+    .click();
+  await page.getByLabel("Context review", { exact: true }).waitFor();
+  check(
+    !(await page.getByLabel("Acknowledge remote transfer").isChecked()) &&
+      (await get()).responses.length === 1,
+    "regenerate prepares a new review and requires fresh approval",
   );
   const previousSession = (await get()).sessionId;
   await page.getByLabel("AI provider").selectOption("codex");
@@ -261,7 +296,7 @@ try {
       sessionId: fixture.sessionId,
       provider: "codex",
       question: "Renderer fixture",
-      text: '<img src="https://invalid.example/evil" onerror="window.injected=true">\n```ts\nconst answer = 42;\n```',
+      text: '# Rendered answer\n\n- First point\n- Second point\n\n| Item | Count |\n| --- | --- |\n| Red | 3 |\n\n<img src="https://invalid.example/evil" onerror="window.injected=true">\n\n```ts\nconst answer = 42;\n```',
       status: "generating",
       startedAt: Date.now(),
       firstTextAt: Date.now(),
@@ -284,6 +319,29 @@ try {
     (await page.locator(".ai-response pre code").innerText()) ===
       "const answer = 42;\n",
     "code fences render as selectable code",
+  );
+  check(
+    (await page.locator(".ai-response h1").innerText()) === "Rendered answer" &&
+      (await page.locator(".ai-response li").count()) === 2 &&
+      (await page.locator(".ai-response td").count()) === 2,
+    "headings, lists and tables render during streaming",
+  );
+  check(
+    await page
+      .locator(".code-toolbar")
+      .innerText()
+      .then((text) => text.includes("ts")),
+    "code language is labelled",
+  );
+  await page.getByRole("button", { name: "Copy code", exact: true }).click();
+  await page
+    .getByRole("status")
+    .filter({ hasText: /^Copied$/ })
+    .waitFor();
+  check(
+    (await desktop.evaluate(({ clipboard }) => clipboard.readText())) ===
+      "const answer = 42;\n",
+    "per-code copy sends only code through the bounded clipboard route",
   );
   check(
     (await page.locator(".ai-response img").count()) === 0 &&

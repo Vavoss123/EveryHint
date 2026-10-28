@@ -29,7 +29,7 @@ import type {
 } from "../shared/contracts";
 import { errorMessage } from "../shared/validation";
 import { ElectronScreenCapture } from "./electron-capture";
-import { HotkeyController } from "./hotkeys";
+import { DEFAULT_HOTKEYS, HotkeyController } from "./hotkeys";
 import {
   assetPath,
   contentSecurityPolicy,
@@ -389,6 +389,9 @@ async function initialise(): Promise<void> {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:assistant", value);
     },
+    90000,
+    Date.now,
+    () => controller.freshScreenshot(),
   );
   await accounts.restore();
 
@@ -490,15 +493,31 @@ async function initialise(): Promise<void> {
     );
   }
   shortcuts = new HotkeyController(globalShortcut);
-  hotkeys = shortcuts.register({
-    toggle: () => {
-      safely(() => (window?.isVisible() ? hide() : show()));
-    },
-    pause: () => {
-      safely(() => controller.togglePause());
-    },
-    stop: () => controller.stop(),
-  });
+  const registerShortcuts = (): void => {
+    hotkeys = shortcuts.register(
+      {
+        toggle: () => {
+          safely(() => (window?.isVisible() ? hide() : show()));
+        },
+        pause: () => {
+          safely(() => controller.togglePause());
+        },
+        stop: () => controller.stop(),
+        assist: () => {
+          show();
+          if (window && !window.isDestroyed())
+            window.webContents.send("everyhint:assist");
+        },
+        clear: () => assistant?.clear(),
+      },
+      {
+        ...DEFAULT_HOTKEYS,
+        assist: store.settings.assistShortcut ?? DEFAULT_HOTKEYS.assist,
+        clear: store.settings.clearShortcut ?? DEFAULT_HOTKEYS.clear,
+      },
+    );
+  };
+  registerShortcuts();
   for (const hotkey of hotkeys)
     if (!hotkey.registered)
       warn(
@@ -567,6 +586,7 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-billing", (input) => assistant!.billing(input));
   handle("everyhint:ai-review", (input) => assistant!.prepare(input));
+  handle("everyhint:ai-remove", (input) => assistant!.removeContext(input));
   handle("everyhint:ai-ask", (input) => assistant!.ask(input));
   handle("everyhint:ai-copy", (input) => {
     if (typeof input !== "string" || input.length === 0 || input.length > 32000)
@@ -613,7 +633,16 @@ async function initialise(): Promise<void> {
   handle("everyhint:settings", (input) => {
     // Appearance is safe to edit during capture; interval changes apply on next start/resume.
     const oldPresentation = presentation(store.settings);
+    const oldShortcuts = [
+      store.settings.assistShortcut,
+      store.settings.clearShortcut,
+    ].join("|");
     store.save(input, window?.getNormalBounds());
+    if (
+      oldShortcuts !==
+      [store.settings.assistShortcut, store.settings.clearShortcut].join("|")
+    )
+      registerShortcuts();
     applyAppearance();
     if (oldPresentation !== presentation(store.settings))
       configureSize(oldPresentation);

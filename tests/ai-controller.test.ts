@@ -40,7 +40,10 @@ function provider(id: ProviderId) {
   return { id, inspect, respond, dispose: vi.fn() };
 }
 const controllers: AssistantController[] = [];
-function setup(timeoutMs = 90000) {
+function setup(
+  timeoutMs = 90000,
+  freshCapture?: () => Promise<SessionSnapshot>,
+) {
   const codex = provider("codex");
   const claude = provider("claude");
   const changed = vi.fn();
@@ -52,6 +55,7 @@ function setup(timeoutMs = 90000) {
         () => {},
       ).value,
       sessionId: "capture",
+      state: "ACTIVE",
       consent: { ...consent, microphone: true, systemAudio: true },
       frame: { ...frame },
     },
@@ -62,6 +66,8 @@ function setup(timeoutMs = 90000) {
     () => sources,
     changed,
     timeoutMs,
+    Date.now,
+    freshCapture,
   );
   controllers.push(controller);
   const prepare = (question = "Question?", options = {}) =>
@@ -104,6 +110,112 @@ describe("manual AI request lifecycle", () => {
     expect(s.codex.respond).not.toHaveBeenCalled();
     expect(s.claude.respond).not.toHaveBeenCalled();
     expect(s.controller.value.selected).toBe("codex");
+  });
+  it("waits for a fresh authorised screenshot and never infers during preparation", async () => {
+    const pending = deferred<SessionSnapshot>();
+    const fresh = vi.fn(() => pending.promise);
+    const s = setup(90000, fresh);
+    await s.controller.inspect();
+    const preparation = s.prepare("Visible code?", { screenshot: true });
+    expect(s.controller.value.review).toBeNull();
+    expect(fresh).toHaveBeenCalledOnce();
+    pending.resolve(s.sources.capture);
+    await preparation;
+    expect(s.controller.value.review!.screenshot).toEqual(frame);
+    expect(s.codex.respond).not.toHaveBeenCalled();
+  });
+  it.each(["clear", "provider", "edit", "pause"])(
+    "rejects a late fresh screenshot after %s",
+    async (action) => {
+      const pending = deferred<SessionSnapshot>();
+      const s = setup(90000, () => pending.promise);
+      await s.controller.inspect();
+      const preparation = s.prepare("q", { screenshot: true });
+      if (action === "clear") s.controller.clear();
+      if (action === "provider") s.controller.select("claude");
+      if (action === "edit") s.controller.discardReview();
+      if (action === "pause")
+        s.controller.captureChanged({ ...s.sources.capture, state: "PAUSED" });
+      pending.resolve(s.sources.capture);
+      await expect(preparation).rejects.toThrow("cancelled");
+      expect(s.controller.value.review).toBeNull();
+      expect(s.codex.respond).not.toHaveBeenCalled();
+    },
+  );
+  it("removes selected excerpts and image from the frozen payload, invalidates old approval, and excludes removed utterances from later reviews", async () => {
+    const s = setup();
+    s.sources.events = [
+      {
+        id: "sensitive",
+        sessionId: "capture",
+        source: "microphone",
+        text: "private excerpt",
+        startMs: 999000,
+        endMs: 1000000,
+        state: "final",
+        model: "tiny.en",
+      },
+    ];
+    await s.controller.inspect();
+    s.prepare("q", { microphone: true, screenshot: true });
+    const old = s.controller.value.review!.requestId;
+    s.controller.removeContext({
+      reviewId: old,
+      kind: "transcripts",
+      index: 0,
+    });
+    let review = s.controller.value.review!;
+    expect(review.prompt).not.toContain("private excerpt");
+    expect(review.requestId).not.toBe(old);
+    await expect(
+      s.controller.ask({ reviewId: old, acknowledged: true }),
+    ).rejects.toThrow("Review");
+    s.controller.removeContext({
+      reviewId: review.requestId,
+      kind: "screenshot",
+      index: 0,
+    });
+    review = s.controller.value.review!;
+    expect(review.screenshot).toBeNull();
+    expect(review.imageBytes).toBe(0);
+    s.prepare("next", { microphone: true });
+    expect(s.controller.value.review!.transcripts).toEqual([]);
+    expect(s.codex.respond).not.toHaveBeenCalled();
+  });
+  it("regenerates only the latest answer through a new review without feeding its answer back as history", async () => {
+    const s = setup();
+    s.prepare("First");
+    await s.ask();
+    await flush();
+    s.prepare("Follow-up");
+    await s.ask();
+    await flush();
+    const latest = s.controller.value.responses.at(-1)!;
+    s.controller.prepare({
+      question: latest.question,
+      options: DEFAULT_CONTEXT,
+      preset: "code",
+      regenerateId: latest.requestId,
+    });
+    expect(
+      s.controller.value.review!.history.map((turn) => turn.question),
+    ).toEqual(["First"]);
+    expect(s.controller.value.review!.screenshot).toBeNull();
+    expect(s.controller.value.review!.preset).toBe("code");
+    expect(s.codex.respond).toHaveBeenCalledTimes(2);
+    const review = s.controller.value.review!;
+    s.controller.removeContext({
+      reviewId: review.requestId,
+      kind: "history",
+      index: 0,
+    });
+    await s.ask();
+    await flush();
+    s.prepare("Next");
+    expect(
+      s.controller.value.review!.history.map((turn) => turn.question),
+    ).toEqual(["Follow-up"]);
+    expect(s.codex.respond).toHaveBeenCalledTimes(3);
   });
   it("requires review, an exact one-time review id and per-request transfer consent", async () => {
     const s = setup();
@@ -322,7 +434,7 @@ describe("manual AI request lifecycle", () => {
     await s.ask();
     await flush();
     s.prepare("Follow-up");
-    expect(s.controller.value.review!.history).toEqual([
+    expect(s.controller.value.review!.history).toMatchObject([
       { question: "First", answer: "Hello world" },
     ]);
     const previousSession = s.controller.value.sessionId;

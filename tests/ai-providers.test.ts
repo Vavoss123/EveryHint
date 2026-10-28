@@ -210,7 +210,11 @@ describe("provider authentication and fail-closed permissions", () => {
       { type: "text", text: "Reviewed prompt" },
       {
         type: "image",
-        source: { type: "base64", media_type: "image/jpeg", data: "dGVzdA==" },
+        source: {
+          type: "base64",
+          media_type: "image/jpeg",
+          data: frame.dataUrl.slice(23),
+        },
       },
     ]);
     expect(f.close).toHaveBeenCalled();

@@ -6,6 +6,34 @@ import { backend, deferred, frame, source } from "./helpers";
 describe("screen capture lifecycle", () => {
   beforeEach(() => vi.useFakeTimers());
   afterEach(() => vi.useRealTimers());
+  it("shares an in-flight native frame but never reuses it after a generation change", async () => {
+    const capture = backend(),
+      pending = deferred<ScreenFrame>();
+    capture.capture.mockReturnValueOnce(pending.promise);
+    const service = new ScreenCaptureService(capture);
+    const first = service.snapshot(source);
+    const shared = service.snapshot(source);
+    expect(capture.capture).toHaveBeenCalledTimes(1);
+    service.stop();
+    const fresh = service.snapshot(source);
+    pending.resolve(frame);
+    await Promise.all([first, shared, fresh]);
+    expect(capture.capture).toHaveBeenCalledTimes(2);
+  });
+  it("does not issue a queued native capture after its generation is stopped", async () => {
+    const capture = backend(),
+      pending = deferred<ScreenFrame>();
+    capture.capture.mockReturnValueOnce(pending.promise);
+    const service = new ScreenCaptureService(capture);
+    const first = service.snapshot(source);
+    service.stop();
+    const queued = service.snapshot(source);
+    service.stop();
+    pending.resolve(frame);
+    await first;
+    await expect(queued).rejects.toThrow("capture changed");
+    expect(capture.capture).toHaveBeenCalledTimes(1);
+  });
   it("captures sequentially without overlapping slow native requests", async () => {
     const capture = backend(),
       pending = deferred<ScreenFrame>(),

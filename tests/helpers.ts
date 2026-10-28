@@ -1,4 +1,5 @@
 import { vi } from "vitest";
+import { readFileSync } from "node:fs";
 import type {
   CaptureSource,
   Consent,
@@ -17,10 +18,10 @@ export const source: CaptureSource = {
   kind: "screen",
 };
 export const frame: ScreenFrame = {
-  dataUrl: "data:image/jpeg;base64,dGVzdA==",
+  dataUrl: `data:image/jpeg;base64,${readFileSync(new URL("./fixtures/assist-white.jpg", import.meta.url)).toString("base64")}`,
   width: 960,
   height: 540,
-  capturedAt: 123,
+  capturedAt: 1000000,
 };
 export const backend = () => ({
   listSources: vi.fn(async () => [source]),

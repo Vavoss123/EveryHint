@@ -4,11 +4,8 @@ import type {
   HotkeyStatus,
 } from "../shared/contracts";
 
-export const DEFAULT_HOTKEYS: HotkeyBindings = {
-  toggle: "Control+Alt+Space",
-  pause: "Control+Alt+P",
-  stop: "Control+Alt+Shift+X",
-};
+import { DEFAULT_HOTKEYS } from "../shared/shortcuts";
+export { DEFAULT_HOTKEYS } from "../shared/shortcuts";
 interface ShortcutRegistry {
   register(accelerator: string, callback: () => void): boolean;
   unregister(accelerator: string): void;

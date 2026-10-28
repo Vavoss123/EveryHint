@@ -14,6 +14,7 @@ export const capture = (): SessionSnapshot => ({
     () => {},
   ).value,
   sessionId: "capture",
+  state: "ACTIVE",
   consent: { ...consent, microphone: true, systemAudio: true },
   frame: { ...frame },
 });
@@ -138,7 +139,9 @@ describe("reviewed AI context", () => {
   it("includes an explicit authorised image with byte size, timestamp and frozen contents", () => {
     const result = review({ screenshot: true });
     expect(result.screenshot).toEqual(frame);
-    expect(result.imageBytes).toBe(4);
+    expect(result.imageBytes).toBe(
+      Buffer.from(frame.dataUrl.slice(23), "base64").length,
+    );
     expect(result.prompt).toContain('"attached":true');
     expect(result.prompt).not.toContain("dGVzdA");
   });
