@@ -42,6 +42,8 @@ Every launch starts **Manual**, with automatic sharing off. In Settings choose t
 
 **Live Assist** needs active authorised capture, local Whisper, a connected ChatGPT-plan account and an explicitly selected model. Its separate permission lists the exact sources, account/model, triggers and limits. Defaults: 30 minutes, at least 30 seconds between attempts and 20 attempts; the existing five-minute model cache may pause it sooner. Select microphone/system final text and optionally current image/history, then acknowledge **Authorise Live Assist**. Pause Live, capture Pause/Stop, Clear, expiry or account/source/model changes revoke it; Resume/restart never restore it. Root status and tray show remote-enabled state even between answers. There is no automatic Claude, raw audio upload, paid fallback or agent tool execution.
 
+One explicitly authorised automatic gpt-6.1-sol answer was verified through synthetic microphone audio and real local Whisper: one request, 8.995 seconds, scope ended at the one-attempt cap. This does not verify physical microphone/playback or real-call accuracy.
+
 Seven actions include talking points, follow-up questions, **unverified/context-only** Fact Check, selected-retained-window Recap and local user-provided participant information/unknown. No independent fact retrieval, speaker identity or saved meeting records are claimed. Detailed scope, measurements and manual checklist: [TESTING.md](docs/TESTING.md).
 
 ## Ask an assistant (P4.2)

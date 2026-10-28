@@ -358,11 +358,11 @@
       "description": "Manual/Auto-Hint reviewed actions plus separately authorised bounded Live Assist using final source-labelled questions; no speaker identity.",
       "workflow": "Choose sources, account/model and mode; review each manual action or explicitly grant time-limited Live scope.",
       "milestone": "P4/P6/P7",
-      "status": "AUTOMATED VERIFIED",
+      "status": "MANUAL VERIFIED",
       "dependencies": "Local final transcripts; P6 builder/controller; official ChatGPT plan model; separate Live grant",
       "acceptance": "One active request, bounded pending candidate, source/account/session isolation, expiry/cooldown/cap and immediate revocation.",
       "automated": "ASSIST; INTEL; LIVEAUTO; AI; PLAN",
-      "manual": "Real Whisper with synthetic microphone verified; genuine automatic outcome in TESTING.md; physical calls/system audio and long run pending",
+      "manual": "2026-10-28: one authorised genuine gpt-6.1-sol automatic answer via synthetic microphone and real tiny.en, 8.995 s, one request/cap closure; physical calls/system audio and long run pending",
       "reference": "LIVE",
       "referenceState": "CURRENT"
     },
