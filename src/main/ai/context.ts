@@ -8,6 +8,7 @@ import type {
   ReviewInput,
 } from "../../shared/ai";
 import { ASSIST_PRESETS } from "../../shared/ai";
+import { ACTION_GUIDELINES } from "../../shared/actions";
 
 export const MAX_SCREENSHOT_AGE_MS = 10000;
 export function validateScreenshot(
@@ -102,10 +103,12 @@ export function contextPrompt(
     | "screenshot"
     | "preset"
     | "sourceName"
+    | "action"
   >,
 ): string {
   return (
     ASSIST_PRESETS[review.preset ?? "general"].instruction +
+    (review.action ? "\n" + ACTION_GUIDELINES[review.action] : "") +
     "\n" +
     (review.question
       ? "Answer the question."
@@ -151,6 +154,7 @@ export function buildReview(
     provider,
     captureSessionId: capture.sessionId,
     question: input.question,
+    ...(input.action ? { action: input.action } : {}),
     preset: input.preset ?? "general",
     transcripts: [],
     screenshot: null,
@@ -162,6 +166,14 @@ export function buildReview(
     imageBytes: 0,
     notices: [],
   };
+  if (input.action === "fact-check")
+    review.notices.push(
+      "Unverified · context-only assessment. No external retrieval or authoritative independent fact check is available.",
+    );
+  if (input.action === "recap")
+    review.notices.push(
+      `Only selected retained context from the requested ${input.options.recentSeconds}-second window is available; this is not a full-session recap.`,
+    );
   let remaining = input.options.transcriptChars;
   const selected = events
     .filter(

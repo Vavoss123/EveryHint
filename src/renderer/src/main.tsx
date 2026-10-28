@@ -1,4 +1,10 @@
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
+import {
+  IntelligencePanel,
+  IntelligenceSettingsPanel,
+} from "./IntelligencePanel";
+import { useIntelligenceSnapshot } from "./useIntelligenceSnapshot";
+import { LiveStatus } from "./LiveConsent";
 import { ShortcutSettings } from "./ShortcutSettings";
 import { createRoot } from "react-dom/client";
 import type {
@@ -27,6 +33,7 @@ function unwrap<T>(result: Result<T>): T {
 }
 
 function App() {
+  const intelligence = useIntelligenceSnapshot();
   const assistant = useAssistantSnapshot();
   const [app, setApp] = useState<AppSnapshot | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +50,8 @@ function App() {
   const [sourceId, setSourceId] = useState("");
   const [destination, setDestination] = useState<Destination>("home");
   const focusComposer = useRef(false);
+  const focusReview = useRef(false);
+  const lastAutomatic = useRef<string | null>(null);
 
   const accept = useCallback(
     (next: AppSnapshot) =>
@@ -124,8 +133,9 @@ function App() {
         ),
       );
   };
-  function openAssistant(): void {
-    focusComposer.current = true;
+  function openAssistant(review = false): void {
+    focusComposer.current = !review;
+    focusReview.current = review;
     setDestination("assistant");
     setSettingsOpen(false);
     setPreparing(false);
@@ -138,6 +148,46 @@ function App() {
     if (id === "assistant") focusComposer.current = true;
   }
   useEffect(() => window.everyhint.onAssist(openAssistant));
+  useEffect(() => {
+    const response = assistant?.responses.at(-1);
+    if (response?.automatic && response.requestId !== lastAutomatic.current) {
+      lastAutomatic.current = response.requestId;
+      if (
+        app &&
+        !app.settings.compact &&
+        !settingsOpen &&
+        !preparing &&
+        (app.settings.layout !== "dashboard" || destination === "assistant")
+      )
+        requestAnimationFrame(() =>
+          document
+            .querySelector(".ai-response:last-child")
+            ?.scrollIntoView({ block: "start" }),
+        );
+    }
+  }, [assistant, app, settingsOpen, preparing, destination]);
+  useEffect(() => {
+    if (
+      focusReview.current &&
+      app &&
+      !app.settings.compact &&
+      !settingsOpen &&
+      !preparing &&
+      assistant?.review
+    ) {
+      focusReview.current = false;
+      requestAnimationFrame(() => {
+        document
+          .querySelector('[aria-label="Context review"]')
+          ?.scrollIntoView({ block: "start" });
+        document
+          .querySelector<HTMLInputElement>(
+            '[aria-label="Acknowledge remote transfer"]',
+          )
+          ?.focus();
+      });
+    }
+  }, [app, settingsOpen, preparing, assistant?.review]);
   useEffect(() => {
     document.documentElement.dataset.theme = app?.settings.theme ?? "light";
   }, [app?.settings.theme]);
@@ -274,7 +324,7 @@ function App() {
 
   return (
     <main
-      className={`app ${settings.compact ? "is-compact" : ""} ${dashboard ? "is-dashboard" : "is-assistant"}`}
+      className={`app mode-${intelligence?.mode ?? "manual"} ${settings.compact ? "is-compact" : ""} ${dashboard ? "is-dashboard" : "is-assistant"}`}
     >
       <button
         className="skip-link"
@@ -388,17 +438,26 @@ function App() {
           </span>
         )}
         <span className="status-detail">
-          {active ? "ACTIVE MODE" : "CAPTURE OFF"}
+          {intelligence?.mode === "auto-hint"
+            ? "AUTO-HINT · LOCAL"
+            : intelligence?.mode === "live"
+              ? intelligence.live
+                ? "LIVE · REMOTE ENABLED"
+                : "LIVE · NOT AUTHORISED"
+              : "MANUAL"}
         </span>
       </div>
 
+      <LiveStatus snapshot={intelligence} />
       {sharing && (
         <div className="remote-status" role="status">
           <Icon name="spark" />
           <span>
             {response.provider === "codex" ? "ChatGPT" : "Claude"} ·{" "}
             {response.status === "sending"
-              ? "Sending reviewed context"
+              ? response.automatic
+                ? "Sending authorised Live context"
+                : "Sending reviewed context"
               : "Generating answer"}
           </span>
           <button
@@ -580,6 +639,10 @@ function App() {
                   </select>
                 </label>
                 <h2>Global shortcuts</h2>
+                <IntelligenceSettingsPanel
+                  snapshot={intelligence}
+                  capture={session}
+                />
                 <ShortcutSettings settings={settings} save={save} />
                 <TranscriptionPanel settings canEnable={active} />
                 {app.hotkeys.map((hotkey) => (
@@ -798,6 +861,11 @@ function App() {
             )}
             <div hidden={settingsOpen || preparing}>
               <div className="session-workspace">
+                <IntelligencePanel
+                  snapshot={intelligence}
+                  compact={settings.compact}
+                  openReview={() => openAssistant(true)}
+                />
                 <Panel
                   title="Live transcript"
                   badge="LOCAL"
@@ -820,6 +888,7 @@ function App() {
                   compact={settings.compact}
                 >
                   <AssistantPanel
+                    operatingMode={intelligence?.mode ?? "manual"}
                     compact={settings.compact}
                     hideImage={active && session.source?.kind === "screen"}
                     expand={openAssistant}

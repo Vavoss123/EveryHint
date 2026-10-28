@@ -297,6 +297,7 @@ export class ChatGptProvider implements AIProvider {
   async *respond(
     request: AIRequest,
     signal: AbortSignal,
+    canSend?: () => boolean,
   ): AsyncGenerator<ProviderEvent> {
     const model =
       this.fresh() &&
@@ -317,6 +318,11 @@ export class ChatGptProvider implements AIProvider {
       identity = this.accounts.identity;
     const token = await this.accounts.token(signal);
     signal.throwIfAborted();
+    if (canSend && !canSend())
+      throw new ProviderError(
+        "cancelled",
+        "Live Assist permission expired or changed before transmission.",
+      );
     if (generation !== this.generation || identity !== this.accounts.identity)
       throw new ProviderError(
         "cancelled",

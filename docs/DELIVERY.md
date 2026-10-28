@@ -1,4 +1,79 @@
-# P6 delivery -- Screen-Aware AI Assist
+# P7 delivery — Automatic Conversation Intelligence
+
+Implemented on `e68bfe7`, preserving the P1–P6 capture/transcription/AI controllers and EverySession red/Poppins/Inter themes/layouts. P7.1 detection/correlation and P7.2 reviewed actions/UI passed their gates before P7.3 scoped Live scheduling. Version remains 0.4.0; no dependency or model download was added. P8 is unstarted.
+
+- **Modes and detection:** Manual unchanged; Auto-Hint analyses selected consented final English transcripts and stable screen differences locally. Typed bounded events correlate time/source/current screen without speaker identity. Question rules suppress incomplete/rhetorical/reported/unrelated/duplicate/echo speech. No OCR or screen-only automatic inference is claimed.
+- **Actions and suggestions:** seven fixed handlers reuse the P6 context review; at most three ranked, expiring candidates with Accept, Dismiss and Dismiss Similar. Fact Check remains unverified/context-only; Recap covers selected retained context; Who uses supplied participant information/unknown locally. No P8 notes or P10 research are credited.
+- **Live permission:** separate explicit source/account/model/session-bound grant; defaults 30 minutes, at least 30 seconds and 20 attempts. One active request plus at most one fresh pending candidate; failed/uncertain attempts count; pre-existing/low-confidence/stale/unshared/removed questions are ineligible. Permission is rechecked after screenshot acquisition, token renewal and throughout streaming. No retry, automatic Claude or paid fallback. Pause/Stop/expiry/cancel/source/account/model/settings/Clear/lifecycle boundaries revoke; Resume/restart never restore permission. Existing five-minute catalog expiry can pause longer grants early.
+- **UI/privacy:** compact/expanded/dashboard controls share actual main state. Root Live countdown/counter/Pause and native tray/title disclose enabled sharing between requests. Readiness is published before speech, so consent does not depend on a question arriving. Manual/Auto-Hint Accept still requires frozen review/acknowledgement. Live uses the same bounded builder, immutable instructions and official Responses shape; no new executor, credentials in React or media persistence.
+
+Verification: **458 unit tests / 35 files**, **5 native-vault/local HTTP plan fixtures**, **6 installed SDK loopback tests**, **174 Electron assertions** (47 core + 44 AI + 11 speech + 44 UI + 28 intelligence), real cached JFK tiny.en inference, theme/spec consistency, strict TypeScript, zero-warning lint and production build pass. Existing coverage remains enabled. The readiness regression and corrected post-consent synthetic audio driver passed with real Whisper and a clearly labelled fixture provider; fixture completion is not a genuine OpenAI result.
+
+**Genuine automatic verification remains pending:** the first scoped test played before consent, and its pre-existing question correctly did not trigger an answer. The readiness publication defect was fixed and verified locally. A replacement test needs the separately requested permission; no further genuine inference is sent without it. Existing P4.2/P6 genuine manual provider evidence does not prove automatic operation. See the full test record in [TESTING.md](TESTING.md).
+
+One performance observation: rules averaged 0.0044 ms on authored English fixtures; 50 actual native 1600×900 JPEG sample operations averaged 4.385 ms (p95 5.849 ms); actual dictionary-question Whisper inference was about 351 ms direct / 425 ms mean through synthetic capture, worker about 173 MB. These are isolated observations, not latency/accuracy/whole-app/endurance guarantees. The small classifier comparison did not justify a new model or dependency. Details, methodology, all 34 coverage categories and the 19-item remaining Windows checklist are in [TESTING.md](TESTING.md).
+
+Remaining acceptance: physical microphone/system playback/both, real consented calls with VS Code, human suggestions/Live/cooldown/expiry/permission loss/account switching, physical hotkeys, Narrator/themes/opacity, mixed DPI/multi-monitor, base.en/ARM64/older CPUs and 15-minute CPU/RSS/stability. No synthetic event closes those gates. English heuristics, fixed keyword cues, perceptual-only screen changes, whole-source exclusions, no independent fact retrieval and no person identification are explicit limits. No unresolved implementation defect remains in tested scope; distribution eligibility, Anthropic subscription approval and broader security/release acceptance remain open. The four P6 temporary editor profiles were not modified or deleted.
+
+The 103-feature inventory is regenerated, with partial P7/P8/P10 capabilities distinguished: **27 AUTOMATED VERIFIED, 5 MANUAL VERIFIED, 4 IMPLEMENTED, 67 PLANNED, 0 COMPLETE**. No marketing accuracy or universal privacy claim is inherited. No paid API request is permitted by this delivery. Capture/test context is stopped/cleared, preferences restored and normal startup has no mode/grant restoration. The final normal build was opened without media overrides: Manual, IDLE, no review/history/grant, all five hotkeys registered and no inference requests.
+
+## P7 file manifest
+
+45 source/documentation/test files changed; generated application output, synthetic speech, live evidence and screenshots remain ignored.
+
+```text
+README.md
+docs/ARCHITECTURE.md
+docs/BACKLOG.md
+docs/DECISIONS/P7-intelligence.md
+docs/DELIVERY.md
+docs/FEATURE_MATRIX.md
+docs/PRODUCT_SPEC.md
+docs/TESTING.md
+package.json
+resources/feature-inventory.json
+scripts/benchmark-screen.mjs
+scripts/build-feature-matrix.mjs
+scripts/smoke-ai.mjs
+scripts/smoke-intelligence.mjs
+src/main/ai/context.ts
+src/main/ai/controller.ts
+src/main/ai/plan/provider.ts
+src/main/index.ts
+src/main/intelligence/actions.ts
+src/main/intelligence/controller.ts
+src/main/intelligence/engine.ts
+src/main/intelligence/live.ts
+src/main/intelligence/native-screen.ts
+src/main/intelligence/question.ts
+src/main/intelligence/screen.ts
+src/main/session.ts
+src/preload/index.ts
+src/renderer/src/AssistantPanel.tsx
+src/renderer/src/IntelligencePanel.tsx
+src/renderer/src/LiveConsent.tsx
+src/renderer/src/main.tsx
+src/renderer/src/styles.css
+src/renderer/src/useIntelligenceSnapshot.ts
+src/shared/actions.ts
+src/shared/ai.ts
+src/shared/contracts.ts
+src/shared/intelligence.ts
+src/shared/validation.ts
+tests/fixtures/intelligence-corpus.ts
+tests/intelligence-actions.test.ts
+tests/intelligence-benchmark.test.ts
+tests/intelligence-live.test.ts
+tests/intelligence-local.test.ts
+tests/intelligence-plan.test.ts
+tests/plan-provider.test.ts
+```
+
+Delivery commit: `feat: add EveryHint automatic conversation intelligence`, no AI co-author trailer. Working tree clean after commit. Stop after P7; do not start P8.
+
+---
+
+# P6 delivery — historical record: Screen-Aware AI Assist
 
 Implemented the authorised manual workflow on baseline `f00bf2a`, retaining EverySession tokens, red/Poppins/Inter and all three layouts. P5 human Windows/visual checks remain open. No P7 detection or automatic request was added.
 

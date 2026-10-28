@@ -65,6 +65,12 @@ export class CaptureSessionController {
   get value(): SessionSnapshot {
     return structuredClone(this.snapshot);
   }
+  get indicator(): Pick<SessionSnapshot, "state" | "sources"> {
+    return structuredClone({
+      state: this.snapshot.state,
+      sources: this.snapshot.sources,
+    });
+  }
   async freshScreenshot(): Promise<SessionSnapshot> {
     if (
       this.snapshot.state !== "ACTIVE" ||

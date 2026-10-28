@@ -95,6 +95,27 @@ async function collect(
   return items;
 }
 describe("answer-only ChatGPT Responses transport", () => {
+  it("rechecks Live sharing permission after token renewal before any inference POST", async () => {
+    const s = await setup();
+    const pending = deferred<string>();
+    s.account.token.mockReturnValueOnce(pending.promise);
+    let allowed = true;
+    const result = (async () => {
+      for await (const event of s.provider.respond(
+        request(),
+        new AbortController().signal,
+        () => allowed,
+      ))
+        void event;
+    })();
+    await Promise.resolve();
+    allowed = false;
+    pending.resolve("synthetic-refreshed-token");
+    await expect(result).rejects.toMatchObject({ code: "cancelled" });
+    expect(
+      s.transport.mock.calls.every(([url]) => url.endsWith("/models")),
+    ).toBe(true);
+  });
   it("does not contact OpenAI during construction or local inspection and never selects an API-key fallback", async () => {
     const account = { identity: null, registration: undefined, token: vi.fn() },
       transport = vi.fn();

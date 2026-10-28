@@ -366,6 +366,7 @@ try {
     "cancel is available while generating",
   );
   await page.getByRole("button", { name: "Compact mode", exact: true }).click();
+  await page.locator(".assistant-compact").waitFor({ state: "visible" });
   check(
     !(await page.locator(".capture-status").innerText()).includes("LOCAL ONLY"),
     "capture status does not claim the entire app is local-only during an AI request",

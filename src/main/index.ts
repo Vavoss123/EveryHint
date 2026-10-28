@@ -42,6 +42,10 @@ import { ElectronAudioCapture } from "./audio-host";
 import { SpeechInstallation } from "./transcription/models";
 import { TranscriptionController } from "./transcription/controller";
 import { AssistantController } from "./ai/controller";
+import { IntelligenceController } from "./intelligence/controller";
+import { sampleScreen } from "./intelligence/native-screen";
+import { DEFAULT_INTELLIGENCE } from "../shared/intelligence";
+import { parseIntelligenceSettings } from "../shared/validation";
 import { ChatGptProvider } from "./ai/plan/provider";
 import { ClaudeProvider } from "./ai/claude";
 import { ChatGptAccounts } from "./ai/plan/accounts";
@@ -71,7 +75,10 @@ let tray: Tray | undefined;
 let store: SettingsStore;
 let controller: CaptureSessionController;
 let speech: TranscriptionController | undefined;
+let transcriptionListening = false;
+let currentAccountLabel = "Selected ChatGPT account";
 let assistant: AssistantController | undefined;
+let intelligence: IntelligenceController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
 let shortcuts: HotkeyController;
@@ -161,7 +168,7 @@ function safely(action: () => void): void {
 }
 function updateTray(): void {
   if (!tray || tray.isDestroyed()) return;
-  const value = controller.value;
+  const value = controller.indicator;
   const state = value.state;
   const summary = Object.entries(value.sources)
     .map(
@@ -169,14 +176,35 @@ function updateTray(): void {
         `${id === "systemAudio" ? "System" : id === "microphone" ? "Mic" : "Screen"} ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
     )
     .join(" · ");
-  const key = `${state}:${summary}`;
+  const sharing = intelligence?.indicator;
+  const mode =
+    sharing?.mode === "live"
+      ? "Live Assist"
+      : sharing?.mode === "auto-hint"
+        ? "Auto-Hint"
+        : "Manual";
+  const remote = sharing?.enabled
+    ? `LIVE REMOTE ENABLED · ${sharing.requests}/${sharing.limit} attempts`
+    : `${mode} · automatic sharing off`;
+  const key = `${state}:${summary}:${remote}:${sharing?.expiresAt ?? 0}`;
   if (key === lastTrayState) return;
   lastTrayState = key;
   tray.setImage(icon(state));
-  tray.setToolTip(`EveryHint · ${state} · ${summary}`.slice(0, 127));
+  tray.setToolTip(
+    `EveryHint · ${remote} · ${state} · ${summary}`.slice(0, 127),
+  );
   tray.setContextMenu(
     Menu.buildFromTemplate([
       { label: `EveryHint · ${state}`, enabled: false },
+      { label: remote, enabled: false },
+      {
+        label: "Pause Live Assist",
+        enabled: sharing?.enabled ?? false,
+        click: () =>
+          intelligence?.revoke(
+            "Paused from the tray. Renew explicitly to resume automatic sharing.",
+          ),
+      },
       ...Object.entries(value.sources).map(([id, source]) => ({
         label: `${id === "systemAudio" ? "System audio" : id === "microphone" ? "Microphone" : "Screen"}: ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
         enabled: false,
@@ -199,11 +227,15 @@ function updateTray(): void {
       { label: "Quit EveryHint", click: () => app.quit() },
     ]),
   );
-  window?.setTitle(`EveryHint · ${state}`);
+  window?.setTitle(
+    `EveryHint · ${mode}${sharing?.enabled ? " · remote enabled" : ""} · ${state}`,
+  );
 }
 function publish(): void {
   if (speech && controller) speech.captureChanged(controller.value);
   if (assistant && controller) assistant.captureChanged(controller.value);
+  if (intelligence && controller)
+    intelligence.update(controller.value, speech?.value.events ?? []);
   revision++;
   updateTray();
   if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
@@ -229,7 +261,17 @@ function configureSize(previous: Presentation): void {
     width: current.width,
     height: current.height,
   });
-  window.setMinimumSize(360, mode === "compact" ? 180 : 380);
+  const intelligenceMode = intelligence?.value.mode ?? "manual";
+  window.setMinimumSize(
+    360,
+    mode === "compact"
+      ? intelligenceMode === "manual"
+        ? 180
+        : intelligenceMode === "live"
+          ? 380
+          : 280
+      : 380,
+  );
   window.setBounds(
     presentationBounds(
       mode,
@@ -348,8 +390,10 @@ async function initialise(): Promise<void> {
   speech = new TranscriptionController(
     installation,
     (value) => {
+      transcriptionListening = value.state === "LISTENING";
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:transcription", value);
+      if (controller) intelligence?.update(controller.value, value.events);
     },
     (token) => audio.setTranscriptionToken(token),
   );
@@ -370,6 +414,9 @@ async function initialise(): Promise<void> {
     join(app.getPath("userData"), "chatgpt-plan"),
     (value) => {
       const binding = `${value.selectedAccount}:${value.planUsage}:${value.accounts?.find((item) => item.id === value.selectedAccount)?.signedIn}`;
+      currentAccountLabel =
+        value.accounts?.find((item) => item.id === value.selectedAccount)
+          ?.label ?? "Selected ChatGPT account";
       if (binding !== accountBinding) {
         accountBinding = binding;
         chatgpt?.invalidate();
@@ -388,11 +435,28 @@ async function initialise(): Promise<void> {
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         window.webContents.send("everyhint:assistant", value);
+      intelligence?.assistantChanged(value);
     },
     90000,
     Date.now,
     () => controller.freshScreenshot(),
   );
+  intelligence = new IntelligenceController(
+    assistant,
+    (value) => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:intelligence", value);
+      updateTray();
+    },
+    Date.now,
+    sampleScreen,
+    () => ({
+      accountId: accounts?.identity ?? null,
+      accountLabel: currentAccountLabel,
+      transcribing: transcriptionListening,
+    }),
+  );
+  intelligence.configure(store.settings.intelligence ?? DEFAULT_INTELLIGENCE);
   await accounts.restore();
 
   const saved = store.bounds;
@@ -525,6 +589,37 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  handle("everyhint:intelligence-get", () => intelligence!.value);
+  handle("everyhint:intelligence-authorise", (input) =>
+    intelligence!.authorise(input),
+  );
+  handle("everyhint:intelligence-pause", (input) => {
+    if (input !== undefined)
+      throw new Error("Pause Live Assist takes no parameters.");
+    intelligence!.revoke(
+      "Paused by you. Renew explicitly to resume automatic sharing.",
+    );
+  });
+  handle("everyhint:intelligence-mode", (input) => {
+    intelligence!.mode(input);
+    if (store.settings.compact) configureSize("compact");
+  });
+  handle("everyhint:intelligence-configure", (input) => {
+    const settings = parseIntelligenceSettings(input);
+    store.save(
+      { ...store.settings, intelligence: settings },
+      window?.getNormalBounds(),
+    );
+    intelligence!.configure(settings);
+    assistant!.discardReview();
+    publish();
+  });
+  handle("everyhint:intelligence-action", (input) =>
+    intelligence!.action(input),
+  );
+  handle("everyhint:intelligence-dismiss", (input) =>
+    intelligence!.dismiss(input),
+  );
   handle("everyhint:account-get", () => accounts!.value);
   handle("everyhint:account-action", async (input) => {
     if (
@@ -585,15 +680,24 @@ async function initialise(): Promise<void> {
     await assistant!.inspect();
   });
   handle("everyhint:ai-billing", (input) => assistant!.billing(input));
-  handle("everyhint:ai-review", (input) => assistant!.prepare(input));
+  handle("everyhint:ai-review", (input) => {
+    intelligence!.revoke("Manual Assist was started.");
+    return assistant!.prepare(input);
+  });
   handle("everyhint:ai-remove", (input) => assistant!.removeContext(input));
-  handle("everyhint:ai-ask", (input) => assistant!.ask(input));
+  handle("everyhint:ai-ask", (input) => {
+    intelligence!.revoke("A manually reviewed request was chosen.");
+    return assistant!.ask(input);
+  });
   handle("everyhint:ai-copy", (input) => {
     if (typeof input !== "string" || input.length === 0 || input.length > 32000)
       throw new Error("Invalid response text.");
     clipboard.writeText(input);
   });
   handle("everyhint:ai-action", (input) => {
+    intelligence!.revoke(
+      "The assistant was cancelled, cleared or manually edited.",
+    );
     if (input === "cancel") return assistant!.cancel();
     if (input === "clear") return assistant!.clear();
     if (input === "discard-review") return assistant!.discardReview();
@@ -602,8 +706,12 @@ async function initialise(): Promise<void> {
   handle("everyhint:transcription-get", () => speech!.value);
   handle("everyhint:transcription-action", (input) => {
     if (input === "enable") return speech!.enable();
-    if (input === "pause") return speech!.pause();
+    if (input === "pause") {
+      intelligence!.revoke("Local transcription was paused.");
+      return speech!.pause();
+    }
     if (input === "clear") {
+      intelligence!.clear();
       assistant!.discardReview();
       return speech!.clear();
     }
@@ -613,9 +721,10 @@ async function initialise(): Promise<void> {
   handle("everyhint:transcription-install", (input) =>
     installation.install(input),
   );
-  handle("everyhint:transcription-settings", (input) =>
-    speech!.configure(input),
-  );
+  handle("everyhint:transcription-settings", (input) => {
+    intelligence!.revoke("Local transcription settings changed.");
+    return speech!.configure(input);
+  });
   handle("everyhint:sources", (input) => controller.listSources(input));
   handle("everyhint:microphones", (input) => controller.listMicrophones(input));
   handle("everyhint:microphone-mute", (input) =>
@@ -633,11 +742,23 @@ async function initialise(): Promise<void> {
   handle("everyhint:settings", (input) => {
     // Appearance is safe to edit during capture; interval changes apply on next start/resume.
     const oldPresentation = presentation(store.settings);
+    const oldIntelligence = JSON.stringify(
+      store.settings.intelligence ?? DEFAULT_INTELLIGENCE,
+    );
     const oldShortcuts = [
       store.settings.assistShortcut,
       store.settings.clearShortcut,
     ].join("|");
     store.save(input, window?.getNormalBounds());
+    if (
+      oldIntelligence !==
+      JSON.stringify(store.settings.intelligence ?? DEFAULT_INTELLIGENCE)
+    ) {
+      intelligence!.configure(
+        store.settings.intelligence ?? DEFAULT_INTELLIGENCE,
+      );
+      assistant!.discardReview();
+    }
     if (
       oldShortcuts !==
       [store.settings.assistShortcut, store.settings.clearShortcut].join("|")
@@ -699,6 +820,7 @@ app.on("before-quit", (event) => {
   accounts?.dispose();
   controller?.stop();
   speech?.dispose();
+  intelligence?.dispose();
   shortcuts?.dispose();
   if (saveTimer) clearTimeout(saveTimer);
   if (store) persistBounds();

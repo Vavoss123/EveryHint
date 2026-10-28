@@ -1,4 +1,108 @@
-# P6 Screen-Aware Assist verification -- 2026-10-28
+# P7 Automatic Conversation Intelligence verification — 2026-10-28
+
+Baseline `e68bfe7`. P7.1, P7.2 and P7.3 were verified in order; design and intermediate gates are in [P7-intelligence.md](DECISIONS/P7-intelligence.md). P1–P6 hardware/visual/endurance acceptance remains open. No P8 records, new dependency, classifier/model download, raw-audio transfer, paid API fallback or automatic Claude request was added.
+
+| Check | P7 result |
+| --- | --- |
+| `npm run check` | Generated theme/spec, strict TypeScript, zero-warning lint, **458 unit tests / 35 files**, production build pass |
+| `npm run test:plan` | **5 passed**: real local HTTP/JWT/SSE and isolated Windows native-vault fixtures; no OpenAI inference |
+| `npm run test:ai-sdk` | **6 passed**: installed Claude SDK against loopback fixtures; no paid requests |
+| Electron core / AI / speech / UI / intelligence | **47 / 44 / 11 / 44 / 28 = 174 assertions**; source capture and suggestions are explicitly synthetic/labelled |
+| `npm run speech:test` | Cached verified tiny.en and upstream JFK fixture; real native inference, 355/331 ms in one run; no physical microphone/playback |
+| P7 real local audio path | Offline TTS question through synthetic microphone → actual PCM/VAD/Whisper → final question at heuristic 0.94 → suggestion; fixture-provider Live run reserved/completed once and closed at cap |
+| Genuine automatic provider test | See current outcome below; a local fixture answer never establishes real provider success |
+| Production output | Main about 210 kB, renderer JS about 292 kB, CSS about 25 kB; original bundled fonts/tokens retained |
+
+## Genuine automatic verification
+
+**Genuine automatic OpenAI completion remains pending.** The first authorised attempt did not produce a remote response; the corrected path passed with actual local Whisper and a clearly labelled fixture provider. A replacement one-minute/one-attempt gpt-6.1-sol test was requested with the same synthetic-microphone-only, no-system-audio/image/history/API-fallback scope. No replacement inference is sent without the user’s fresh authorisation. P4.2 genuine text and P6 genuine image/follow-up evidence remain valid for their narrower workflows.
+
+The initial authorised test timed out without an automatic response. Local reproduction showed the question completed before the Live grant: the app correctly rejected that pre-existing question. Investigation found that source/Whisper readiness reached `getIntelligence()` but was not pushed to the renderer until new context arrived. This delayed the consent UI until speech had already been processed. The controller now publishes readiness independently of transcript changes; a regression test asserts that microphone startup and Whisper readiness enable the permission preview before any speech, with no request and no redundant identical publication. The replacement fixture starts playback only after the real UI grant is confirmed. Separate local diagnostics block inference at the transport and use clearly labelled fixture responses. They are not live-provider evidence.
+
+No physical microphone/system playback, other windows, screenshot or previous history was used in P7's scripted audio test. Local TTS was generated offline, no speech/model download occurred, and the test app was closed to remove its Playwright-only media override. Preferences were restored, capture stopped, local test context cleared and mode returned to Manual. The four restricted P6 editor profiles were left untouched. Ignored local evidence includes `artifacts/p7-speech-check.json`, `p7-local-audio-debug.json`, `p7-local-live-gated-result.json` and the separately scoped live-result files. No credential, live response, WAV or capture is committed.
+
+## Automated coverage for the 34 requested categories
+
+Abbreviations: **local** = `tests/intelligence-local.test.ts`; **actions** = `tests/intelligence-actions.test.ts`; **live** = `tests/intelligence-live.test.ts`; **transport** = `tests/intelligence-plan.test.ts` and `tests/plan-provider.test.ts`; **Electron** = `scripts/smoke-intelligence.mjs`. Existing P1–P6 suites remain enabled.
+
+| # | Required category | Verification |
+| --- | --- | --- |
+| 1 | Manual Mode | local/live: no analysis/automatic request; Electron startup/restart Manual |
+| 2 | Auto-Hint Mode | local/actions/live/Electron: local detection, accept prepares review, no auto-submit |
+| 3 | Live authorisation | live/transport: acknowledgement, exact binding/sources/limits, no capture-as-permission; readiness-before-speech regression |
+| 4 | Session expiration | local/live: retention and wall/monotonic lease expiry, no renewal or clock rollback extension |
+| 5 | Question detection | local/benchmark: interrogative/help rules and distinct authored evaluation fixtures |
+| 6 | No punctuation | local: same final question eligible with/without punctuation |
+| 7 | Duplicate questions | local/live: provisional/final, repeated normalized text and cross-source echo suppression |
+| 8 | False positives | local/benchmark: statements/reported/rhetorical/unrelated/incomplete examples; low-confidence help review only |
+| 9 | Transcript ordering | local: chronological current-session selected final events; stale/invalid source/time rejection |
+| 10 | Screen changes | local: native-sized bounded grid, substantial difference and stable observation |
+| 11 | Unchanged screen | local: hash skip, cursor-like noise/unstable frames suppressed; no question from a screen change alone |
+| 12 | Correlation | local/actions: source/time/current screen and nearby excerpt IDs, no old-session leakage |
+| 13 | Ranking | actions: max three stable candidates, freshness/relevance/confidence and repetition penalties |
+| 14 | Dismissal | actions/Electron: dismiss/similar suppression within the session |
+| 15 | Suggestion expiry | local/actions: TTL/retention/session reset and typed expiry events |
+| 16 | Get Answer | actions/live/transport: same builder/controller/model path; manual review retained |
+| 17 | Spoken-response suggestions | actions: selected-context eligibility and fixed talking-point instructions, no speech output |
+| 18 | Follow-up suggestions | actions: reviewed fixed follow-up action; no automatic sending of suggested prompts |
+| 19 | Recap | actions: no-context rejection and explicit retained-window notice; no P8 storage |
+| 20 | Fact Check uncertainty | actions/Electron: specific claim, permanent unverified/context-only review/response metadata |
+| 21 | Cooldown | live: at least configured interval, including late token/pre-send checks; fresh pending candidate only |
+| 22 | Request limits | live/transport: conservative reservation cap including failures; closes at cap, no renewal |
+| 23 | Cancellation | live/transport: screenshot/token races, stream guard, Cancel and removed utterances; no late response |
+| 24 | Pause/Stop | live + existing capture/speech suites: epoch/lifecycle cancellation and no permission restoration |
+| 25 | No requests after expiry | live/transport: exact expiry and post-token check before genuine provider POST |
+| 26 | No Manual automatic requests | live: final eligible speech cannot submit in Manual |
+| 27 | No Auto-Hint automatic requests | live/Electron: final eligible speech creates optional local suggestions only |
+| 28 | Provider auth failure | live/plan-provider/AI: no retries, no automatic second provider |
+| 29 | Image capability failure | live/transport/assist suites: unavailable/unknown capability blocks image scope; fresh-image races guarded |
+| 30 | Rate limiting | live/plan-provider: explicit failure revokes, no usage retry or billing fallback |
+| 31 | Account isolation | actions/live/transport: assistant/account/provider/model/capture bindings clear or revoke scope |
+| 32 | Source selection | local/actions/live/transport: independently selected consented local/remote categories, exclusions and removed IDs |
+| 33 | Unauthorised content | transport/AI/security/Electron: no shared credentials/raw audio/history/image outside scope, no arbitrary IPC, fixed official payload and untrusted reference data |
+| 34 | P1–P6 regression | 367 baseline unit tests retained, plan/SDK/core/AI/speech/UI checks and real cached JFK inference |
+
+Local-only Who returns unknown or escaped user-provided participant information without network/identity inference. Strict settings and action schemas reject forged IDs/ranges. Renderer-only suggestion/response fixtures are labelled and forged acceptance is rejected by main. Root Live status/Pause and remote Cancel remain accessible in Settings; restart restores neither mode/grant nor media capture. Narrow Live geometry was measured at 360×380 native DIP and 125% zoom (288×305 CSS viewport): question/top review/latest answer and footer fit without overlap/overflow. Each displayed button is also checked against the viewport; the intentionally offscreen unfocused skip link is excluded. Native Electron capture avoids the cropped CDP screenshot at nondefault zoom. Compact error text has its own row so it cannot squeeze the question out. This is one automated geometry fixture, not a physical mixed-DPI acceptance claim. Screenshots/reports are ignored under `artifacts/p7-*`.
+
+## Performance observations and limits
+
+- The classifier experiment used 22 authored development and 32 distinct authored English evaluation examples. Rules: 16 TP / 0 FP / 0 FN / 16 TN; unigram Naive Bayes candidate: 6 TP / 1 FP / 10 FN / 15 TN at 0.85. Production keeps rules; no model/dependency was justified. Small synthetic fixtures do not establish call accuracy or a 95% claim. Rule confidence is a heuristic score, not probability.
+- One isolated run: 3,200 rule evaluations in 14.18 ms (mean 0.0044 ms, p95 0.0078 ms). 1,000 unchanged encoded-frame hashes took 6.67 ms with one 576-byte sample. That hash benchmark excludes native JPEG decoding. Test-process RSS was about 68.8 MB; negative heap delta reflects GC, not app savings.
+- `npm run intelligence:screen-bench`: 50 actual native JPEG decode/resize/bitmap/sample operations on a generated 1600×900 gradient, 74,259-byte JPEG. Total 219.26 ms, mean 4.385 ms, p95 5.849 ms; 2,304-byte bitmap / 576-byte retained grid. Isolated Electron main RSS 266,559,488 bytes; 187 ms user + 78 ms system CPU. This is not steady-state whole-app memory or a 15-minute measure.
+- Real local P7 dictionary-question fixture: 3.75-second PCM16 mono 16 kHz offline TTS; direct tiny.en load 122 ms/inference 351 ms, worker RSS about 172 MB. The gated synthetic-microphone capture run used two actual Whisper jobs, no gaps/drops, about 425 ms mean inference and 173 MB worker RSS. The labelled fixture provider's 1 ms response is not remote latency. JFK smoke measured load 96 ms, mean 377 ms over 12 jobs, queue 0, gaps/drops 0, about 174 MB worker RSS. CPU diagnostics are process totals and may exceed 100% across four threads.
+- Local events/questions/recent text/seen IDs/suggestions are capped; identical frames skip decoding, provisional text cannot trigger, duplicate questions cannot retransmit during the grant, and queue depth is at most one. The native tray reads scalar indicators instead of cloning frame/transcript snapshots. Full-app CPU/RSS, real call precision/recall and long-run scheduling remain manual measurements.
+
+## P7 Windows manual acceptance — all remaining human checks open
+
+Use authorised non-sensitive content and consented participants. Inspect the exact in-app Live account/model/sources/limits before permitting remote sharing. Automated synthetic audio proves the software pipeline only.
+
+1. **Startup/Manual:** restart; verify Manual, no capture, no grant and no automatic request despite saved local source/limit preferences. Make a normal reviewed P6 text/image request and verify unchanged acknowledgement/cancel/follow-up behaviour.
+2. **Physical microphone:** consent/select the intended input, enable local Whisper and microphone analysis, choose Auto-Hint; speak complete and punctuation-free coding/work questions. Check final-source labels, useful suggestions, incomplete/rhetorical suppression and no remote activity.
+3. **Windows system audio:** with consented playback/call audio, independently select system analysis; verify actual source routing/transcript and question detection. Ensure unshared microphone speech cannot trigger a Live request or enter its context.
+4. **Both audio sources:** test simultaneous speech, speakerphone echo/repeated questions, ordering and duplicate suppression. Source labels must not imply speaker identity. Record false positives/misses rather than inferring real accuracy from authored fixtures.
+5. **VS Code plus speech:** select the intended non-sensitive editor window and supported image model; ask a spoken code question. Check current source/time correlation and review/source isolation. Screen-only changes must not trigger remote inference or claim a recognized error/question.
+6. **Stable screen changes:** move cursor/animate then switch substantial content. Verify noise/stability debounce, one optional review candidate and no repeated upload of identical images. Whole-monitor sources may include other visible apps; exclusions cover the entire selected handle, not masking inside it.
+7. **Suggestions:** verify at most three, sensible ranking, keyboard focus/top review, Accept→frozen review→acknowledge→Ask, Dismiss, Dismiss Similar and TTL expiry. An old/forged/removed suggestion cannot be accepted.
+8. **Actions:** review talking points/follow-up questions; Fact Check stays unverified without retrieval, Recap states selected retained context only, Who reports provided data/unknown without inventing identity. These do not create meeting records.
+9. **Live consent before speech:** after capture/Whisper becomes ready, verify sharing choices enable before saying a question. Choose exact source/account/model and conservative limits, then acknowledge the separate scope. Local capture/transcription consent alone must not authorise remote sharing.
+10. **Physical automatic answer:** in a deliberately authorised short Live session, speak a new complete question after the grant. Verify one automatic answer from the selected model, exact selected categories, visible status/counters/cancel and terminal completion. This physical test remains open despite any genuine provider test with synthetic audio.
+11. **Follow-up:** ask another fresh question after cooldown. Optional history must include only bounded current-session text when explicitly permitted; old images/transcripts are never silently reattached.
+12. **Cooldown/cap:** speak several questions; confirm one active request, at most one fresh pending candidate, no stale backlog, minimum 30-second interval and conservative failed-attempt count. Reaching cap ends sharing; no automatic renewal or paid fallback.
+13. **Expiry/catalog/auth:** test a short lease and lost/expired model/auth access. No request may start after expiry. The five-minute catalog can stop a longer grant early; explicit refresh/reselect/renew is required, and model/account changes clear prior context.
+14. **Immediate controls:** use root Pause Live and remote Cancel during preparation/streaming, then capture Pause/Stop via UI/tray/global shortcuts while hidden. Verify cancellation, cleared scope and no late answer; capture Resume never restores Live permission.
+15. **Permission/device/source loss:** remove screen capture permission, disconnect microphone/playback, mute a shared input, change selected window/source/exclusion or settings. Verify safe stop/revocation and no fallback to unrelated windows/sources.
+16. **Lifecycle/account isolation:** switch account/provider/model, Clear, lock/suspend/wake, reload/crash/quit/restart during pending work. Nothing resumes automatically or enters the new session/account.
+17. **Compact/expanded/dashboard:** exercise suggestions, answer updates, hidden Settings/panels, persistent root Live/Pause/Stop/Cancel and tray/title state between requests. Preserve manual draft/review; layout changes never grant permission.
+18. **Windows visual/accessibility:** themes/opacity, physical global shortcuts, Narrator/high contrast/keyboard focus, mixed 100/125/150/200% DPI, multi-monitor dragging/resizing and tiny work areas. Carry forward every pending P5/P1 visual check.
+19. **Hardware/endurance:** real consented conversations for 15 minutes; record main/renderer/worker CPU/RSS, question precision/recall, suggestion/request frequency, latency, queue/drop/gap counts and controls under load. Base.en, ARM64 and older-CPU builds remain unverified; retain P1–P3 checklists below.
+
+## Known limitations and unresolved release acceptance
+
+English rule cues can miss questions or produce false suggestions; fixed keyword cues have no custom list editor. Perceptual visual changes provide no OCR/semantic/error classification. There is no multilingual/diarisation model, person research, external factual retrieval, full-session recap or saved meeting memory. Content on a whole monitor cannot be selectively masked by source exclusions. In-scope content may be sent automatically while an explicitly granted lease is active; Pause cannot recall data already transmitted. Subscription request counts are not prices. No unresolved implementation finding remains in the tested permission boundary; this is not an independent security audit. Distribution eligibility, Anthropic subscription approval and the physical/visual/endurance release gates remain unresolved. No paid Claude request or P8 implementation is authorised by this delivery.
+
+---
+
+# P6 Screen-Aware Assist verification — historical record, 2026-10-28
 
 Baseline `f00bf2a`. P5 human Windows/visual acceptance remains open. P6 extends the existing capture/context/provider pipeline; it adds no automatic inference, raw-audio transfer, paid fallback or model/tool execution. No dependency or model download was added.
 

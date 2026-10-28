@@ -1,5 +1,7 @@
 import { exactKeys, record } from "./validation";
 import type { AudioSourceId, ScreenFrame } from "./contracts";
+import type { ContextualAction } from "./intelligence";
+import { ACTION_LABELS } from "./intelligence";
 
 export type ProviderId = "codex" | "claude";
 export function providerId(value: unknown): ProviderId {
@@ -61,6 +63,8 @@ export const DEFAULT_CONTEXT: ContextOptions = {
   imageBytes: 1500000,
 };
 export interface ReviewInput {
+  transcriptIds?: string[];
+  action?: ContextualAction;
   question: string;
   options: ContextOptions;
   preset?: AssistPreset;
@@ -68,7 +72,29 @@ export interface ReviewInput {
 }
 export function parseReview(value: unknown): ReviewInput {
   const input = record(value);
-  exactKeys(input, ["question", "options", "preset", "regenerateId"]);
+  exactKeys(input, [
+    "question",
+    "options",
+    "preset",
+    "regenerateId",
+    "action",
+    "transcriptIds",
+  ]);
+  if (
+    input.transcriptIds !== undefined &&
+    (!Array.isArray(input.transcriptIds) ||
+      input.transcriptIds.length > 100 ||
+      input.transcriptIds.some(
+        (id) => typeof id !== "string" || !/^[a-zA-Z0-9:_-]{1,128}$/.test(id),
+      ))
+  )
+    throw new Error("Choose bounded current transcript identifiers.");
+  if (
+    input.action !== undefined &&
+    (typeof input.action !== "string" ||
+      !Object.hasOwn(ACTION_LABELS, input.action))
+  )
+    throw new Error("Choose a supported contextual action.");
   if (typeof input.question !== "string" || input.question.length > 6000)
     throw new Error("The optional question must be at most 6,000 characters.");
   if (
@@ -104,6 +130,12 @@ export function parseReview(value: unknown): ReviewInput {
       throw new Error(`Invalid context limit: ${key}.`);
   return {
     question: input.question.trim(),
+    ...(input.transcriptIds === undefined
+      ? {}
+      : { transcriptIds: [...new Set(input.transcriptIds as string[])] }),
+    ...(input.action === undefined
+      ? {}
+      : { action: input.action as ContextualAction }),
     options: { ...options } as unknown as ContextOptions,
     preset: (input.preset ?? "general") as AssistPreset,
     ...(input.regenerateId === undefined
@@ -124,6 +156,8 @@ export interface ConversationTurn {
   answer: string;
 }
 export interface AIRequest {
+  automatic?: boolean;
+  action?: ContextualAction;
   replacesRequestId?: string;
   preset?: AssistPreset;
   sourceName?: string;
@@ -165,6 +199,9 @@ export interface AIUsage {
   estimatedUsd?: number;
 }
 export interface AIResponse {
+  contextNotices?: string[];
+  action?: ContextualAction;
+  automatic?: boolean;
   preset?: AssistPreset;
   requestId: string;
   sessionId: string;
@@ -194,6 +231,7 @@ export interface AIProvider {
   respond(
     request: AIRequest,
     signal: AbortSignal,
+    canSend?: () => boolean,
   ): AsyncIterable<ProviderEvent>;
   dispose(): void | Promise<void>;
 }

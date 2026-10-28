@@ -83,6 +83,7 @@ export interface Settings {
   opacity?: number;
   assistShortcut?: string;
   clearShortcut?: string;
+  intelligence?: import("./intelligence").IntelligenceSettings;
 }
 export interface WindowBounds {
   x: number;
@@ -108,6 +109,29 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  authoriseLive(
+    input: import("./intelligence").LiveConsentInput,
+  ): Promise<Result<void>>;
+  pauseLive(): Promise<Result<void>>;
+  getIntelligence(): Promise<
+    Result<import("./intelligence").IntelligenceSnapshot>
+  >;
+  onIntelligence(
+    listener: (value: import("./intelligence").IntelligenceSnapshot) => void,
+  ): () => void;
+  setOperatingMode(
+    mode: import("./intelligence").OperatingMode,
+  ): Promise<Result<void>>;
+  saveIntelligenceSettings(
+    settings: import("./intelligence").IntelligenceSettings,
+  ): Promise<Result<void>>;
+  contextualAction(
+    input: import("./intelligence").ContextualActionInput,
+  ): Promise<Result<import("./intelligence").ActionOutcome>>;
+  dismissSuggestion(input: {
+    id: string;
+    similar: boolean;
+  }): Promise<Result<void>>;
   getAccountConnection(): Promise<
     Result<import("./accounts").AccountConnection>
   >;

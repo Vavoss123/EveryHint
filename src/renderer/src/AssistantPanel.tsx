@@ -9,6 +9,7 @@ import { ASSIST_PRESETS, DEFAULT_CONTEXT } from "../../shared/ai";
 import type { Result } from "../../shared/contracts";
 import { AccountPanel } from "./AccountPanel";
 import { ResponseText } from "./ResponseText";
+import { ACTION_LABELS, type OperatingMode } from "../../shared/intelligence";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -19,11 +20,13 @@ export function AssistantPanel({
   hideImage,
   expand,
   sourceName,
+  operatingMode = "manual",
 }: {
   compact: boolean;
   hideImage: boolean;
   expand: () => void;
   sourceName: string;
+  operatingMode?: OperatingMode;
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
   const [question, setQuestion] = useState("");
@@ -140,6 +143,7 @@ export function AssistantPanel({
           onClick={expand}
           title="Expand assistant"
         >
+          {operatingMode === "manual" ? "Manual · " : ""}
           {latest
             ? `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${labels[latest.status]} · ${latest.text.slice(-90) || latest.error?.message || ""}`
             : `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${selected.ready ? "Ready" : "Not connected"} · Expand to ask`}
@@ -437,6 +441,7 @@ export function AssistantPanel({
           </strong>
           <small>
             {ASSIST_PRESETS[review.preset ?? "general"].name}
+            {review.action ? ` · ${ACTION_LABELS[review.action]}` : ""}
             {review.sourceName ? ` · ${review.sourceName}` : ""}
           </small>
           <small>
@@ -594,6 +599,26 @@ export function AssistantPanel({
               {labels[response.status]}
               {response.model ? ` · ${response.model}` : ""}
             </small>
+            {response.automatic && (
+              <small>
+                Live Assist · automatically requested within your authorised
+                session
+              </small>
+            )}
+            {response.contextNotices?.map((notice) => (
+              <small className="warning-message" key={notice}>
+                {notice}
+              </small>
+            ))}
+            {response.action === "fact-check" && (
+              <p className="warning-message">
+                Unverified · context-only assessment. No external independent
+                verification.
+              </p>
+            )}
+            {response.action === "recap" && (
+              <small>Recap of selected retained context only</small>
+            )}
             <ResponseText text={response.text} />
             {response.error && (
               <p className="error-message" role="alert">
@@ -654,6 +679,7 @@ export function AssistantPanel({
                           question: response.question,
                           options: nextOptions,
                           preset: response.preset ?? "general",
+                          action: response.action,
                           regenerateId: response.requestId,
                         }),
                       );

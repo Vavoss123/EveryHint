@@ -81,6 +81,30 @@ export class AssistantController {
       responses: this.responses,
     });
   }
+  allowsTranscript(id: string): boolean {
+    return !this.excludedTranscripts.has(id);
+  }
+  get routing(): {
+    sessionId: string;
+    selected: ProviderId;
+    auth: ProviderStatus["auth"];
+    ready: boolean;
+    model: string | null;
+    images: boolean;
+  } {
+    const status = this.statuses.find((item) => item.id === this.selected)!;
+    return {
+      sessionId: this.sessionId,
+      selected: this.selected,
+      auth: status.auth,
+      ready: status.ready,
+      model: status.selectedModel ?? null,
+      images: status.capabilities.images,
+    };
+  }
+  requestState(id: string): AIResponse["status"] | undefined {
+    return this.responses.find((response) => response.requestId === id)?.status;
+  }
   private publish(): void {
     if (!this.closed) {
       this.revision++;
@@ -124,10 +148,14 @@ export class AssistantController {
     if (this.inspecting) await this.inspecting;
     await this.inspect();
   }
-  prepare(value: unknown): void | Promise<void> {
+  prepare(value: unknown, automatic = false): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     if (this.active)
       throw new Error("Cancel the active request before reviewing another.");
+    if (automatic && this.review)
+      throw new Error(
+        "A manual review is pending. Automatic preparation is unavailable.",
+      );
     const input = parseReview(value);
     const status = this.statuses.find((status) => status.id === this.selected)!;
     if (input.options.screenshot && !status.capabilities.images)
@@ -158,25 +186,40 @@ export class AssistantController {
         this.selected,
         this.sessionId,
         capture,
-        events.filter((event) => !this.excludedTranscripts.has(event.id)),
+        events.filter(
+          (event) =>
+            !this.excludedTranscripts.has(event.id) &&
+            (!input.transcriptIds || input.transcriptIds.includes(event.id)),
+        ),
         history,
         this.now(),
       );
       if (status.selectedModel) review.model = status.selectedModel;
       if (input.regenerateId) review.replacesRequestId = input.regenerateId;
+      if (automatic) review.automatic = true;
       if (
         review.screenshot &&
         this.sentImages.has(imageHash(review.screenshot.dataUrl))
       )
-        throw new Error(
-          "This unchanged screenshot was already submitted. Uncheck screenshot or capture an updated image.",
-        );
+        if (automatic) {
+          review.screenshot = null;
+          review.imageBytes = 0;
+          delete review.sourceName;
+          review.notices.push(
+            "Unchanged image already submitted; image omitted. Only the selected text/history is shared in this request.",
+          );
+          review.prompt = contextPrompt(review);
+          review.textChars = review.prompt.length;
+        } else
+          throw new Error(
+            "This unchanged screenshot was already submitted. Uncheck screenshot or capture an updated image.",
+          );
       this.review = review;
       this.reviewTimer = setTimeout(
         () => this.discardReview(),
         Math.max(0, review.expiresAt - this.now()),
       );
-      this.publish();
+      if (!automatic) this.publish();
     };
     if (input.options.screenshot && this.freshCapture)
       return this.freshCapture().then(finish);
@@ -240,7 +283,7 @@ export class AssistantController {
     review.textChars = review.prompt.length;
     this.publish();
   }
-  async ask(value: unknown): Promise<void> {
+  async ask(value: unknown, canSend?: () => boolean): Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     const input = record(value);
     exactKeys(input, ["reviewId", "acknowledged"]);
@@ -261,6 +304,14 @@ export class AssistantController {
     const provider = this.providers.find(
       (provider) => provider.id === this.selected,
     )!;
+    if (Boolean(request.automatic) !== Boolean(canSend))
+      throw new Error(
+        "Automatic reviews belong to Live Assist. Prepare a manual review to send manually.",
+      );
+    if (canSend && !canSend())
+      throw new Error(
+        "Live Assist permission expired or changed before transmission.",
+      );
     if (request.screenshot)
       validateScreenshot(request.screenshot, this.now(), 120000);
     const abort = new AbortController();
@@ -269,6 +320,10 @@ export class AssistantController {
       sessionId: this.sessionId,
       provider: request.provider,
       question: request.question,
+      ...(request.automatic
+        ? { automatic: true, contextNotices: request.notices.slice(0, 8) }
+        : {}),
+      ...(request.action ? { action: request.action } : {}),
       preset: request.preset,
       text: "",
       status: "sending",
@@ -324,8 +379,21 @@ export class AssistantController {
           if (this.sentImages.size > 32)
             this.sentImages.delete(this.sentImages.values().next().value!);
         }
-        for await (const event of provider.respond(request, abort.signal)) {
+        if (canSend && !canSend())
+          throw new ProviderError(
+            "cancelled",
+            "Live Assist permission expired or changed before transmission.",
+          );
+        const stream = canSend
+          ? provider.respond(request, abort.signal, canSend)
+          : provider.respond(request, abort.signal);
+        for await (const event of stream) {
           if (!this.current(response)) break;
+          if (canSend && !canSend())
+            throw new ProviderError(
+              "cancelled",
+              "Live Assist permission expired or changed during the response.",
+            );
           if (
             typeof event.text !== "string" ||
             event.text.length > maxResponseChars

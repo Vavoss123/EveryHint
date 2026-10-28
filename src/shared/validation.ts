@@ -1,5 +1,9 @@
 import type { Consent, Settings, WindowBounds } from "./contracts";
 import { DEFAULT_HOTKEYS, parseShortcut } from "./shortcuts";
+import {
+  DEFAULT_INTELLIGENCE,
+  type IntelligenceSettings,
+} from "./intelligence";
 
 export const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop: true,
@@ -65,6 +69,7 @@ export function parseSettings(value: unknown): Settings {
     "opacity",
     "assistShortcut",
     "clearShortcut",
+    "intelligence",
   ]);
   if (
     typeof input.alwaysOnTop !== "boolean" ||
@@ -125,7 +130,53 @@ export function parseSettings(value: unknown): Settings {
     opacity,
     assistShortcut,
     clearShortcut,
+    ...(input.intelligence === undefined
+      ? {}
+      : { intelligence: parseIntelligenceSettings(input.intelligence) }),
   };
+}
+export function parseIntelligenceSettings(
+  value: unknown,
+): IntelligenceSettings {
+  const input = record(value);
+  exactKeys(input, Object.keys(DEFAULT_INTELLIGENCE));
+  const ranges: Record<string, [number, number]> = {
+    confidenceThreshold: [0.85, 0.99],
+    cooldownSeconds: [30, 600],
+    requestLimit: [1, 100],
+    sessionMinutes: [1, 60],
+    retentionMinutes: [1, 15],
+  };
+  for (const [key, [min, max]] of Object.entries(ranges))
+    if (
+      typeof input[key] !== "number" ||
+      !Number.isFinite(input[key]) ||
+      (input[key] as number) < min ||
+      (input[key] as number) > max ||
+      (key !== "confidenceThreshold" && !Number.isInteger(input[key]))
+    )
+      throw new Error(`Invalid intelligence setting: ${key}.`);
+  const sources = record(input.sources);
+  exactKeys(sources, ["microphone", "systemAudio", "screen"]);
+  for (const key of ["microphone", "systemAudio", "screen"])
+    if (typeof sources[key] !== "boolean")
+      throw new Error("Choose local analysis sources explicitly.");
+  if (
+    !Array.isArray(input.excludedSourceIds) ||
+    input.excludedSourceIds.length > 20 ||
+    input.excludedSourceIds.some(
+      (id) =>
+        typeof id !== "string" ||
+        id.length > 128 ||
+        !/^(?:window|screen):[\d:]+$/.test(id),
+    )
+  )
+    throw new Error("Invalid excluded capture sources.");
+  return {
+    ...input,
+    sources: { ...sources },
+    excludedSourceIds: [...new Set(input.excludedSourceIds)],
+  } as unknown as IntelligenceSettings;
 }
 export function parseBounds(value: unknown): WindowBounds {
   const input = record(value);

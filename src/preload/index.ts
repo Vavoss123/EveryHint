@@ -6,6 +6,26 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  authoriseLive: (input) =>
+    ipcRenderer.invoke("everyhint:intelligence-authorise", input),
+  pauseLive: () => ipcRenderer.invoke("everyhint:intelligence-pause"),
+  getIntelligence: () => ipcRenderer.invoke("everyhint:intelligence-get"),
+  setOperatingMode: (mode) =>
+    ipcRenderer.invoke("everyhint:intelligence-mode", mode),
+  saveIntelligenceSettings: (settings) =>
+    ipcRenderer.invoke("everyhint:intelligence-configure", settings),
+  contextualAction: (input) =>
+    ipcRenderer.invoke("everyhint:intelligence-action", input),
+  dismissSuggestion: (input) =>
+    ipcRenderer.invoke("everyhint:intelligence-dismiss", input),
+  onIntelligence: (listener) => {
+    const wrapped = (
+      _event: Electron.IpcRendererEvent,
+      value: import("../shared/intelligence").IntelligenceSnapshot,
+    ): void => listener(value);
+    ipcRenderer.on("everyhint:intelligence", wrapped);
+    return () => ipcRenderer.removeListener("everyhint:intelligence", wrapped);
+  },
   removeContext: (input) => ipcRenderer.invoke("everyhint:ai-remove", input),
   onAssist: (listener) => {
     const wrapped = (): void => listener();
