@@ -1,3 +1,66 @@
+# P5 UI foundation verification -- 2026-10-28
+
+Baseline e7b3e38; this task changes product documentation, appearance and the connected desktop shell. **No new live AI/authentication request, paid API request or real desktop/audio capture was made.** Existing P4.2 genuine ChatGPT evidence below remains historical provider evidence, not a new UI-test claim. Capture/transcription/provider implementations, OS token storage and trusted IPC security boundaries are preserved.
+
+| Check | Result |
+| --- | --- |
+| Theme/spec generation consistency | Passed; checked by npm run check |
+| Strict TypeScript and zero-warning ESLint | Passed |
+| Unit/regression suite | **315 passed in 27 files**, retaining all 298 baseline cases; 14 presentation/contrast/migration and 3 specification cases added |
+| UI visual/interaction smoke | **41 assertions passed**, five app-only screenshots; no remote requests or real capture |
+| Existing core Electron smoke | **47 assertions passed**, synthetic capture/source combinations |
+| Existing assistant Electron smoke | **37 assertions passed**, auth/consent/IPC rejection and labelled renderer fixtures |
+| Existing speech Electron smoke | **11 assertions passed**, real tiny.en through both synthetic P2 sources |
+| Real native vault/local HTTP plan tests | **5 passed**, synthetic OAuth/JWT/model/SSE and actual isolated Windows credential storage |
+| Installed Claude SDK loopback tests | **6 passed**, streaming/cancel/tool denial; not paid provider authentication |
+| Offline speech inference | Passed twice on cached real JFK fixture through one loaded tiny.en helper |
+| Production build | Passed; main about 146 kB, renderer JS about 266 kB, CSS about 23 kB; local font assets 1.68 MB |
+| Font distribution | Six original local faces bundled; both SIL OFL notices present in out/renderer/licenses/fonts |
+| EverySession non-modification | SHA-256 of all 15 inspected source/assets unchanged; HEAD 1256e54dffebfd7b839d8b4b849dd62d22f372e5 and clean Git unchanged |
+
+Electron assertions total **136** (47 + 37 + 11 + 41). The long-running separate EveryHint instance held the global shortcuts during isolated tests; conflicts were correctly reported with overlay/tray fallbacks. This is not proof of physical hotkey behaviour. Test profiles are temporary and removed with checked paths; isolated native vault fixtures are cleaned up. No production fixture mode or arbitrary IPC/test endpoint is added.
+
+## New coverage and visual evidence
+
+- Actual renderer EverySession red, loaded Inter/Poppins font faces, Light/Dark/System and reduced motion.
+- Actual native opacity, layout resizing, monitor-bound geometry, per-view dimensions and legacy version-1 preference migration.
+- Eight dashboard destinations with truthful planned states; no dummy meetings/analytics/connections.
+- Composer/review preserved through navigation, settings and panel collapse; focus-only Ctrl+Enter and compact Quick Ask send nothing.
+- Focus skip control preserves the exact trusted URL; root remote cancellation remains visible in Settings/planned pages; emergency controls remain within the minimum window at 125% zoom.
+- Semantic text/action/status/focus/control contrast, no palette literals in component CSS, generated token/spec consistency and exactly 103 complete inventory records with valid action mappings.
+- Network is forbidden during the UI scenario; capture remains IDLE, inference history remains empty, and only appearance is persisted.
+
+Screenshots under ignored artifacts/ui/: dashboard-light.png, dashboard-dark.png, assistant-light.png, compact-light.png, narrow-settings-light.png. Reports: artifacts/ui-smoke.json and existing core/AI/speech fixture reports. Screenshots are inspected app-only captures; visual regression assertions use rendered colours/fonts/geometry/interactions rather than machine-specific pixel-perfect golden files. Human visual parity/acceptance is not claimed.
+
+Run:
+
+```powershell
+npm run check
+npm run smoke:ui
+npm run smoke
+npm run smoke:ai
+npm run test:plan
+npm run test:ai-sdk
+npm run speech:test
+npm run smoke:speech
+```
+
+No model/runtime/font download is needed for these checks on the current workspace. tiny.en/runtime/JFK were previously authorised and cached. The fonts are now repository assets with notices. Regenerate tokens with npm run theme:build and inventory Markdown with npm run spec:build; check rejects stale generated files.
+
+## Manual Windows visual and interaction acceptance -- still pending
+
+1. Compare the actual EverySession app with EveryHint Light: red #E01A34, warm neutral cards/borders, Poppins/Inter hierarchy, pill buttons and compact spacing. Review dark mode as a desktop extension, not a canonical EverySession palette. Confirm logo distinction.
+2. Review all three layouts at 100/125/150/200% Windows display scale; test mixed-DPI monitors, negative monitor coordinates, docking changes, moving/resizing and a 360px minimum native window. Confirm controls/text reflow rather than overlap.
+3. Use keyboard only: skip control, all eight destinations, panel summaries, composer focus, consent checkboxes, provider/model selection, copy/cancel and capture Pause/Stop. Check Narrator and Windows high contrast. Ctrl+Enter opens only the composer while focused; existing global shortcuts retain their roles.
+4. Change Light/Dark/System; change the real OS theme while running; restart and confirm local preferences. Check native opacity at 80/85/100% against varied wallpaper/apps; full-opacity contrast tests cannot guarantee lower-opacity contrast against arbitrary backgrounds.
+5. Drag each layout using the titlebar; verify buttons are not drag handles. Compact overlay shows latest provider/answer and all source states with notices condensed; Quick Ask and emergency controls stay visible. Inspect active remote status/cancel on Home, Settings and planned pages using a separately authorised real request only if desired.
+6. Preserve a draft and frozen review through navigation/theme/panel collapse. Explicit Clear and capture/account changes retain their established clearing policy. Review expiry still applies. Future pages must contain no fake records or enabled integrations.
+7. In a consented real session, verify screen/window/mic/Windows playback, partial/final local transcript, per-source states/mute and pause/stop. Verify capture persists while intentionally hidden and the tray remains clear. Test shortcut conflicts and missing tray behaviour.
+8. Check the already configured ChatGPT connection survives the UI upgrade without token exposure. Account switching/sign-out/revocation, real screenshot/transcript transfer and broad model acceptance remain pending. Do not make a paid Claude or new model test without separate permission.
+9. Keep the earlier physical-device/call/base.en/ARM64/older-CPU and 15-minute combined CPU/RSS/queue/stability checks open. Public distribution, signing, updates and release approval belong to P13, not this milestone.
+
+---
+
 # EveryHint -- P4.2 verification, 2026-10-28
 
 Live verification on **2026-10-28 succeeded** with **gpt-6.1-sol** using EveryHint's own SIWC ChatGPT plan grant and the public Responses endpoint. The approved question was **Reply exactly: EveryHint is connected.** The actual completed answer was **EveryHint is connected.** No screenshot, transcript, history or raw audio was sent. The response reported **167 input / 9 output tokens**, first text in **4.214 s** and completion in **4.299 s**. No API-key/provider fallback or paid Claude request was made. These are a single observation, not a latency guarantee, quota balance or dollar-cost estimate.

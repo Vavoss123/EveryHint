@@ -7,6 +7,7 @@ import {
   ipcMain,
   Menu,
   nativeImage,
+  nativeTheme,
   powerMonitor,
   protocol,
   screen,
@@ -45,6 +46,12 @@ import { ChatGptProvider } from "./ai/plan/provider";
 import { ClaudeProvider } from "./ai/claude";
 import { ChatGptAccounts } from "./ai/plan/accounts";
 import { ProviderError, providerError } from "./ai/errors";
+import design from "../../resources/design-tokens.json";
+import {
+  presentation,
+  presentationBounds,
+  type Presentation,
+} from "./presentation";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -74,7 +81,10 @@ let revision = 0;
 let quitting = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let lastTrayState: string | undefined;
-let expandedHeight = 440;
+const presentationSizes = new Map<
+  Presentation,
+  { width: number; height: number }
+>();
 const devUrl = developmentUrl(process.env.ELECTRON_RENDERER_URL);
 const documentUrl = devUrl
   ? new URL(devUrl).href
@@ -97,14 +107,21 @@ function snapshot(): AppSnapshot {
   };
 }
 function icon(state: SessionState): Electron.NativeImage {
-  const color =
+  const palette = design.light;
+  const hex =
     state === "ACTIVE"
-      ? [255, 96, 109]
+      ? palette.brand
       : state === "PAUSED"
-        ? [246, 190, 89]
+        ? palette.warning
         : state === "ERROR"
-          ? [255, 133, 74]
-          : [153, 143, 255];
+          ? palette.danger
+          : palette["brand-deep"];
+  const color = [1, 3, 5].map((offset) =>
+    parseInt(hex.slice(offset, offset + 2), 16),
+  );
+  const background = [1, 3, 5].map((offset) =>
+    parseInt(palette.background.slice(offset, offset + 2), 16),
+  );
   const pixels = Buffer.alloc(32 * 32 * 4);
   for (let y = 0; y < 32; y++)
     for (let x = 0; x < 32; x++) {
@@ -116,9 +133,9 @@ function icon(state: SessionState): Electron.NativeImage {
             (y >= 14 && y <= 17) ||
             (y >= 22 && y <= 25)));
       const offset = (y * 32 + x) * 4;
-      pixels[offset] = e ? color[2]! : 22;
-      pixels[offset + 1] = e ? color[1]! : 22;
-      pixels[offset + 2] = e ? color[0]! : 27;
+      pixels[offset] = e ? color[2]! : background[2]!;
+      pixels[offset + 1] = e ? color[1]! : background[1]!;
+      pixels[offset + 2] = e ? color[0]! : background[0]!;
       pixels[offset + 3] = 255;
     }
   return nativeImage.createFromBitmap(pixels, { width: 32, height: 32 });
@@ -204,17 +221,32 @@ function queueBounds(): void {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(persistBounds, 250);
 }
-function configureSize(): void {
+function configureSize(previous: Presentation): void {
   if (!window) return;
+  const current = window.getBounds(),
+    mode = presentation(store.settings);
+  presentationSizes.set(previous, {
+    width: current.width,
+    height: current.height,
+  });
+  window.setMinimumSize(360, mode === "compact" ? 180 : 380);
+  window.setBounds(
+    presentationBounds(
+      mode,
+      current,
+      screen.getDisplayMatching(current).workArea,
+      presentationSizes.get(mode),
+    ),
+  );
+}
+function applyAppearance(): void {
+  if (!window || window.isDestroyed()) return;
   window.setAlwaysOnTop(store.settings.alwaysOnTop);
-  if (store.settings.compact) {
-    expandedHeight = Math.max(440, window.getBounds().height);
-    window.setMinimumSize(360, 180);
-    window.setSize(window.getBounds().width, 190);
-  } else {
-    window.setMinimumSize(360, 380);
-    window.setSize(window.getBounds().width, expandedHeight);
-  }
+  window.setOpacity(store.settings.opacity ?? 1);
+  const dark =
+    store.settings.theme === "dark" ||
+    (store.settings.theme === "system" && nativeTheme.shouldUseDarkColors);
+  window.setBackgroundColor((dark ? design.dark : design.light).background);
 }
 function handle(
   channel: string,
@@ -274,6 +306,8 @@ function configureSession(target: Session, audio = false): void {
         ".js": "text/javascript",
         ".css": "text/css",
         ".svg": "image/svg+xml",
+        ".ttf": "font/ttf",
+        ".woff2": "font/woff2",
       };
       const content = await readFile(path);
       return new Response(content, {
@@ -360,14 +394,16 @@ async function initialise(): Promise<void> {
 
   const saved = store.bounds;
   const area = screen.getDisplayMatching(
-    saved ?? { x: 0, y: 0, width: 460, height: 440 },
+    saved ?? { x: 0, y: 0, width: 540, height: 720 },
   ).workArea;
-  const width = Math.min(area.width, saved?.width ?? 460);
+  const width = Math.min(
+    area.width,
+    saved?.width ?? (store.settings.layout === "dashboard" ? 1040 : 540),
+  );
   const height = Math.min(
     area.height,
-    store.settings.compact ? 190 : Math.max(380, saved?.height ?? 440),
+    store.settings.compact ? 190 : Math.max(380, saved?.height ?? 720),
   );
-  expandedHeight = Math.max(440, height);
   window = new BrowserWindow({
     title: "EveryHint",
     width,
@@ -387,7 +423,7 @@ async function initialise(): Promise<void> {
     minHeight: store.settings.compact ? 180 : 380,
     frame: false,
     alwaysOnTop: store.settings.alwaysOnTop,
-    backgroundColor: "#111217",
+    backgroundColor: design.light.background,
     show: false,
     icon: icon("IDLE"),
     webPreferences: {
@@ -401,6 +437,8 @@ async function initialise(): Promise<void> {
       backgroundThrottling: true,
     },
   });
+  applyAppearance();
+  nativeTheme.on("updated", applyAppearance);
   window.setMenu(null);
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
@@ -574,10 +612,11 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:settings", (input) => {
     // Appearance is safe to edit during capture; interval changes apply on next start/resume.
-    const oldCompact = store.settings.compact;
+    const oldPresentation = presentation(store.settings);
     store.save(input, window?.getNormalBounds());
-    window?.setAlwaysOnTop(store.settings.alwaysOnTop);
-    if (oldCompact !== store.settings.compact) configureSize();
+    applyAppearance();
+    if (oldPresentation !== presentation(store.settings))
+      configureSize(oldPresentation);
     publish();
   });
   handle("everyhint:window", (input) => {

@@ -1,3 +1,37 @@
+# P5 delivery -- authentic design system and product roadmap
+
+Implemented the authorised **feature audit and UI foundation only**. No calendar, saved meeting history, enterprise/mobile backend, automatic detection, autonomous assistance or additional paid/provider request was added. The previous ChatGPT inference result remains verified at baseline; Claude subscription approval and paid live verification remain unresolved.
+
+## EverySession provenance
+
+The real project was found at C:\Users\Victor\OneDrive\Documents\mmaapp\MMAsyncApp, identified as EverySession by app.json. Inspected actual theme/typography, club theme, Button/Card/form/header/navigation/login source, font loading, design audit and icon assets. Source HEAD: 1256e54dffebfd7b839d8b4b849dd62d22f372e5. All 15 inspected source/assets have matching before/after SHA-256 and the source repository stays clean. No EverySession code or asset was modified. PeerDesk was a secondary reference only.
+
+Confirmed palette: **#E01A34** primary/danger, **#5C0F26** maroon, **#FFFFFF** background, **#F6F5F5** surface, **#EAE8E8** decorative border, **#181818** text, **#7A7878** original muted and **#1E8E5A** source success. Confirmed **Poppins headings / Inter body**, 14px cards, 10px inputs, pill buttons and 4/8/12/16/20/28 spacing. Secondary/status ink, control boundaries, warning/focus/hover and Dark/System are documented accessible desktop extensions; no exact dark-theme or pixel parity claim is made. Six authentic unmodified local font faces and their OFL notices ship offline. EveryHint retains its own mark; no Cluely artwork/design was copied. See [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md).
+
+## UI and behaviour
+
+Central JSON tokens and generated CSS replace the purple placeholder palette. Native tray/window colours share the same source. The new dashboard navigation/Home/planned pages, reusable icons/disclosure panels, local appearance controls, three-layout sizing and root remote-request status build around the working assistant, account, transcript and capture components. Settings/theme/layout changes preserve draft/review state and never acquire media or submit AI. Active request cancellation and emergency capture controls remain outside hidden/collapsed content. Quick Ask/focused Ctrl+Enter only open the composer. Legacy preferences migrate safely; native opacity is bounded to 80-100%.
+
+Home reports actual current session/provider state. Assistant and Settings work. Meetings, Knowledge, Calendar, People and Modes show planned scope with no simulated content or connections. General is a truthful fixed-instruction indicator; custom modes are not enabled. Existing microphone/system/screen controls, local Whisper, OAuth/OS credentials, provider/model selection, review/acknowledgement/Ask, streaming, safe code/copy, cancel/clear and IPC isolation are retained. No provider/authentication/transcription core was rewritten.
+
+## Requirements and missing features
+
+[PRODUCT_SPEC.md](PRODUCT_SPEC.md) defines scope, consent/execution contracts and Manual/Auto-Hint/Live Assist distinctions. [FEATURE_MATRIX.md](FEATURE_MATRIX.md) covers **all 103 unique requirements** and **nine named contextual-action mappings**, with all requested evidence/acceptance fields and separate CURRENT/HISTORICAL/ENTERPRISE-ONLY/UNVERIFIED reference categories. Its validated JSON source generates the Markdown.
+
+Current counts: **18 AUTOMATED VERIFIED, 2 MANUAL VERIFIED, 7 IMPLEMENTED, 76 PLANNED, 0 COMPLETE**. Verification applies only to each row's stated scope. Claude subscription authentication is separately BLOCKED under the account feature, not double-counted. Existing capabilities include overlay/window/tray/hotkeys, consented capture, source/mute/diagnostics, English local transcripts, bounded reviewed AI/context/history, ChatGPT plan login and one genuine text reply, and the new theme/navigation foundation. Partial image transport/code formatting/general mode/multi-monitor support retain explicit limits.
+
+Missing capabilities include global screen Assist/custom hotkeys/session timer/full Markdown, local question/keyword/multilingual/speaker intelligence, automatic suggestion/live-sharing sessions, persistent meeting notes/history/search/sharing, custom modes/prompts/documents, calendars/people/cross-session memory, enterprise integrations/permissions/coaching and all mobile functions. None is marked complete because its navigation exists. The master P1-P13 roadmap in [BACKLOG.md](BACKLOG.md) replaces the old future-phase numbering and defines testable exit gates.
+
+## Verification and remaining acceptance
+
+**315 unit tests / 27 files**, **5 native-vault/local HTTP plan tests**, **6 installed Claude SDK loopback tests**, **136 Electron assertions (47 core + 37 AI + 11 speech + 41 UI)**, real cached tiny.en speech inference, TypeScript, zero-warning lint, token/spec checks and production build pass. The UI suite produces five app-only screenshots and forbids network requests. Build output includes both font licences. No new npm dependency was added; the app version remains 0.4.0. See [TESTING.md](TESTING.md) for evidence, commands and exact manual limits.
+
+Human EverySession visual acceptance, Windows display scaling/mixed monitors, native dragging/resizing/opacity, Narrator/high contrast, physical keyboard/shortcut/tray behaviour, actual capture/transcription/provider workflows and the original devices/calls/base.en/ARM64/15-minute checks remain pending. Source-code verification and automated screenshots do not replace those checks. Existing separate app use caused expected hotkey-conflict notices during isolated smoke tests.
+
+**Next recommendation:** complete P5 human Windows visual acceptance, then explicitly scope P6 manual screen-aware Assist, configurable shortcuts and safe rich responses using the permitted ChatGPT pathway. Do not start P7-P13 features implicitly. This delivery stops after the requested foundation and uses commit **feat: establish EveryHint design system and product roadmap**, with no AI co-author trailer.
+
+---
+
 # P4.2 delivery -- ChatGPT plan inference
 
 Live verification on **2026-10-28 succeeded** with **gpt-6.1-sol** using EveryHint's own SIWC ChatGPT plan grant and the public Responses endpoint. The approved question was **Reply exactly: EveryHint is connected.** The actual completed answer was **EveryHint is connected.** No screenshot, transcript, history or raw audio was sent. The response reported **167 input / 9 output tokens**, first text in **4.214 s** and completion in **4.299 s**. No API-key/provider fallback or paid Claude request was made. These are a single observation, not a latency guarantee, quota balance or dollar-cost estimate.

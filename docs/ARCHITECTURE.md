@@ -1,4 +1,4 @@
-# EveryHint architecture — P1 + P2 + P3
+# EveryHint architecture
 
 ## Process boundaries
 
@@ -183,3 +183,15 @@ Defaults remain 120 seconds of recent transcript, 6,000 combined transcript char
 Every new account/model route uses the existing exact sender/webContents/main-frame/document check. The sandbox, Node isolation, denied browser permissions, renderer network block and restrictive CSP are unchanged. Tokens, HTTP and OS storage remain outside React. Capture/transcription remain local; remote auth/model metadata and explicitly reviewed inference are clearly labelled. No content is automatically saved or submitted. Clear cannot recall transmitted content or remove remote provider records; `store: false` does not claim that all provider security/operational retention is absent.
 
 Claude's existing bare, one-turn SDK adapter retains empty tools, wildcard denial, deny permissions, disabled skills/plugins/MCP/hooks, isolated temporary configuration, API-only allowlisted environment and `persistSession: false`. Session-only API billing consent remains off by default; subscription login needs Anthropic approval. Its 4,096-output-token/$1 estimated-budget setting is not an account spending cap. SDK caches/crash remnants/provider retention are separate. No paid Claude test was authorised. Actual installed-SDK loopback tests remain fixtures. P5 has not started.
+
+## P5 UI foundation and product specification
+
+This separately authorised milestone supersedes earlier statements that P5 had not started; it implements design/interface foundations only. See PRODUCT_SPEC.md, FEATURE_MATRIX.md and DESIGN_SYSTEM.md. No detection, background sharing, persistent meeting history, calendar connector, enterprise backend or mobile application is added.
+
+resources/design-tokens.json is the semantic palette/type/spacing/radius/elevation source. build-theme.mjs generates the committed renderer token CSS; theme:check rejects drift. Native window/tray colours import the same JSON. Renderer font faces are local unmodified Poppins/Inter; OFL notices are copied by Vite from public/licenses/fonts into the production output. No remote font loading or CSP exception is introduced. Dark/status/hover/focus/opacity adaptations are distinguished from actual EverySession source values.
+
+The existing BrowserWindow remains the only user-facing shell and privileged state owner. Compact uses the existing compact flag; the new optional layout preference selects assistant/dashboard. A pure presentationBounds helper clamps layout sizes to the current monitor and preserves per-view resized dimensions in memory. Appearance saves use the existing trusted settings IPC, with validated theme/layout/80-100% opacity and backward-compatible defaults for old version-1 files. Only appearance is persisted; no capture, remote-sharing or content consent is added.
+
+Dashboard navigation is renderer-local. Home reads actual public snapshots; Assistant and Settings preserve working controls. Future destinations show planned scope with no fake records/actions. The live assistant and transcript components remain mounted when hidden by navigation/settings, preserving their draft/review state. Native capture/AI/transcription controllers and account storage/flows are unchanged. Visible active-remote cancellation and emergency capture controls live outside collapsible/scrolling panels. The focused-window Ctrl+Enter handler only opens the composer; it grants no remote permission. The skip control focuses content without changing the exact trusted document URL.
+
+resources/feature-inventory.json contains exactly 103 requirements. build-feature-matrix.mjs validates IDs, required fields, status/source categories and generates FEATURE_MATRIX.md, including nine action mappings. spec:check and the product-spec test detect omissions/drift. Roadmap phases P6-P13 are specification only.

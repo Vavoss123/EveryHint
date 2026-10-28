@@ -124,8 +124,15 @@ export function AssistantPanel({
           title="Expand assistant"
         >
           {latest
-            ? `${labels[latest.status]} · ${latest.text.slice(-90) || latest.error?.message || snapshot.selected}`
+            ? `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${labels[latest.status]} · ${latest.text.slice(-90) || latest.error?.message || ""}`
             : `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${selected.ready ? "Ready" : "Not connected"} · Expand to ask`}
+        </button>
+        <button
+          className="secondary quick-ask"
+          onClick={expand}
+          title="Open the question composer. Ctrl+Enter works while EveryHint is focused; no request is sent."
+        >
+          Quick Ask <kbd>Ctrl+Enter</kbd>
         </button>
         {active && (
           <button

@@ -4,6 +4,9 @@ export const DEFAULT_SETTINGS: Settings = {
   alwaysOnTop: true,
   compact: false,
   captureIntervalMs: 3000,
+  theme: "light",
+  layout: "assistant",
+  opacity: 1,
 };
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -50,7 +53,14 @@ export function parseDeviceId(value: unknown): string {
 }
 export function parseSettings(value: unknown): Settings {
   const input = record(value);
-  exactKeys(input, ["alwaysOnTop", "compact", "captureIntervalMs"]);
+  exactKeys(input, [
+    "alwaysOnTop",
+    "compact",
+    "captureIntervalMs",
+    "theme",
+    "layout",
+    "opacity",
+  ]);
   if (
     typeof input.alwaysOnTop !== "boolean" ||
     typeof input.compact !== "boolean"
@@ -65,10 +75,27 @@ export function parseSettings(value: unknown): Settings {
       "Capture interval must be between 1 and 30 seconds, in whole milliseconds.",
     );
   }
+  const theme = input.theme === undefined ? "light" : input.theme,
+    layout = input.layout === undefined ? "assistant" : input.layout,
+    opacity = input.opacity === undefined ? 1 : input.opacity;
+  if (theme !== "light" && theme !== "dark" && theme !== "system")
+    throw new Error("Choose Light, Dark or System theme.");
+  if (layout !== "assistant" && layout !== "dashboard")
+    throw new Error("Choose an assistant or dashboard layout.");
+  if (
+    typeof opacity !== "number" ||
+    !Number.isFinite(opacity) ||
+    opacity < 0.8 ||
+    opacity > 1
+  )
+    throw new Error("Window opacity must be between 80 and 100 percent.");
   return {
     alwaysOnTop: input.alwaysOnTop,
     compact: input.compact,
     captureIntervalMs: input.captureIntervalMs as number,
+    theme,
+    layout,
+    opacity,
   };
 }
 export function parseBounds(value: unknown): WindowBounds {

@@ -78,6 +78,9 @@ export interface Settings {
   alwaysOnTop: boolean;
   compact: boolean;
   captureIntervalMs: number;
+  theme?: "light" | "dark" | "system";
+  layout?: "assistant" | "dashboard";
+  opacity?: number;
 }
 export interface WindowBounds {
   x: number;

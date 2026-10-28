@@ -1,0 +1,236 @@
+# EveryHint requirements coverage matrix
+
+Audit date: 2026-10-28; baseline e7b3e38; current UI-foundation evidence included. Exactly **103** requested features, with no duplicate completion credit for named actions. Source data: [feature-inventory.json](../resources/feature-inventory.json). Regenerate with npm run spec:build; check with npm run spec:check.
+
+## Status and evidence rules
+
+- **NOT STARTED:** no implementation/design work beyond the inventory.
+- **PLANNED:** future phase, workflow, dependencies and acceptance are specified; implementation absent.
+- **IMPLEMENTED:** working code exists for the described scope, but partial capability or acceptance gaps remain.
+- **AUTOMATED VERIFIED:** the described implemented scope passes the referenced tests; hardware/manual acceptance may remain.
+- **MANUAL VERIFIED:** a human-authorised real workflow has been observed for the stated provider/platform scope; other variants may remain.
+- **BLOCKED:** an external approval, capability or dependency prevents that scope; reasons must be recorded.
+- **COMPLETE:** full acceptance plus required automated/manual verification and dependencies satisfied. No row is currently marked COMPLETE.
+
+Counts: NOT STARTED: **0**; PLANNED: **76**; IMPLEMENTED: **7**; AUTOMATED VERIFIED: **18**; MANUAL VERIFIED: **2**; BLOCKED: **0**; COMPLETE: **0**. Higher verification status does not erase a row's explicit limitations. A navigation page, disabled selector or fixture reply cannot establish feature completion.
+
+**Reference status is separate from EveryHint status.** CURRENT means official public documentation was accessible on the audit date, not that a live Cluely account or every plan was tested. HISTORICAL marks dated launch/compatibility behaviour; current availability is not inferred. ENTERPRISE-ONLY identifies enterprise documentation, with packaging/access unverified. UNVERIFIED means the supplied product requirement or EveryHint-specific feature was not established as a current competitor capability. No third-party clone, cluelyai.com, trycuely.com or unrelated brand was treated as the official product. The old widget/invisibility compatibility claims are not inherited as universal EveryHint promises.
+
+## Test evidence legend
+
+| Code | Actual evidence |
+| --- | --- |
+| CAP | tests/session.test.ts, capture/electron-capture/hotkeys/security tests; scripts/smoke.mjs |
+| AUDIO | audio-session/engine/host/processing/permissions tests; synthetic P2 source combinations in core smoke |
+| SPEECH | transcription-controller/pcm/segmenter/transcripts/worker/model tests; real tiny.en fixture; smoke-transcription.mjs |
+| AI | ai-context/controller/providers and plan-provider tests; scripts/smoke-ai.mjs; no paid live Claude proof |
+| PLAN | tests/plan.integration.ts: actual local HTTP/JWT/SSE and native OS vault; fixture replies only |
+| ACCOUNT | plan-oauth/accounts/vault tests; genuine ChatGPT browser sign-in/restart and one text reply in P4.2 |
+| PRESENT | tests/presentation.test.ts: migration, validated preferences, monitor bounds and contrast |
+| UI | scripts/smoke-ui.mjs: real Electron layouts/theme/opacity/fonts/navigation/draft/focus/privacy checks and screenshots |
+
+Manual cells deliberately retain real Windows, model/provider and long-run limitations. Existing in-memory capture Resume is not persisted meeting Resume; source labels are not speaker identity; local Clear is not historical deletion. Tests listed for partial rows verify only the stated subset.
+
+## A. Desktop assistant (14)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-001 | Floating assistant overlay | Persistent lightweight window with actual session state. | Open compact view; expand when needed. | P1/P5 | AUTOMATED VERIFIED | Native window and tray | Move overlay; keep Pause/Stop and latest provider visible. | CAP; UI | Windows visual/drag pending | [DESKTOP] | CURRENT |
+| EH-002 | Screen-aware contextual AI answers | Partial: reviewed image transport; real vision answer unverified. | Select screenshot; review; acknowledge; Ask. | P4/P6 | IMPLEMENTED | Capture consent; image-capable model | Only selected image reaches permitted provider; verify a real image answer. | AI | Real image reasoning pending | [LIVE] | CURRENT |
+| EH-003 | Shortcut-triggered AI assistance | Global context-aware Assist is absent; local Ctrl+Enter only focuses composer. | Invoke Assist; inspect selected context before sending. | P6 | PLANNED | Hotkey configuration; review gate | Global shortcut prepares an answer request without bypassing sharing scope. | None yet; UI covers focus only | Not run; feature absent | [LIVE] | CURRENT |
+| EH-004 | Manual AI chat | Real ChatGPT text inference; Claude paid access unverified. | Type question; review; acknowledge; Ask. | P4 | MANUAL VERIFIED | Official plan grant; selected model | Stream and complete a genuine authorised reply; cancel and isolate stale results. | AI; PLAN | ChatGPT gpt-6.1-sol reply verified 2026-10-28 | [LIVE] | CURRENT |
+| EH-005 | Contextual follow-up questions | Bounded reviewed QA continuation; no suggested-question generation. | Select prior QA text in a new reviewed question. | P4/P6 | AUTOMATED VERIFIED | Memory-only bounded history | Include only selected history; isolate accounts/providers/sessions. | AI | Real multi-turn acceptance pending | [LIVE] | CURRENT |
+| EH-006 | Coding Smart Mode | No specialised coding mode or code execution. | Choose coding assistance; attach reviewed context. | P6 | PLANNED | Mode contract; answer-only model | Return useful code/explanation with no shell or workspace actions. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-007 | Screen-sharing privacy options on supported platforms | No capture-protection option; no universal invisibility claim. | Opt into supported privacy setting and test the sharing app. | P13 | PLANNED | Platform capability; consent policy | Report supported scope and limitations; fail visibly on unsupported platforms. | None yet | OS/conferencing compatibility pending | [LIVE] | HISTORICAL |
+| EH-008 | Movable and resizable windows | Native drag/resize and remembered per-view dimensions. | Drag header; resize; switch layouts. | P1/P5 | AUTOMATED VERIFIED | Native bounds; monitor work area | Keep all layouts inside work area and emergency controls reachable. | CAP; UI; PRESENT | Physical mixed-DPI drag/resize pending | [LIVE] | CURRENT |
+| EH-009 | Overlay show/hide shortcut | Fixed Ctrl+Alt+Space with tray fallback and conflict notices. | Toggle visibility during an authorised session. | P1 | AUTOMATED VERIFIED | Global shortcut registration; tray | Hide/show without silently changing capture; disclose conflicts. | CAP | Physical shortcut acceptance pending | [LIVE] | CURRENT |
+| EH-010 | Customisable keyboard shortcuts | Registration supports bindings internally; no user configuration. | Choose a chord; validate conflicts; save. | P6 | PLANNED | Persistent preferences; safe re-registration | Restore valid bindings and retain emergency fallback on collision. | None yet | Not run; user configuration absent | [SETTINGS] | CURRENT |
+| EH-011 | Session timer | No session duration timer. | Start session; inspect elapsed active time. | P6 | PLANNED | Monotonic session timing | Define paused-time policy; verify resume/reset/clock-change behaviour. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-012 | Session start, pause, resume and stop | Explicit consent-gated capture lifecycle with token/session guards. | Prepare sources; Start; Pause/Resume; Stop. | P1/P2 | AUTOMATED VERIFIED | Capture controller and per-source consent | Pause releases capture; Stop clears frames/buffers/consent and rejects stale work. | CAP; AUDIO | Real devices and emergency shortcuts pending | [LIVE] | CURRENT |
+| EH-013 | Audio capture toggles | Independent initial source choices and microphone mute. | Choose mic/system; mute selected mic; pause/stop sources. | P2 | AUTOMATED VERIFIED | Audio permissions and lifecycle | Never activate unselected sources; reflect actual mute/capture state. | AUDIO | Physical mute/routing checks pending | [LIVE] | CURRENT |
+| EH-014 | Main dashboard access | Working Home/Assistant/Settings; future sections clearly planned. | Open dashboard; navigate; return to overlay. | P5 | AUTOMATED VERIFIED | Single trusted shell and settings | All eight destinations reachable; preserve drafts/state; no fake records. | UI | Human visual acceptance pending | [LIVE] | CURRENT |
+
+## B. Live conversation intelligence (13)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-015 | Microphone capture | Local bounded mic input and level diagnostics. | Consent; choose input; start capture. | P2 | AUTOMATED VERIFIED | Windows/browser permissions; audio host | Capture selected input only; revoke on stop/disconnect/permission loss. | AUDIO | Physical inputs/noise/disconnect pending | [AUDIOREF] | CURRENT |
+| EH-016 | System-audio capture | Windows loopback mix with immediate release of required display track. | Consent to system source; start; inspect meter. | P2 | AUTOMATED VERIFIED | Windows loopback support and routing | No meeting bot or raw uploads; release sources on pause/stop. | AUDIO | Real playback/driver/call acceptance pending | [AUDIOREF] | CURRENT |
+| EH-017 | Bot-free local meeting capture | Local screen/audio pipeline; no call-platform bot or meeting integration. | Obtain participant consent; select capture sources. | P2/P3 | IMPLEMENTED | Capture/audio; meeting permissions | Verify a consented real meeting and correct local source routing. | CAP; AUDIO; SPEECH | Real calls not verified | [DESKTOP] | CURRENT |
+| EH-018 | Live speech transcription | Local English Whisper with real tiny.en fixture verification. | Enable transcription after consented audio starts. | P3 | AUTOMATED VERIFIED | Verified local model/runtime; segmenter | Show bounded partial/final text; stop work on lifecycle changes. | SPEECH | Physical speech/base.en/long run pending | [DESKTOP] | CURRENT |
+| EH-019 | Multilingual transcription | Current supported models are English only. | Choose supported language/model before listening. | P7 | PLANNED | Multilingual local models; language contract | Validate model/language pairs and quality on licensed multi-language fixtures. | None yet | Not run; feature absent | [DESKTOP] | CURRENT |
+| EH-020 | Live transcript display | Source/time/partial/final text with bounded retention and auto-scroll. | Open Live transcript; pause or clear independently. | P3 | AUTOMATED VERIFIED | Transcript store; per-source events | Replace partials, order finals and preserve controls while collapsed. | SPEECH; UI | Real conversation readability pending | [LIVE] | CURRENT |
+| EH-021 | Speaker identification where technically supported | Source labels are not speaker identity or diarisation. | Enable supported diarisation; correct uncertain labels. | P7 | PLANNED | Diarisation model; consent; identity policy | Represent uncertainty; evaluate overlap; never infer identity from source alone. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-022 | Dynamic question detection | No automatic question detection. | Enable local Auto-Hint; approve suggested question. | P7 | PLANNED | Local detector; bounded transcript context | Measure precision/recall; zero remote requests before approval. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-023 | Keyword detection | No local keyword detector or user keyword list. | Configure local terms; inspect matched prompt suggestions. | P7 | PLANNED | Local detector; settings | Evaluate false positives, source scope, language and debounce limits. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-024 | Contextual dynamic suggestions | No generated or automatic hint stream. | Review a locally prepared suggestion; explicitly send. | P7 | PLANNED | Detection; deduplication; privacy filters | No hidden requests; suppress duplicates; expire stale suggestions. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-025 | Suggested spoken answers | No dedicated What Should I Say Next action. | Select approved context; request talking points as text. | P7 | PLANNED | Permitted provider; source review | Useful attributed talking points without fabricated facts or automatic speech. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-026 | Conversation-aware AI assistance | Partial: manually selected recent transcript/QA context; no autonomous intelligence. | Select source text and question; review; Ask. | P4/P7 | IMPLEMENTED | Local transcript selection; approved model | Preserve source labels/context limits; validate genuine conversation assistance. | AI; PLAN | Real conversation assistance pending | [LIVE] | CURRENT |
+| EH-027 | Pause/resume listening | Capture Pause releases sources; transcription resumes explicitly. | Pause capture or transcription; resume intentionally. | P2/P3 | AUTOMATED VERIFIED | Capture epoch and transcription tokens | Discard late PCM/inference; never restart listening without valid consent. | AUDIO; SPEECH | Physical pause/resume pending | [LIVE] | CURRENT |
+
+## C. Meetings and history (16)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-028 | AI meeting notes | No persistent notes or automatic end-session notes. | Choose authorised session; request notes; review save. | P8 | PLANNED | Storage/retention consent; provider | Generate source-grounded notes only for opted-in meeting content. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-029 | Structured meeting summaries | No dedicated summary schema or saved summaries. | Select meeting; generate/review structured recap. | P8 | PLANNED | Meeting record; bounded provider context | Schema-valid sections; missing facts remain unknown; cite transcript spans. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-030 | Key decision extraction | No decision extraction pipeline. | Review suggested decisions and supporting transcript spans. | P8 | PLANNED | Meeting summaries; source timestamps | Distinguish explicit decisions from proposals and uncertainty. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-031 | Action-item extraction | No task/owner/due-date extraction. | Review proposed actions; edit before saving. | P8 | PLANNED | Meeting record; extraction schema | Do not invent assignees/deadlines; preserve source and user edits. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-032 | Full transcript history | Current transcript text expires in memory; no persistent history. | Opt into retention; save and reopen a transcript. | P8 | PLANNED | Encrypted storage; retention/deletion policy | Persist only opted-in records; restart, isolation and expiry verified. | None yet | Not run; history absent | [NOTES] | CURRENT |
+| EH-033 | Speaker-labelled transcripts | Mic/system labels exist, not person-labelled stored transcripts. | Review speaker labels before saving/exporting. | P8 | PLANNED | Speaker identification; meeting history | Preserve uncertain speakers and corrections without inventing identity. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-034 | Editable notes | No saved-note editor. | Open notes; edit; save revisions. | P8 | PLANNED | Meeting store; conflict policy | Persist edits and preserve provenance/version integrity. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-035 | Meeting history dashboard | Meetings destination is planned; no records or history backend. | Open Meetings; browse real opted-in records. | P8 | PLANNED | Persistent meeting store | Show truthful empty/loading/error states and paginate actual records. | None yet; UI checks planned label | Not run; history absent | [NOTES] | CURRENT |
+| EH-036 | Meeting search | No searchable historical index. | Search saved meeting titles/transcripts with source snippets. | P8 | PLANNED | History index and deletion propagation | Correct scoped results; deleted/expired records never reappear. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-037 | Ask AI about previous meetings | No historical retrieval or prior-meeting QA. | Select records; review retrieved evidence; Ask. | P8 | PLANNED | History search; provider; sharing consent | Cite real meeting spans and refuse unsupported recollections. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-038 | Resume existing sessions | Live paused capture can resume; saved-session reopening is absent. | Reopen an opted-in saved session; request fresh capture consent. | P8 | PLANNED | Meeting store; lifecycle isolation | Restore permitted history without silently reactivating capture/sharing. | None yet | Not run; saved sessions absent | [NOTES] | CURRENT |
+| EH-039 | Shareable meeting summaries | No share links or publishing service. | Review redacted summary; choose audience and expiry; publish. | P8 | PLANNED | Share service; access control; consent | Revoke/expire links; never publish transcripts or participants by default. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-040 | Transcript export | No dedicated transcript export; response copying is separate. | Choose transcript/range/format; confirm export. | P8 | PLANNED | Meeting/transcript store; redaction | Export correct text/source/times and disclose destination without silent writes. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-041 | Follow-up email generation | No dedicated email draft action. | Select meeting; review generated follow-up draft. | P8 | PLANNED | Grounded notes/actions; provider | Draft only; preserve uncertain commitments; never send automatically. | None yet | Not run; feature absent | [NOTES] | CURRENT |
+| EH-042 | Email-client integration | No mail account, mailto handoff or send capability. | Review draft; explicitly open approved mail client. | P8 | PLANNED | Mail-client integration and user approval | No message sent without separate send confirmation; no invented connection. | None yet | Not run; feature absent | [REQ] | UNVERIFIED |
+| EH-043 | Meeting history deletion | Current Clear controls remove memory only; no history to delete. | Select stored records; review deletion scope; delete. | P8 | PLANNED | History/blob/index/share deletion model | Delete all derived copies/retrieval/shares according to disclosed policy. | None yet | Not run; persistent records absent | [NOTES] | CURRENT |
+
+## D. AI modes and personalisation (12)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-044 | General Mode | Fixed answer-only instructions; General is a truthful read-only indicator. | Use normal reviewed manual chat. | P4/P9 | IMPLEMENTED | Restricted provider instructions | General questions work without tool authority; do not imply custom modes exist. | AI; UI | One text reply verified; broad use pending | [MODES] | CURRENT |
+| EH-045 | Interview Mode | No interview prompt preset or mode logic. | Select permitted interview-preparation mode; review context. | P9 | PLANNED | Modes; policy/participant consent | No fabricated experience, hidden recording or assessment-rule evasion. | None yet | Not run; feature absent | [MODES] | CURRENT |
+| EH-046 | Sales Call Mode | No sales-specific prompt or workflow. | Choose sales mode; select approved knowledge/context. | P9 | PLANNED | Modes and personal knowledge | Ground claims in approved facts; no automatic CRM write. | None yet | Not run; feature absent | [MODES] | CURRENT |
+| EH-047 | Meeting Mode | No meeting-specific mode preset. | Choose meeting mode and its permitted context. | P9 | PLANNED | Modes; meeting schema | Mode changes require a fresh review and cannot broaden capture consent. | None yet | Not run; feature absent | [MODES] | CURRENT |
+| EH-048 | Custom Modes | Modes destination is a roadmap page only. | Create mode; preview instructions; choose for next review. | P9 | PLANNED | Versioned settings; prompt validation | Bound inputs; enforce immutable answer-only/security policy above user prompts. | None yet; UI checks planned label | Not run; feature absent | [MODES] | CURRENT |
+| EH-049 | Custom system prompts | User-editable system instructions are absent. | Edit permitted custom instructions; review effective prompt. | P9 | PLANNED | Instruction layering and validation | Never override consent/tool limits; account/mode isolation and adversarial tests. | None yet | Not run; feature absent | [REQ] | UNVERIFIED |
+| EH-050 | Knowledge/document uploads | No upload/parser/index capability. | Choose local documents; inspect extraction and sharing scope. | P9 | PLANNED | Safe file parsing; storage/retention; retrieval | Validate size/type, isolate content, defend prompt injection and delete derivatives. | None yet; UI checks planned label | Not run; feature absent | [KNOWLEDGE] | ENTERPRISE-ONLY |
+| EH-051 | Mode switching | General selector is disabled; no alternate modes. | Choose mode; invalidate old review; prepare new request. | P9 | PLANNED | Modes; controller review binding | No context silently transfers; new mode/prompt appears in review. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-052 | AI output language | No configured response language preference. | Set output language; verify next reviewed request. | P9 | PLANNED | Mode settings; supported provider | Keep user text/source intact; disclose language in effective review. | None yet | Not run; feature absent | [SETTINGS] | CURRENT |
+| EH-053 | Meeting transcription language | English-only model selection; no language picker. | Choose supported local language/model before enable. | P7 | PLANNED | Multilingual inference and fixtures | Correct language routing; pause/reload model safely; never remote-fallback. | None yet | Not run; feature absent | [SETTINGS] | CURRENT |
+| EH-054 | Custom meeting note templates | No personal note-template editor. | Edit template; preview on an opted-in meeting. | P9 | PLANNED | Meeting schema; template validation | Bound schema, source-ground outputs and preserve user revisions. | None yet | Not run; feature absent | [REQ] | UNVERIFIED |
+| EH-055 | Coding-focused assistance | Code-as-text instructions/rendering exist; no specialised coding workflow. | Ask coding question with explicitly reviewed context. | P4/P6 | IMPLEMENTED | Answer-only provider; code renderer | Useful safe code output; no file access, commands or edits. | AI | Real coding-task acceptance pending | [LIVE] | CURRENT |
+
+## E. Calendar, people and memory (11)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-056 | Google Calendar integration | No calendar OAuth or event access. | Connect calendar with least privilege; inspect selected calendars. | P10 | PLANNED | Calendar auth/refresh/revocation; storage | Explicit scope/expiry; disconnect removes retained calendar data. | None yet; UI checks planned label | Not run; feature absent | [PRECALL] | CURRENT |
+| EH-057 | Upcoming meeting reminders | No scheduled reminders or notifications. | Opt in; select calendars/reminder timing. | P10 | PLANNED | Calendar sync; local notification permissions | Timezone/DST and cancellation accurate; no phantom/duplicate reminders. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-058 | Upcoming meeting dashboard | Calendar/Home show no fake upcoming meetings. | Choose connected calendar; inspect current events. | P10 | PLANNED | Calendar sync and timezones | Show real upcoming items with loading/offline/empty/stale states. | None yet | Not run; feature absent | [PRECALL] | CURRENT |
+| EH-059 | Meeting activity detection | No conferencing-app activity detector. | Opt into local meeting hints; confirm session start. | P10 | PLANNED | Supported OS signals; detection policy | No hidden capture/sharing from activity; test false positives and disconnects. | None yet | Not run; feature absent | [LIVE] | CURRENT |
+| EH-060 | AI pre-call briefings | No briefs or attendee ingestion. | Select upcoming meeting; approve research and context. | P10 | PLANNED | Calendar; permitted research; memory | Ground brief in cited evidence, dates and uncertainty; no invented attendee facts. | None yet | Not run; feature absent | [PRECALL] | CURRENT |
+| EH-061 | Meeting participant research | No external person lookup capability. | Confirm person identity and approve research. | P10 | PLANNED | Permitted research source; identity disambiguation | Cite sources; handle namesakes, errors and deletion; no face-identification shortcut. | None yet | Not run; feature absent | [PEOPLE] | HISTORICAL |
+| EH-062 | People Search | People page is planned; no search service. | Enter a person; review potential matches and sources. | P10 | PLANNED | Research permissions; privacy model | Avoid identity certainty without evidence; never fabricate a profile. | None yet; UI checks planned label | Not run; feature absent | [PEOPLE] | HISTORICAL |
+| EH-063 | Memory across previous meetings | Only ephemeral in-conversation QA memory exists. | Opt into saved memory and choose meetings for retrieval. | P10 | PLANNED | History; scoped retrieval; retention/deletion | Cross-account isolation; provenance; expiry; user review before remote use. | None yet | Not run; feature absent | [PEOPLE] | HISTORICAL |
+| EH-064 | Previous commitments and follow-up recall | No cross-meeting commitments index. | Review retrieved prior promises and their source meetings. | P10 | PLANNED | Action extraction; identity; memory | Cite exact commitments; distinguish completion from unsupported assumptions. | None yet | Not run; feature absent | [PEOPLE] | HISTORICAL |
+| EH-065 | Relationship context | No relationship model or persistent person context. | Opt into a person context assembled from permitted records. | P10 | PLANNED | Identity matching; scoped meeting memory | Show provenance and uncertainty; allow correction/deletion. | None yet | Not run; feature absent | [PEOPLE] | HISTORICAL |
+| EH-066 | Contextual meeting preparation | No combined meeting-preparation workflow. | Select meeting; review agenda, sourced people and prior context. | P10 | PLANNED | Calendar; briefs; people; memory | Prepare grounded context without capturing or sending before approval. | None yet | Not run; feature absent | [PRECALL] | CURRENT |
+
+## F. Settings and desktop utilities (15)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-067 | Screenshot preview | Authorised app-window preview and explicitly frozen review image. | Choose source; inspect local preview or paused frozen review. | P1 | AUTOMATED VERIFIED | Screen consent; own-window exclusion | No stale frame after Pause/Stop; screen recursion avoided; no image persistence. | CAP; AI | Real monitors/windows and scaling pending | [LIVE] | CURRENT |
+| EH-068 | Screenshot capture toggle | Screen consent independent from mic/system; Stop revokes capture. | Enable screen before preparing; pause/stop deliberately. | P1/P2 | AUTOMATED VERIFIED | Capture lifecycle and consent | No screen snapshots unless selected and active; no automatic AI upload. | CAP; AUDIO | Real source permission checks pending | [LIVE] | CURRENT |
+| EH-069 | Rich answer formatting | Escaped plain text/fenced code only; full Markdown/syntax styling absent. | Read/copy generated code; future rich formatting remains safe. | P4/P6 | IMPLEMENTED | Safe parser; response renderer | Sanitised Markdown, code overflow and accessible copy; no provider-created actions. | AI; UI | Full Markdown not implemented | [LIVE] | CURRENT |
+| EH-070 | Copy AI responses | Explicit bounded main-process plain-text clipboard write. | Click Copy response for chosen answer. | P4 | AUTOMATED VERIFIED | Trusted IPC; OS clipboard | Exact text copied; reject malformed/oversized or untrusted sender input. | AI | Real normal clipboard app workflow pending | [REQ] | UNVERIFIED |
+| EH-071 | Web-assisted AI answers | No web/search tool is exposed to the model. | Explicitly approve permitted research; inspect cited results. | P6 | PLANNED | Permitted provider/source retrieval; review | Fresh sources and uncertainty required; never label unsourced text fact-checked. | None yet | Not run; feature absent | [REQ] | UNVERIFIED |
+| EH-072 | Audio diagnostics | Independent actual state/device/level/mute/error diagnostics. | Inspect local audio panel before/during capture. | P2 | AUTOMATED VERIFIED | Audio host and per-source diagnostics | Silent/muted/disconnected states truthful; meters zero on stop/pause. | AUDIO | Physical levels/routing pending | [AUDIOREF] | CURRENT |
+| EH-073 | Real-time transcription preview | Live source-labelled partial/final display and local helper metrics. | Enable local transcription and inspect revision/queue status. | P3 | AUTOMATED VERIFIED | Whisper helper; bounded event store | Show true recognition text, timing and overload; no synthetic production transcripts. | SPEECH | Real speech/noise/latency pending | [LIVE] | CURRENT |
+| EH-074 | Multi-monitor support | Monitor source enumeration and work-area clamping exist; mixed-DPI acceptance open. | Move/resize across monitors and choose source. | P1/P5/P13 | IMPLEMENTED | Electron displays; native bounds | Correct positioning, monitor changes and 100-200% mixed scaling without lost controls. | CAP; PRESENT | Physical multi-monitor/DPI pending | [SETTINGS] | CURRENT |
+| EH-075 | Launch at Windows login | No login-item/auto-start registration. | Explicitly enable/disable startup after install. | P13 | PLANNED | Signed packaged app; OS startup API | Respect opt-out; no capture/sharing on login; uninstall cleans registration. | None yet | Not run; feature absent | [SETTINGS] | CURRENT |
+| EH-076 | Light/dark theme support | Verified light palette; documented Dark/System desktop extensions. | Choose Light/Dark/System; persist locally. | P5 | AUTOMATED VERIFIED | Central tokens; local fonts; migration | AA-conscious text/controls/focus; reduced motion; no remote theme/font requests. | PRESENT; UI | Human brand/high-contrast/DPI review pending | [REQ] | UNVERIFIED |
+| EH-077 | Clear AI context shortcut | Clear conversation button works; no dedicated global clear chord. | Configure clear shortcut; reset current conversation safely. | P6 | PLANNED | Hotkey config; controller clear | Cancel active inference; clear review/history; never affect another account's state. | AI covers button; shortcut absent | Physical shortcut not implemented | [REQ] | UNVERIFIED |
+| EH-078 | In-app onboarding/tutorial | Privacy copy exists; no guided onboarding. | Walk through local capture, reviewed sharing and emergency stop. | P13 | PLANNED | Accessible onboarding; real capability checks | No default consent/billing; resumable keyboard-friendly tutorial with accurate setup. | None yet | Not run; feature absent | [SETTINGS] | CURRENT |
+| EH-079 | Automatic application updates | No updater or release channel. | Opt into verified updates; review/restart safely. | P13 | PLANNED | Signing; distribution; update service | Verify signatures, rollback/failure handling and consent-safe restart. | None yet | Not run; feature absent | [SETTINGS] | CURRENT |
+| EH-080 | Account and provider settings | Working ChatGPT registered plan login/model picker; Claude subscription blocked. | Continue with ChatGPT; select registration/model; review Ask. | P4/P5 | MANUAL VERIFIED | OS vault; official eligibility; permitted provider | No secret IPC/logs; signed grant; no billable fallback; pending providers labelled. | ACCOUNT; AI; UI | ChatGPT sign-in/restart/live reply verified; switch/logout and Claude paid auth pending | [EH] | UNVERIFIED |
+| EH-081 | Built-in help and troubleshooting | Current status/error/privacy copy; no complete in-app help centre. | Open relevant local help for a failed workflow. | P13 | PLANNED | Reviewed docs; platform diagnostics | Accurate recovery steps; accessible/offline help; never expose credentials. | None yet | Dedicated help not implemented | [SETTINGS] | CURRENT |
+
+## G. Enterprise and teams (16)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-082 | Company knowledge base | No organisation knowledge store. | Admin uploads approved company documents. | P11 | PLANNED | Workspace identity; storage; retention | Tenant isolation, versioning, review and deletion of originals/derivatives. | None yet | Not run; feature absent | [KNOWLEDGE] | ENTERPRISE-ONLY |
+| EH-083 | Retrieval-augmented knowledge answers | No enterprise retrieval pipeline. | Select allowed knowledge; review evidence; Ask. | P11 | PLANNED | Knowledge index; ACL filtering; provider | Cite real authorised passages; resist injection; never retrieve another tenant. | None yet | Not run; feature absent | [KNOWLEDGE] | ENTERPRISE-ONLY |
+| EH-084 | External reference links | No managed live-link corpus or grounded source-link UI. | Admin registers an approved source and refresh policy. | P11 | PLANNED | Safe fetch; ACLs; provenance | Block private-network fetch abuse; show source/date and access constraints. | None yet | Not run; feature absent | [KNOWLEDGE] | ENTERPRISE-ONLY |
+| EH-085 | Team-specific AI prompts | No shared prompt administration. | Admin assigns reviewed prompt versions to teams. | P11 | PLANNED | Enterprise identity; roles; prompt policy | Only authorised members can select; security/consent rules remain immutable. | None yet | Not run; feature absent | [CUSTOM] | ENTERPRISE-ONLY |
+| EH-086 | Role-based access controls | No enterprise identity or roles. | Admin assigns roles; user accesses allowed resources. | P11 | PLANNED | Workspace authentication and authorisation | Enforce permissions server-side; test deny paths, revocation and audit trail. | None yet | Not run; feature absent | [ADMIN] | ENTERPRISE-ONLY |
+| EH-087 | Shared company knowledge and access permissions | No sharing or organisation ACLs. | Share approved content with scoped teams. | P11 | PLANNED | RBAC; knowledge store; policy | Permission changes invalidate cached/retrieved access; no cross-team leakage. | None yet | Not run; feature absent | [KNOWLEDGE] | ENTERPRISE-ONLY |
+| EH-088 | CRM integrations | No CRM accounts or connector. | Connect a permitted CRM with explicit scopes. | P11 | PLANNED | Connector consent; RBAC; secret storage | Read/write scopes separate; review writes; support revocation and idempotency. | None yet | Not run; feature absent | [INTEGRATIONS] | ENTERPRISE-ONLY |
+| EH-089 | ATS integrations | No ATS accounts or connector. | Authorise an ATS and choose permitted records. | P11 | PLANNED | Connector consent; recruiting privacy; RBAC | Least-privilege record access; no candidate data transfer outside approved scope. | None yet | Not run; feature absent | [INTEGRATIONS] | ENTERPRISE-ONLY |
+| EH-090 | Contact matching | No calendar/CRM contact resolution. | Review candidate record matches for attendees. | P11 | PLANNED | CRM/ATS data; identity disambiguation | Handle namesakes/low confidence; require confirmation before merging identities. | None yet | Not run; feature absent | [INTEGRATIONS] | ENTERPRISE-ONLY |
+| EH-091 | CRM meeting-note synchronisation | No note sync or external writes. | Review meeting-note payload and destination; approve sync. | P11 | PLANNED | Grounded notes; CRM connector; RBAC | Idempotent writes; visible failure/retry/revocation; never silently publish. | None yet | Not run; feature absent | [INTEGRATIONS] | ENTERPRISE-ONLY |
+| EH-092 | Live call coaching | No organisation coaching rules or live scoring. | Authorise bounded Live Assist with team playbook. | P11 | PLANNED | Scoped live consent; approved knowledge; usage limits | Visible remote state; grounded suggestions; immediate stop; no hidden coaching. | None yet | Not run; feature absent | [COACHING] | ENTERPRISE-ONLY |
+| EH-093 | Missed-opportunity analysis | No post-call opportunity-analysis model. | Review opted-in meeting against approved criteria. | P11 | PLANNED | Meeting history; coaching schema; fairness review | Evidence-linked findings; distinguish model opinions from facts. | None yet | Not run; feature absent | [COACHING] | ENTERPRISE-ONLY |
+| EH-094 | Conversation performance scorecards | No scoring or employee performance records. | Choose approved rubric; inspect evidence and corrections. | P11 | PLANNED | Coaching; RBAC; evaluation and retention policy | Explain criteria/uncertainty; restrict access; support correction/deletion. | None yet | Not run; feature absent | [COACHING] | ENTERPRISE-ONLY |
+| EH-095 | Team analytics | No usage/performance warehouse or analytics UI. | Admin views authorised aggregate reports. | P11 | PLANNED | Workspace data; minimisation; access controls | No fabricated metrics; scoped aggregates; auditable retention and exports. | None yet | Not run; feature absent | [ADMIN] | ENTERPRISE-ONLY |
+| EH-096 | Team administration | No memberships, invites or admin backend. | Admin invites/removes users and assigns teams. | P11 | PLANNED | Enterprise identity; roles; audit trail | Enforce invite expiry, least privilege and immediate removal/revocation. | None yet | Not run; feature absent | [ADMIN] | ENTERPRISE-ONLY |
+| EH-097 | Organisation-level settings | No organisation policy or managed settings. | Admin publishes bounded org policy. | P11 | PLANNED | RBAC; signed policy distribution | Policy cannot silently grant capture/sharing; enforce versioning and revocation. | None yet | Not run; feature absent | [CUSTOM] | ENTERPRISE-ONLY |
+
+## H. Mobile (6)
+
+| ID | Feature | Description / actual scope | Intended workflow | Target | EveryHint status | Dependencies | Acceptance criteria | Automated coverage | Manual verification | Source/reference | Reference state |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| EH-098 | Mobile in-person conversation recording | No EveryHint mobile app or recording service. | Obtain consent; explicitly record and stop on phone. | P12 | PLANNED | Mobile app; platform permissions; retention design | Visible recording; permission/revocation/interruptions; no background hidden recording. | None yet | Not run; feature absent | [MOBILE] | CURRENT |
+| EH-099 | Mobile transcription | No mobile speech pipeline. | Select supported local/approved speech path before recording. | P12 | PLANNED | Mobile runtime/models; consent and resource budget | Measure quality/battery/latency; no unauthorised remote audio transfer. | None yet | Not run; feature absent | [MOBILE] | CURRENT |
+| EH-100 | Mobile AI assistance | No mobile provider connection. | Review selected mobile text/context; approve Ask. | P12 | PLANNED | Permitted mobile auth; restricted provider | Official auth; no API fallback; explicit per-request or bounded live sharing. | None yet | Not run; feature absent | [MOBILE] | CURRENT |
+| EH-101 | Mobile meeting notes | No mobile notes storage or editor. | Generate/review notes from opted-in mobile session. | P12 | PLANNED | Meeting schema; mobile consent/storage | Ground notes in actual transcript; support safe edit/delete/export. | None yet | Not run; feature absent | [MOBILE] | CURRENT |
+| EH-102 | Desktop/mobile synchronisation | No cloud identity, transport or sync backend. | Opt in; select records/devices; inspect sync state. | P12 | PLANNED | Cross-device identity; encrypted sync; conflict/deletion rules | No raw media sync by default; isolation, offline conflicts and deletion propagation verified. | None yet | Not run; feature absent | [MOBILE] | CURRENT |
+| EH-103 | Mobile sharing and export | No mobile share/export capability. | Preview/redact selected notes; choose destination. | P12 | PLANNED | Mobile share API; consent; export schema | Only selected content shared; truthful destination and cancellation handling. | None yet | Not run; feature absent | [MOBILE] | CURRENT |
+
+## I. Contextual actions (mappings, not additional features)
+
+| Named action | Inventory mapping | Current scope |
+| --- | --- | --- |
+| Get Answer | EH-002, EH-003, EH-004 | Manual reviewed Ask exists; automatic/global screen Assist planned P6 |
+| What Should I Say Next? | EH-025, EH-026 | Dedicated grounded action planned P7 |
+| Suggest Follow-up Questions | EH-005, EH-024 | Manual history continuation exists; suggested prompts planned |
+| Fact Check | EH-071 | Planned; requires authorised fresh sources/citations, never unsourced certainty |
+| Who Am I Talking To? | EH-061, EH-062 | Planned; permission-based research and identity uncertainty required |
+| Recap | EH-028, EH-029 | Dedicated grounded summary action planned P8 |
+| Dynamic Action | EH-022, EH-023, EH-024 | Local detection and user-approved prompts planned P7 |
+| Clear Context | EH-004, EH-005, EH-077 | Clear conversation button works; dedicated shortcut planned P6 |
+| Copy Response | EH-070 | Explicit plain-text clipboard action exists |
+
+## Provider readiness within EH-080 (not extra inventory rows)
+
+| Scope | Status | Evidence / limitation |
+| --- | --- | --- |
+| ChatGPT official plan registration and gpt-6.1-sol text inference | MANUAL VERIFIED | User-authorised real reply on 2026-10-28; all other models, images and account variants require acceptance |
+| Claude restricted API adapter | AUTOMATED VERIFIED | Installed SDK against local fixtures; separate billing opt-in off; live paid authentication unverified |
+| Claude subscription sign-in for distribution | BLOCKED | Anthropic approval required; no approval claimed; unavailable control is not working auth |
+| Enterprise/mobile release eligibility | NOT STARTED | No deployment identity, approval, backend or release verification |
+
+## Public references inspected
+
+- [DESKTOP]: [Cluely public desktop site](https://cluely.com/).
+- [LIVE]: [Cluely Live Insights](https://docs.cluely.com/feature/liveinsights).
+- [SETTINGS]: [Cluely Settings](https://docs.cluely.com/feature/settings).
+- [AUDIOREF]: [Cluely audio configuration](https://docs.cluely.com/debugging/audio).
+- [NOTES]: [Cluely Meeting Notes](https://docs.cluely.com/feature/postcall).
+- [MODES]: [Cluely alternate public product site](https://new.cluely.com/).
+- [PRECALL]: [Cluely Pre Call Briefs](https://docs.cluely.com/feature/precall).
+- [PEOPLE]: [People Search and Memory launch, 2025-09-13](https://cluely.com/blog/people-search-live).
+- [KNOWLEDGE]: [Cluely enterprise Knowledge Base](https://docs.cluely.com/enterprise/knowledgebase).
+- [INTEGRATIONS]: [Cluely enterprise CRM/ATS](https://docs.cluely.com/enterprise/integrations).
+- [COACHING]: [Cluely Coaching](https://docs.cluely.com/feature/coaching).
+- [CUSTOM]: [Cluely enterprise Customization Suite](https://docs.cluely.com/enterprise/customizationsuite).
+- [ADMIN]: [Cluely enterprise Admin Training](https://docs.cluely.com/enterprise/admintraining).
+- [MOBILE]: [Cluely iPhone publisher listing](https://apps.apple.com/us/app/cluely-ai-notetaker/id6755442775).
+- [REQ]: [User master specification; vendor support not established](PRODUCT_SPEC.md).
+- [EH]: [EveryHint implementation and P4.2 evidence; not a competitor claim](TESTING.md).
+
+Official enterprise pages describe requirements, not approvals for EveryHint. Dated People Search launch material is historical. The mobile publisher lists iPhone capability; EveryHint mobile platform and implementation are still undecided. Settings/docs contain older dates and compatibility limitations; current account availability was not tested. Exact email-client integration, personal templates, web tool access and EveryHint-specific utilities remain explicitly unverified where primary evidence was insufficient.
+
+[DESKTOP]: https://cluely.com/
+[LIVE]: https://docs.cluely.com/feature/liveinsights
+[SETTINGS]: https://docs.cluely.com/feature/settings
+[AUDIOREF]: https://docs.cluely.com/debugging/audio
+[NOTES]: https://docs.cluely.com/feature/postcall
+[MODES]: https://new.cluely.com/
+[PRECALL]: https://docs.cluely.com/feature/precall
+[PEOPLE]: https://cluely.com/blog/people-search-live
+[KNOWLEDGE]: https://docs.cluely.com/enterprise/knowledgebase
+[INTEGRATIONS]: https://docs.cluely.com/enterprise/integrations
+[COACHING]: https://docs.cluely.com/feature/coaching
+[CUSTOM]: https://docs.cluely.com/enterprise/customizationsuite
+[ADMIN]: https://docs.cluely.com/enterprise/admintraining
+[MOBILE]: https://apps.apple.com/us/app/cluely-ai-notetaker/id6755442775
+[REQ]: PRODUCT_SPEC.md
+[EH]: TESTING.md

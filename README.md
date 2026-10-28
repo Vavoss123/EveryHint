@@ -2,7 +2,7 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 implements explicit, reviewed ChatGPT plan requests through official Sign in with ChatGPT and the Responses API. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service.
+EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 implements explicit, reviewed ChatGPT plan requests through official Sign in with ChatGPT and the Responses API. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service. The current UI foundation uses the verified EverySession design system, with compact, expanded and dashboard layouts.
 
 ## Install and run
 
@@ -23,6 +23,18 @@ npm start
 
 Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Windows installers and signing belong to P6.
 
+## Interface and product roadmap
+
+The header switches between the **dashboard**, **expanded assistant** and **compact overlay**. All views share the existing capture, transcription and account controllers. Home reports actual current state; Assistant and Settings expose working controls. Meetings, Knowledge, Calendar, People and Modes are clearly labelled as planned and create no records or connections.
+
+- Use **Quick Ask** or **Ctrl+Enter while EveryHint is focused** to open/focus the question composer. Neither submits a request. Existing global show/hide, Pause and Stop shortcuts remain unchanged.
+- Collapse Live transcript or Conversation & context independently. Navigation and appearance changes retain the draft and frozen review. Active remote requests keep a visible cancellation control even on another page. Capture Pause/Stop stay outside scrolling panels.
+- In **EveryHint settings**, choose **Light**, **Dark** or **System**, and set native window opacity between 80% and 100%. Light follows the actual EverySession palette; dark mode is a documented desktop extension. Lower opacity can reduce contrast against background apps.
+- Typography is bundled locally: Poppins headings and Inter body, with SIL OFL notices included in production assets. There are no remote font requests. Existing preference files migrate without changing capture consent or account credentials.
+- After rebuilding, quit an already-running EveryHint instance before starting the new build. Account sign-in is remembered in OS storage; capture/sharing authorisation is not restored automatically.
+
+Read the [product specification](docs/PRODUCT_SPEC.md), [103-feature coverage matrix](docs/FEATURE_MATRIX.md), [verified design sources](docs/DESIGN_SYSTEM.md) and [P1-P13 roadmap](docs/BACKLOG.md). This task delivers only the UI foundation; automatic assistance, meeting storage, calendar/people research, enterprise and mobile remain future work. Human Windows visual/hardware acceptance remains open.
+
 ## Ask an assistant (P4.2)
 
 1. Choose **ChatGPT · plan usage**, then **Continue with ChatGPT**. Complete OpenAI sign-in and consent in your normal browser. EveryHint creates its own registered connection; your unrelated Codex/IDE login is not imported. Credentials stay in the OS credential store. Identity-only sign-in requires the separate **Grant ChatGPT plan permission** action.
@@ -40,7 +52,7 @@ The UI does not use the Codex runtime for ChatGPT answers: the SDK's lack of a s
 
 History is bounded to four completed question/answer pairs and 12,000 characters; eight bounded responses are displayed, with 15-minute idle expiry. Previous transcript excerpts/images are not automatically included in follow-up history. Requests have a 90-second deadline and 32,000-character response limit. Claude separately limits one turn/4,096 output tokens and uses a $1 estimated budget threshold, which is not a guaranteed spending cap. ChatGPT limits come from your plan/app grant; the app invents no quota or price.
 
-**Distribution and acceptance:** this private-use prototype is designed for eventual distribution. Real browser sign-in, OS-backed reconnection, model discovery and one genuine gpt-6.1-sol plan-backed response are verified. An initial MIME-check failure was corrected and a separately authorised second attempt returned **EveryHint is connected.** with response.completed. Other models, real remote captured context, account lifecycle and hardware/long-run acceptance remain open. Commercial approval is not claimed. See [current evidence](docs/TESTING.md). P5 has not started.
+**Distribution and acceptance:** this private-use prototype is designed for eventual distribution. Real browser sign-in, OS-backed reconnection, model discovery and one genuine gpt-6.1-sol plan-backed response are verified. An initial MIME-check failure was corrected and a separately authorised second attempt returned **EveryHint is connected.** with response.completed. Other models, real remote captured context, account lifecycle and hardware/long-run acceptance remain open. Commercial approval is not claimed. See [current evidence](docs/TESTING.md). The P5 UI foundation is delivered; later roadmap capabilities remain planned.
 
 ## Set up local speech transcription
 
@@ -98,6 +110,7 @@ Shortcut conflicts appear as warnings. Overlay and tray controls remain availabl
 
 ```powershell
 npm run check
+npm run smoke:ui
 npm run test:ai-sdk
 npm run test:plan
 npm run smoke
@@ -108,4 +121,4 @@ npm run smoke:speech
 
 `check` runs strict TypeScript, lint, unit tests and production build. `smoke` uses synthetic media and needs no speech runtime. The additional speech checks need the installed tiny.en model/helper. `speech:test -- --install-fixture` explicitly downloads a checksum-verified public upstream speech fixture once; subsequent tests are offline. `smoke:speech` sends that fixture through both synthetic P2 sources, real PCM conversion and real whisper.cpp inference. No hardware audio or desktop capture is performed. Known-fixture reports and app-only screenshots are written to ignored `artifacts/`.
 
-The P3 baseline was 157 unit tests. P4.2 adds OAuth/JWT, model, native-vault and actual loopback HTTP/SSE coverage; `test:plan` uses synthetic credentials in an isolated OS-vault namespace and always removes them. These are fixtures, not live provider replies. P4 verification and remaining limitations are recorded in [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). Run `npm run test:ai-sdk` for actual SDK execution against synthetic loopback fixtures and `npm run smoke:ai` for Electron assistant checks; neither is a live provider test or a paid request. P1/P2 hardware and P3 real-device/15-minute acceptance remain pending. One ChatGPT plan live check passed; Claude and broader captured-context acceptance remain open. P5 has not started.
+The P3 baseline was 157 unit tests. P4.2 adds OAuth/JWT, model, native-vault and actual loopback HTTP/SSE coverage; `test:plan` uses synthetic credentials in an isolated OS-vault namespace and always removes them. These are fixtures, not live provider replies. P4 verification and remaining limitations are recorded in [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). Run `npm run test:ai-sdk` for actual SDK execution against synthetic loopback fixtures and `npm run smoke:ai` for Electron assistant checks; neither is a live provider test or a paid request. P1/P2 hardware and P3 real-device/15-minute acceptance remain pending. One ChatGPT plan live check passed; Claude and broader captured-context acceptance remain open. The P5 UI foundation is delivered; later roadmap capabilities remain planned.
