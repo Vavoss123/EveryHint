@@ -22,6 +22,36 @@ describe("settings validation and storage", () => {
       new SettingsStore(join(directory, "settings.json"), vi.fn()).settings,
     ).toEqual(DEFAULT_SETTINGS);
   });
+  it("persists independent assistant geometry without changing saved settings or dashboard bounds", () => {
+    const path = join(directory, "settings.json"),
+      store = new SettingsStore(path, vi.fn());
+    const dashboard = { x: 10, y: 20, width: 1040, height: 740 },
+      assistant = { x: 700, y: 90, width: 440, height: 500 };
+    store.save({ ...DEFAULT_SETTINGS, theme: "light" }, dashboard, assistant);
+    const loaded = new SettingsStore(path, vi.fn());
+    expect(loaded.bounds).toEqual(dashboard);
+    expect(loaded.overlayBounds).toEqual(assistant);
+    expect(loaded.settings.theme).toBe("light");
+    loaded.save(loaded.settings);
+    expect(new SettingsStore(path, vi.fn()).overlayBounds).toEqual(assistant);
+  });
+  it("discards invalid assistant geometry while preserving existing preferences", () => {
+    const path = join(directory, "settings.json"),
+      warning = vi.fn();
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        settings: { ...DEFAULT_SETTINGS, theme: "light", alwaysOnTop: true },
+        overlayBounds: { x: 0, y: 0, width: -1, height: 400 },
+      }),
+    );
+    const loaded = new SettingsStore(path, warning);
+    expect(loaded.settings.theme).toBe("light");
+    expect(loaded.settings.alwaysOnTop).toBe(true);
+    expect(loaded.overlayBounds).toBeUndefined();
+    expect(warning).toHaveBeenCalledOnce();
+  });
   it("preserves an older custom Enter binding and migrates Answer to a free binding", () => {
     const path = join(directory, "settings.json"),
       warning = vi.fn();

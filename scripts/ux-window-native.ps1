@@ -13,6 +13,7 @@ public static class EveryHintUxNative {
   [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
   [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
   [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint process);
+  [DllImport("dwmapi.dll")] public static extern int DwmGetWindowAttribute(IntPtr hwnd, uint attribute, out uint value, uint size);
 }
 '@
 if ($Action -eq 'Focus' -or $Action -eq 'Foreground') {
@@ -33,7 +34,9 @@ if ($Action -eq 'Focus' -or $Action -eq 'Foreground') {
   $style = [EveryHintUxNative]::GetWindowLongPtr($windowHandle, -20).ToInt64()
   [uint32]$affinity = 0
   $affinityRead = [EveryHintUxNative]::GetWindowDisplayAffinity($windowHandle, [ref]$affinity)
-  @{ topmost = ($style -band 8) -ne 0; toolWindow = ($style -band 128) -ne 0; appWindow = ($style -band 262144) -ne 0; noActivate = ($style -band 134217728) -ne 0; owner = [EveryHintUxNative]::GetWindow($windowHandle, 4).ToInt64(); affinity = $affinity; affinityRead = $affinityRead } | ConvertTo-Json -Compress
+  [uint32]$cloaked = 0
+  $cloakRead = [EveryHintUxNative]::DwmGetWindowAttribute($windowHandle, 14, [ref]$cloaked, 4) -eq 0
+  @{ topmost = ($style -band 8) -ne 0; toolWindow = ($style -band 128) -ne 0; appWindow = ($style -band 262144) -ne 0; noActivate = ($style -band 134217728) -ne 0; owner = [EveryHintUxNative]::GetWindow($windowHandle, 4).ToInt64(); affinity = $affinity; affinityRead = $affinityRead; cloaked = $cloaked; cloakRead = $cloakRead } | ConvertTo-Json -Compress
 } elseif ($Action -eq 'Shortcut') {
   $keys = @()
   foreach ($part in $Accelerator.Split('+')) {

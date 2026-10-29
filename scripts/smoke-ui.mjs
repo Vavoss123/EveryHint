@@ -442,16 +442,14 @@ try {
   check(
     await overlay.evaluate(() => {
       const b = Array.from(document.querySelectorAll("button"))
-        .find((b) => b.textContent.trim() === "Review & send")
+        .find((b) => b.textContent.trim() === "Ask")
         .getBoundingClientRect();
       return b.top >= 0 && b.bottom <= innerHeight;
     }),
     "Floating send action is fully visible at its default size",
   );
   await shot("floating-assistant-dark", overlay);
-  await overlay
-    .getByRole("button", { name: "Dismiss overlay", exact: true })
-    .click();
+  await overlay.getByRole("button", { name: "Hide", exact: true }).click();
   await settingsSection(page, "General");
   await page.getByLabel("Colour theme", { exact: true }).selectOption("dark");
   const prefs = await desktop.evaluate(({ BrowserWindow }) =>

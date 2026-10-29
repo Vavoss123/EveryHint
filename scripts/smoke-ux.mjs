@@ -194,7 +194,9 @@ try {
     "Explicit overlay toggle restores separate assistant",
   );
   const overlay = desktop.windows().find((p) => p.url().includes("overlay=1"));
-  await overlay.waitForFunction(() => document.querySelector(".app"));
+  await overlay.waitForFunction(() =>
+    document.querySelector(".floating-assistant"),
+  );
   await overlay.evaluate(() => window.everyhint.window("close"));
   await page.evaluate(async () => {
     const s = await window.everyhint.getSnapshot();
@@ -210,9 +212,9 @@ try {
     "Dismissed overlay stays dismissed through state updates",
   );
   check(
-    windows.find((w) => w.url.includes("overlay=1")).top &&
+    !windows.find((w) => w.url.includes("overlay=1")).top &&
       !windows.find((w) => w.id === main.id).top,
-    "Pin preference affects overlay alone",
+    "Hidden overlay remains unpinned while the pin preference is retained",
   );
   check(
     (await page.evaluate(() => window.everyhint.getSnapshot())).value.session
@@ -351,7 +353,7 @@ try {
   );
   await desktop.evaluate(() =>
     globalThis.__uxTrayMenu.items
-      .find((i) => i.label === "Show dashboard")
+      .find((i) => i.label === "Open EveryHint")
       .click(),
   );
   check(
@@ -470,7 +472,7 @@ try {
     ),
   ]);
   await overlay.waitForFunction(
-    () => window.everyhint && document.querySelector(".app"),
+    () => window.everyhint && document.querySelector(".floating-assistant"),
   );
   let afterReload = (await page.evaluate(() => window.everyhint.getSnapshot()))
     .value;

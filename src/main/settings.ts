@@ -14,10 +14,12 @@ interface StoredSettings {
   version: 1;
   settings: Settings;
   bounds?: WindowBounds;
+  overlayBounds?: WindowBounds;
 }
 export class SettingsStore {
   settings: Settings = { ...DEFAULT_SETTINGS };
   bounds: WindowBounds | undefined;
+  overlayBounds: WindowBounds | undefined;
   constructor(
     private readonly path: string,
     private readonly warning: (message: string) => void,
@@ -25,7 +27,7 @@ export class SettingsStore {
     if (!existsSync(path)) return;
     try {
       const stored = record(JSON.parse(readFileSync(path, "utf8")) as unknown);
-      exactKeys(stored, ["version", "settings", "bounds"]);
+      exactKeys(stored, ["version", "settings", "bounds", "overlayBounds"]);
       if (stored.version !== 1)
         throw new Error("Unsupported settings version.");
       const prior = record(stored.settings);
@@ -50,6 +52,15 @@ export class SettingsStore {
       if (this.settings.setupComplete === undefined)
         this.settings.setupComplete = true;
       if (stored.bounds !== undefined) this.bounds = parseBounds(stored.bounds);
+      if (stored.overlayBounds !== undefined) {
+        try {
+          this.overlayBounds = parseBounds(stored.overlayBounds);
+        } catch {
+          this.warning(
+            "The saved assistant position was invalid; a default position will be used. Your settings are preserved.",
+          );
+        }
+      }
     } catch (error) {
       this.settings = { ...DEFAULT_SETTINGS };
       this.bounds = undefined;
@@ -58,10 +69,15 @@ export class SettingsStore {
       );
     }
   }
-  save(settings: unknown, bounds = this.bounds): void {
+  save(
+    settings: unknown,
+    bounds = this.bounds,
+    overlayBounds = this.overlayBounds,
+  ): void {
     const validated = parseSettings(settings);
     const stored: StoredSettings = { version: 1, settings: validated };
     if (bounds) stored.bounds = parseBounds(bounds);
+    if (overlayBounds) stored.overlayBounds = parseBounds(overlayBounds);
     writeFileSync(`${this.path}.tmp`, JSON.stringify(stored, null, 2), {
       encoding: "utf8",
       mode: 0o600,
@@ -69,5 +85,6 @@ export class SettingsStore {
     renameSync(`${this.path}.tmp`, this.path);
     this.settings = validated;
     this.bounds = stored.bounds;
+    this.overlayBounds = stored.overlayBounds;
   }
 }

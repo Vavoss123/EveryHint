@@ -173,7 +173,7 @@ try {
     await desktop.evaluate(({ BrowserWindow }) => {
       const windows = BrowserWindow.getAllWindows();
       return (
-        windows
+        !windows
           .find((w) => w.webContents.getURL().includes("overlay=1"))
           .isAlwaysOnTop() &&
         !windows
@@ -181,16 +181,20 @@ try {
           .isAlwaysOnTop()
       );
     }),
-    "pinning applies only to separate overlay",
+    "hidden overlay and dashboard stay unpinned",
   );
   await page.evaluate(() => window.everyhint.window("overlay"));
   check(
-    await desktop.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()
-        .find((w) => w.webContents.getURL().includes("overlay=1"))
-        .isVisible(),
+    await desktop.evaluate(
+      ({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL().includes("overlay=1"))
+          .isVisible() &&
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL().includes("overlay=1"))
+          .isAlwaysOnTop(),
     ),
-    "floating overlay restores independently",
+    "floating overlay restores independently with its pin preference",
   );
   await page.evaluate(() => window.everyhint.window("hide"));
   check(

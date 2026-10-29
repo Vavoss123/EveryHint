@@ -1,0 +1,1369 @@
+{
+  "date": "2026-10-29T17:34:13.975739+00:00",
+  "baseline": "66215d80d3952c51180131cb5c1688fdedf110dc",
+  "version": "0.5.0",
+  "checkpoints": [
+    "FIX.1",
+    "FIX.2",
+    "FIX.3",
+    "FIX.4"
+  ],
+  "release": "NO-GO",
+  "published": false,
+  "installerBuilt": false,
+  "reproduction": {
+    "attachmentImagesAvailable": false,
+    "processAndNativeWindowInspection": {
+      "pid": 13084,
+      "lock": true,
+      "windows": [
+        {
+          "id": 2,
+          "url": "everyhint://app/index.html?overlay=1",
+          "visible": true,
+          "handle": 2491542,
+          "native": {
+            "topmost": false,
+            "owner": 0,
+            "noActivate": false,
+            "affinity": 0,
+            "affinityRead": true,
+            "appWindow": false,
+            "toolWindow": false
+          }
+        },
+        {
+          "id": 1,
+          "url": "everyhint://app/index.html",
+          "visible": true,
+          "handle": 15205404,
+          "native": {
+            "topmost": false,
+            "owner": 0,
+            "noActivate": false,
+            "affinity": 0,
+            "affinityRead": true,
+            "appWindow": false,
+            "toolWindow": false
+          }
+        }
+      ],
+      "secondLaunch": {
+        "pid": 40828,
+        "exitCode": 0
+      },
+      "afterSecond": [
+        2,
+        1
+      ],
+      "render": {
+        "roots": 1,
+        "meetingForms": 1,
+        "transcriptionControls": 0,
+        "optionsOpen": true,
+        "viewport": {
+          "width": 481,
+          "height": 582
+        },
+        "response": {
+          "x": 27.33333396911621,
+          "y": 210.625,
+          "width": 426.66668701171875,
+          "height": 65,
+          "top": 210.625,
+          "right": 454.00002098083496,
+          "bottom": 275.625,
+          "left": 27.33333396911621
+        },
+        "composer": {
+          "x": 27.33333396911621,
+          "y": 304.625,
+          "width": 363.66668701171875,
+          "height": 56,
+          "top": 304.625,
+          "right": 391.00002098083496,
+          "bottom": 360.625,
+          "left": 27.33333396911621
+        }
+      }
+    },
+    "conclusion": "One locked primary, two ordinary taskbar-eligible windows; one renderer root with shared dashboard forms. Expanded Session options reproduced content overlap before editing."
+  },
+  "taskbar": {
+    "before": "Both top-level windows ordinary and skipTaskbar false; second process exits without adding windows.",
+    "after": "Dashboard ordinary, skipTaskbar false. Focusable assistant Windows toolbar/WS_EX_TOOLWINDOW, skipTaskbar true at construction and show. One accessible tray.",
+    "shellIconPixelCountVerified": false,
+    "limitation": "Remote Shell taskbar accessibility did not expose app buttons; physical/pinned-cache acceptance remains manual."
+  },
+  "sourceGate": {
+    "command": "npm run check",
+    "passed": true,
+    "tests": 771,
+    "files": 61,
+    "baselineTestsRetained": 765,
+    "newGeometryCases": 4,
+    "newSettingsCases": 2
+  },
+  "providers": [
+    {
+      "command": "npm run test:plan",
+      "passed": true,
+      "tests": 5
+    },
+    {
+      "command": "npm run test:ai-sdk",
+      "passed": true,
+      "tests": 6
+    }
+  ],
+  "storage": {
+    "command": "npm run test:meetings",
+    "passed": true,
+    "assertions": 12
+  },
+  "retainedElectron": [
+    {
+      "command": "node scripts/smoke.mjs",
+      "assertions": 47,
+      "passed": true,
+      "seconds": 7.4,
+      "summary": [
+        "Electron smoke passed: 47 assertions. Hotkeys: toggle=registered, pause=registered, stop=registered, assist=registered, clear=registered, answer=registered. Audio used synthetic media; no microphone, desktop or Windows playback was captured."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-ai.mjs",
+      "assertions": 44,
+      "passed": true,
+      "seconds": 3.4,
+      "summary": [
+        "AI Electron smoke passed: 44 assertions. ChatGPT auth=missing. No remote inference or paid requests. Renderer streaming used labelled fixtures."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-transcription.mjs",
+      "assertions": 12,
+      "passed": true,
+      "seconds": 19,
+      "summary": [
+        "Speech Electron smoke passed: 12 assertions; real tiny.en inference through both synthetic P2 audio sources."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-ui.mjs",
+      "assertions": 47,
+      "passed": true,
+      "seconds": 3.4,
+      "summary": [
+        "UI smoke passed: 47 assertions, 4 screenshots, zero remote requests."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-intelligence.mjs",
+      "assertions": 28,
+      "passed": true,
+      "seconds": 3.6,
+      "summary": [
+        "Intelligence Electron smoke passed: 28 assertions; no remote requests or real capture. Suggestions used labelled renderer fixtures."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-meetings.mjs",
+      "assertions": 42,
+      "passed": true,
+      "seconds": 5.7,
+      "summary": [
+        "Meeting Electron smoke passed: 42 assertions; actual encrypted database/native key/worker; no remote requests or real capture."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-personal.mjs",
+      "assertions": 34,
+      "passed": true,
+      "seconds": 4.5,
+      "summary": [
+        "P9 local Electron smoke passed: 34 assertions. {\"mode_switch_ms\":13.734800000000178,\"import_release.pdf_ms\":221.85699999999997,\"parser_release.pdf\":{\"extractionMs\":164.53919999999994,\"parserHeapBytes\":10975616},\"import_release.docx_ms\":68.33629999999994,\"parser_release.docx\":{\"extractionMs\":2.0231999999998607,\"parserHeapBytes\":6040536},\"import_release.txt_ms\":51.770300000000134,\"parser_release.txt\":{\"extractionMs\":0.2722999999998592,\"parserHeapBytes\":5262516},\"import_release.md_ms\":56.78749999999991,\"parser_release.md\":{\"extractionMs\":0.5480999999999767,\"parserHeapBytes\":5691756},\"search_4_documents_ms\":5.617600000000039,\"main_memory\":{\"rss\":159748096,\"heapTotal\":27856896,\"heapUsed\":16630480,\"external\":15578771,\"arrayBuffers\":0}}"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-context.mjs",
+      "assertions": 36,
+      "passed": true,
+      "seconds": 9.4,
+      "summary": [
+        "P10 local Electron smoke passed: 36 assertions. {\"calendar_refresh_ms\":15.474500000000035,\"document_memory_extraction_ms\":14.012300000000323}"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-windows.mjs",
+      "assertions": 20,
+      "passed": true,
+      "seconds": 3.6,
+      "summary": [
+        "20 Windows desktop assertions passed"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-ux.mjs",
+      "assertions": 45,
+      "passed": true,
+      "seconds": 9.1,
+      "summary": [
+        "{\"checkpoint\":\"UX.1 + UX.2\",\"assertions\":45,\"platform\":\"win32\"}"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-listen.mjs",
+      "assertions": 44,
+      "passed": true,
+      "seconds": 32.5,
+      "summary": [
+        "Listen Windows smoke passed: 44 assertions. Actual native hotkeys, separate foreground application, native Whisper with synthetic audio, owned-window capture, deterministic provider."
+      ]
+    }
+  ],
+  "visual": {
+    "command": "npm run smoke:overlay",
+    "passed": true,
+    "date": "2026-10-29T17:33:11.664Z",
+    "assertions": 219,
+    "screenshots": 30,
+    "scales": [
+      1,
+      1.25,
+      1.5
+    ],
+    "widthsDip": [
+      360,
+      480
+    ],
+    "states": [
+      "idle",
+      "listening",
+      "streaming",
+      "completed"
+    ],
+    "additionalAppearance": "light completed",
+    "allScreenshotsVisuallyInspected": true,
+    "method": "Electron --force-device-scale-factor; actual devicePixelRatio asserted at 1/1.25/1.5",
+    "physicalWindowsDpiChanged": false,
+    "fixture": "real Electron windows/renderers with labelled renderer-only session and answer fixtures; no capture or provider request",
+    "checks": [
+      "1: one locked primary process, one dashboard and one assistant",
+      "1: native Windows tool-window style excludes the overlay from taskbar/Alt+Tab while keeping it focusable",
+      "1: dashboard retains normal focus/Alt+Tab styles",
+      "1: showing the real overlay applies only skipTaskbar true",
+      "1: native dashboard minimise works",
+      "1: restore recovers the dashboard",
+      "1: a second native launch exits and reuses the original windows",
+      "1: native show/hide shortcut registered",
+      "1: repeated native toggles never create a window",
+      "1: the separate manual-review shortcut opens the dashboard without mounting forms in the overlay",
+      "1: hidden assistant is never always-on-top",
+      "1: explicit show restores the pin preference",
+      "1: display-metrics handling returns an offscreen assistant to the work area",
+      "1: display changes neither show nor duplicate a hidden assistant",
+      "1/360/dark/idle: actual renderer device scale factor",
+      "1/360/dark/idle: independent header, scrolling answer and composer do not overlap",
+      "1/360/dark/idle: every visible control fits",
+      "1/360/dark/idle: no dashboard forms or stylesheet loaded",
+      "1/360/dark/listening: actual renderer device scale factor",
+      "1/360/dark/listening: independent header, scrolling answer and composer do not overlap",
+      "1/360/dark/listening: every visible control fits",
+      "1/360/dark/listening: no dashboard forms or stylesheet loaded",
+      "1/360/dark/streaming: actual renderer device scale factor",
+      "1/360/dark/streaming: independent header, scrolling answer and composer do not overlap",
+      "1/360/dark/streaming: every visible control fits",
+      "1/360/dark/streaming: no dashboard forms or stylesheet loaded",
+      "1/360/dark/completed: actual renderer device scale factor",
+      "1/360/dark/completed: independent header, scrolling answer and composer do not overlap",
+      "1/360/dark/completed: every visible control fits",
+      "1/360/dark/completed: no dashboard forms or stylesheet loaded",
+      "1/360/dark: long answer has its own scroll area",
+      "1/360/dark: long-answer keyboard scrolling keeps input fixed",
+      "1/360/light/completed: actual renderer device scale factor",
+      "1/360/light/completed: independent header, scrolling answer and composer do not overlap",
+      "1/360/light/completed: every visible control fits",
+      "1/360/light/completed: no dashboard forms or stylesheet loaded",
+      "1/360/light: long answer has its own scroll area",
+      "1/360/light: long-answer keyboard scrolling keeps input fixed",
+      "1/480/dark/idle: actual renderer device scale factor",
+      "1/480/dark/idle: independent header, scrolling answer and composer do not overlap",
+      "1/480/dark/idle: every visible control fits",
+      "1/480/dark/idle: no dashboard forms or stylesheet loaded",
+      "1/480/dark/listening: actual renderer device scale factor",
+      "1/480/dark/listening: independent header, scrolling answer and composer do not overlap",
+      "1/480/dark/listening: every visible control fits",
+      "1/480/dark/listening: no dashboard forms or stylesheet loaded",
+      "1/480/dark/streaming: actual renderer device scale factor",
+      "1/480/dark/streaming: independent header, scrolling answer and composer do not overlap",
+      "1/480/dark/streaming: every visible control fits",
+      "1/480/dark/streaming: no dashboard forms or stylesheet loaded",
+      "1/480/dark/completed: actual renderer device scale factor",
+      "1/480/dark/completed: independent header, scrolling answer and composer do not overlap",
+      "1/480/dark/completed: every visible control fits",
+      "1/480/dark/completed: no dashboard forms or stylesheet loaded",
+      "1/480/dark: long answer has its own scroll area",
+      "1/480/dark: long-answer keyboard scrolling keeps input fixed",
+      "1/480/light/completed: actual renderer device scale factor",
+      "1/480/light/completed: independent header, scrolling answer and composer do not overlap",
+      "1/480/light/completed: every visible control fits",
+      "1/480/light/completed: no dashboard forms or stylesheet loaded",
+      "1/480/light: long answer has its own scroll area",
+      "1/480/light: long-answer keyboard scrolling keeps input fixed",
+      "1: overflow menu receives keyboard focus",
+      "1: arrow navigation reaches optional context",
+      "1: Escape closes the menu and returns focus",
+      "1: keyboard input and Shift+Enter remain usable",
+      "1: the labelled Hide control dismisses only the assistant",
+      "1: renderer reload remounts one minimal tree without new windows",
+      "1: exactly one renderer root after reload",
+      "1: restart creates one pair and honours start-hidden without duplicate windows",
+      "1: valid assistant position survives restart with compact default size: {\"remembered\":{\"x\":100,\"y\":80,\"width\":440,\"height\":500},\"restored\":{\"x\":100,\"y\":80,\"width\":480,\"height\":580}}",
+      "1: restart restores no capture permission",
+      "1: zero renderer errors",
+      "1.25: one locked primary process, one dashboard and one assistant",
+      "1.25: native Windows tool-window style excludes the overlay from taskbar/Alt+Tab while keeping it focusable",
+      "1.25: dashboard retains normal focus/Alt+Tab styles",
+      "1.25: showing the real overlay applies only skipTaskbar true",
+      "1.25: native dashboard minimise works",
+      "1.25: restore recovers the dashboard",
+      "1.25: a second native launch exits and reuses the original windows",
+      "1.25: native show/hide shortcut registered",
+      "1.25: repeated native toggles never create a window",
+      "1.25: the separate manual-review shortcut opens the dashboard without mounting forms in the overlay",
+      "1.25: hidden assistant is never always-on-top",
+      "1.25: explicit show restores the pin preference",
+      "1.25: display-metrics handling returns an offscreen assistant to the work area",
+      "1.25: display changes neither show nor duplicate a hidden assistant",
+      "1.25/360/dark/idle: actual renderer device scale factor",
+      "1.25/360/dark/idle: independent header, scrolling answer and composer do not overlap",
+      "1.25/360/dark/idle: every visible control fits",
+      "1.25/360/dark/idle: no dashboard forms or stylesheet loaded",
+      "1.25/360/dark/listening: actual renderer device scale factor",
+      "1.25/360/dark/listening: independent header, scrolling answer and composer do not overlap",
+      "1.25/360/dark/listening: every visible control fits",
+      "1.25/360/dark/listening: no dashboard forms or stylesheet loaded",
+      "1.25/360/dark/streaming: actual renderer device scale factor",
+      "1.25/360/dark/streaming: independent header, scrolling answer and composer do not overlap",
+      "1.25/360/dark/streaming: every visible control fits",
+      "1.25/360/dark/streaming: no dashboard forms or stylesheet loaded",
+      "1.25/360/dark/completed: actual renderer device scale factor",
+      "1.25/360/dark/completed: independent header, scrolling answer and composer do not overlap",
+      "1.25/360/dark/completed: every visible control fits",
+      "1.25/360/dark/completed: no dashboard forms or stylesheet loaded",
+      "1.25/360/dark: long answer has its own scroll area",
+      "1.25/360/dark: long-answer keyboard scrolling keeps input fixed",
+      "1.25/360/light/completed: actual renderer device scale factor",
+      "1.25/360/light/completed: independent header, scrolling answer and composer do not overlap",
+      "1.25/360/light/completed: every visible control fits",
+      "1.25/360/light/completed: no dashboard forms or stylesheet loaded",
+      "1.25/360/light: long answer has its own scroll area",
+      "1.25/360/light: long-answer keyboard scrolling keeps input fixed",
+      "1.25/480/dark/idle: actual renderer device scale factor",
+      "1.25/480/dark/idle: independent header, scrolling answer and composer do not overlap",
+      "1.25/480/dark/idle: every visible control fits",
+      "1.25/480/dark/idle: no dashboard forms or stylesheet loaded",
+      "1.25/480/dark/listening: actual renderer device scale factor",
+      "1.25/480/dark/listening: independent header, scrolling answer and composer do not overlap",
+      "1.25/480/dark/listening: every visible control fits",
+      "1.25/480/dark/listening: no dashboard forms or stylesheet loaded",
+      "1.25/480/dark/streaming: actual renderer device scale factor",
+      "1.25/480/dark/streaming: independent header, scrolling answer and composer do not overlap",
+      "1.25/480/dark/streaming: every visible control fits",
+      "1.25/480/dark/streaming: no dashboard forms or stylesheet loaded",
+      "1.25/480/dark/completed: actual renderer device scale factor",
+      "1.25/480/dark/completed: independent header, scrolling answer and composer do not overlap",
+      "1.25/480/dark/completed: every visible control fits",
+      "1.25/480/dark/completed: no dashboard forms or stylesheet loaded",
+      "1.25/480/dark: long answer has its own scroll area",
+      "1.25/480/dark: long-answer keyboard scrolling keeps input fixed",
+      "1.25/480/light/completed: actual renderer device scale factor",
+      "1.25/480/light/completed: independent header, scrolling answer and composer do not overlap",
+      "1.25/480/light/completed: every visible control fits",
+      "1.25/480/light/completed: no dashboard forms or stylesheet loaded",
+      "1.25/480/light: long answer has its own scroll area",
+      "1.25/480/light: long-answer keyboard scrolling keeps input fixed",
+      "1.25: overflow menu receives keyboard focus",
+      "1.25: arrow navigation reaches optional context",
+      "1.25: Escape closes the menu and returns focus",
+      "1.25: keyboard input and Shift+Enter remain usable",
+      "1.25: the labelled Hide control dismisses only the assistant",
+      "1.25: renderer reload remounts one minimal tree without new windows",
+      "1.25: exactly one renderer root after reload",
+      "1.25: restart creates one pair and honours start-hidden without duplicate windows",
+      "1.25: valid assistant position survives restart with compact default size: {\"remembered\":{\"x\":100,\"y\":80,\"width\":442,\"height\":501},\"restored\":{\"x\":100,\"y\":80,\"width\":488,\"height\":585}}",
+      "1.25: restart restores no capture permission",
+      "1.25: zero renderer errors",
+      "1.5: one locked primary process, one dashboard and one assistant",
+      "1.5: native Windows tool-window style excludes the overlay from taskbar/Alt+Tab while keeping it focusable",
+      "1.5: dashboard retains normal focus/Alt+Tab styles",
+      "1.5: showing the real overlay applies only skipTaskbar true",
+      "1.5: native dashboard minimise works",
+      "1.5: restore recovers the dashboard",
+      "1.5: a second native launch exits and reuses the original windows",
+      "1.5: native show/hide shortcut registered",
+      "1.5: repeated native toggles never create a window",
+      "1.5: the separate manual-review shortcut opens the dashboard without mounting forms in the overlay",
+      "1.5: hidden assistant is never always-on-top",
+      "1.5: explicit show restores the pin preference",
+      "1.5: display-metrics handling returns an offscreen assistant to the work area",
+      "1.5: display changes neither show nor duplicate a hidden assistant",
+      "1.5/360/dark/idle: actual renderer device scale factor",
+      "1.5/360/dark/idle: independent header, scrolling answer and composer do not overlap",
+      "1.5/360/dark/idle: every visible control fits",
+      "1.5/360/dark/idle: no dashboard forms or stylesheet loaded",
+      "1.5/360/dark/listening: actual renderer device scale factor",
+      "1.5/360/dark/listening: independent header, scrolling answer and composer do not overlap",
+      "1.5/360/dark/listening: every visible control fits",
+      "1.5/360/dark/listening: no dashboard forms or stylesheet loaded",
+      "1.5/360/dark/streaming: actual renderer device scale factor",
+      "1.5/360/dark/streaming: independent header, scrolling answer and composer do not overlap",
+      "1.5/360/dark/streaming: every visible control fits",
+      "1.5/360/dark/streaming: no dashboard forms or stylesheet loaded",
+      "1.5/360/dark/completed: actual renderer device scale factor",
+      "1.5/360/dark/completed: independent header, scrolling answer and composer do not overlap",
+      "1.5/360/dark/completed: every visible control fits",
+      "1.5/360/dark/completed: no dashboard forms or stylesheet loaded",
+      "1.5/360/dark: long answer has its own scroll area",
+      "1.5/360/dark: long-answer keyboard scrolling keeps input fixed",
+      "1.5/360/light/completed: actual renderer device scale factor",
+      "1.5/360/light/completed: independent header, scrolling answer and composer do not overlap",
+      "1.5/360/light/completed: every visible control fits",
+      "1.5/360/light/completed: no dashboard forms or stylesheet loaded",
+      "1.5/360/light: long answer has its own scroll area",
+      "1.5/360/light: long-answer keyboard scrolling keeps input fixed",
+      "1.5/480/dark/idle: actual renderer device scale factor",
+      "1.5/480/dark/idle: independent header, scrolling answer and composer do not overlap",
+      "1.5/480/dark/idle: every visible control fits",
+      "1.5/480/dark/idle: no dashboard forms or stylesheet loaded",
+      "1.5/480/dark/listening: actual renderer device scale factor",
+      "1.5/480/dark/listening: independent header, scrolling answer and composer do not overlap",
+      "1.5/480/dark/listening: every visible control fits",
+      "1.5/480/dark/listening: no dashboard forms or stylesheet loaded",
+      "1.5/480/dark/streaming: actual renderer device scale factor",
+      "1.5/480/dark/streaming: independent header, scrolling answer and composer do not overlap",
+      "1.5/480/dark/streaming: every visible control fits",
+      "1.5/480/dark/streaming: no dashboard forms or stylesheet loaded",
+      "1.5/480/dark/completed: actual renderer device scale factor",
+      "1.5/480/dark/completed: independent header, scrolling answer and composer do not overlap",
+      "1.5/480/dark/completed: every visible control fits",
+      "1.5/480/dark/completed: no dashboard forms or stylesheet loaded",
+      "1.5/480/dark: long answer has its own scroll area",
+      "1.5/480/dark: long-answer keyboard scrolling keeps input fixed",
+      "1.5/480/light/completed: actual renderer device scale factor",
+      "1.5/480/light/completed: independent header, scrolling answer and composer do not overlap",
+      "1.5/480/light/completed: every visible control fits",
+      "1.5/480/light/completed: no dashboard forms or stylesheet loaded",
+      "1.5/480/light: long answer has its own scroll area",
+      "1.5/480/light: long-answer keyboard scrolling keeps input fixed",
+      "1.5: overflow menu receives keyboard focus",
+      "1.5: arrow navigation reaches optional context",
+      "1.5: Escape closes the menu and returns focus",
+      "1.5: keyboard input and Shift+Enter remain usable",
+      "1.5: the labelled Hide control dismisses only the assistant",
+      "1.5: renderer reload remounts one minimal tree without new windows",
+      "1.5: exactly one renderer root after reload",
+      "1.5: restart creates one pair and honours start-hidden without duplicate windows",
+      "1.5: valid assistant position survives restart with compact default size: {\"remembered\":{\"x\":100,\"y\":80,\"width\":441,\"height\":501},\"restored\":{\"x\":100,\"y\":80,\"width\":484,\"height\":583}}",
+      "1.5: restart restores no capture permission",
+      "1.5: zero renderer errors"
+    ],
+    "observations": [
+      {
+        "scale": 1,
+        "initial": {
+          "pid": 44008,
+          "lock": true,
+          "windows": [
+            {
+              "id": 2,
+              "role": "assistant",
+              "visible": false,
+              "minimized": false,
+              "top": false,
+              "bounds": {
+                "x": 1408,
+                "y": 48,
+                "width": 480,
+                "height": 580
+              },
+              "handle": 12651806
+            },
+            {
+              "id": 1,
+              "role": "dashboard",
+              "visible": true,
+              "minimized": false,
+              "top": false,
+              "bounds": {
+                "x": 840,
+                "y": 80,
+                "width": 1040,
+                "height": 760
+              },
+              "handle": 1708256
+            }
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "dashboardStyles": {
+          "topmost": false,
+          "affinityRead": true,
+          "affinity": 0,
+          "owner": 0,
+          "cloakRead": true,
+          "toolWindow": false,
+          "cloaked": 0,
+          "appWindow": false,
+          "noActivate": false
+        },
+        "overlayStyles": {
+          "topmost": false,
+          "affinityRead": true,
+          "affinity": 0,
+          "owner": 0,
+          "cloakRead": true,
+          "toolWindow": true,
+          "cloaked": 0,
+          "appWindow": false,
+          "noActivate": false
+        }
+      },
+      {
+        "scale": 1,
+        "width": 360,
+        "theme": "dark",
+        "state": "idle",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 360,
+        "theme": "dark",
+        "state": "listening",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 360,
+        "theme": "dark",
+        "state": "streaming",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 360,
+        "theme": "dark",
+        "state": "completed",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 360,
+        "theme": "light",
+        "state": "completed",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 480,
+        "theme": "dark",
+        "state": "idle",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 480,
+        "theme": "dark",
+        "state": "listening",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 480,
+        "theme": "dark",
+        "state": "streaming",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 480,
+        "theme": "dark",
+        "state": "completed",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1,
+        "width": 480,
+        "theme": "light",
+        "state": "completed",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "initial": {
+          "pid": 7768,
+          "lock": true,
+          "windows": [
+            {
+              "id": 2,
+              "role": "assistant",
+              "visible": false,
+              "minimized": false,
+              "top": false,
+              "bounds": {
+                "x": 1024,
+                "y": 48,
+                "width": 488,
+                "height": 585
+              },
+              "handle": 45679526
+            },
+            {
+              "id": 1,
+              "role": "dashboard",
+              "visible": true,
+              "minimized": false,
+              "top": false,
+              "bounds": {
+                "x": 456,
+                "y": 80,
+                "width": 1048,
+                "height": 765
+              },
+              "handle": 28838600
+            }
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "dashboardStyles": {
+          "topmost": false,
+          "affinityRead": true,
+          "affinity": 0,
+          "owner": 0,
+          "cloakRead": true,
+          "toolWindow": false,
+          "cloaked": 0,
+          "appWindow": false,
+          "noActivate": false
+        },
+        "overlayStyles": {
+          "topmost": false,
+          "affinityRead": true,
+          "affinity": 0,
+          "owner": 0,
+          "cloakRead": true,
+          "toolWindow": true,
+          "cloaked": 0,
+          "appWindow": false,
+          "noActivate": false
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 360,
+        "theme": "dark",
+        "state": "idle",
+        "layout": {
+          "width": 362,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 360,
+        "theme": "dark",
+        "state": "listening",
+        "layout": {
+          "width": 362,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 360,
+        "theme": "dark",
+        "state": "streaming",
+        "layout": {
+          "width": 362,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 360,
+        "theme": "dark",
+        "state": "completed",
+        "layout": {
+          "width": 362,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 360,
+        "theme": "light",
+        "state": "completed",
+        "layout": {
+          "width": 362,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 480,
+        "theme": "dark",
+        "state": "idle",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 480,
+        "theme": "dark",
+        "state": "listening",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 480,
+        "theme": "dark",
+        "state": "streaming",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 480,
+        "theme": "dark",
+        "state": "completed",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.25,
+        "width": 480,
+        "theme": "light",
+        "state": "completed",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.25,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "initial": {
+          "pid": 31040,
+          "lock": true,
+          "windows": [
+            {
+              "id": 2,
+              "role": "assistant",
+              "visible": false,
+              "minimized": false,
+              "top": false,
+              "bounds": {
+                "x": 768,
+                "y": 48,
+                "width": 484,
+                "height": 583
+              },
+              "handle": 21300266
+            },
+            {
+              "id": 1,
+              "role": "dashboard",
+              "visible": true,
+              "minimized": false,
+              "top": false,
+              "bounds": {
+                "x": 200,
+                "y": 0,
+                "width": 1044,
+                "height": 753
+              },
+              "handle": 9701540
+            }
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "dashboardStyles": {
+          "topmost": false,
+          "affinityRead": true,
+          "affinity": 0,
+          "owner": 0,
+          "cloakRead": true,
+          "toolWindow": false,
+          "cloaked": 0,
+          "appWindow": false,
+          "noActivate": false
+        },
+        "overlayStyles": {
+          "topmost": false,
+          "affinityRead": true,
+          "affinity": 0,
+          "owner": 0,
+          "cloakRead": true,
+          "toolWindow": true,
+          "cloaked": 0,
+          "appWindow": false,
+          "noActivate": false
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 360,
+        "theme": "dark",
+        "state": "idle",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 360,
+        "theme": "dark",
+        "state": "listening",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 360,
+        "theme": "dark",
+        "state": "streaming",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 360,
+        "theme": "dark",
+        "state": "completed",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 360,
+        "theme": "light",
+        "state": "completed",
+        "layout": {
+          "width": 360,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 480,
+        "theme": "dark",
+        "state": "idle",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 480,
+        "theme": "dark",
+        "state": "listening",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": false,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 480,
+        "theme": "dark",
+        "state": "streaming",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 480,
+        "theme": "dark",
+        "state": "completed",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      },
+      {
+        "scale": 1.5,
+        "width": 480,
+        "theme": "light",
+        "state": "completed",
+        "layout": {
+          "width": 480,
+          "height": 580,
+          "dpr": 1.5,
+          "overlaps": [],
+          "answerOverflow": true,
+          "bodyOverflow": false,
+          "forbidden": 0,
+          "styles": [
+            "everyhint://app/assets/index-D3cY5-_C.css",
+            "everyhint://app/assets/FloatingAssistant-D751tinD.css"
+          ]
+        }
+      }
+    ]
+  },
+  "hmr": {
+    "command": "npm run smoke:overlay-hmr",
+    "passed": true,
+    "date": "2026-10-29T17:33:16.231Z",
+    "assertions": 5,
+    "checks": [
+      "Development renderer mounts one floating tree",
+      "Actual React hot update creates no BrowserWindow",
+      "Actual React hot update retains one renderer root",
+      "Actual CSS hot update retains the same single assistant",
+      "Hot refresh cannot mount dashboard forms in the overlay"
+    ],
+    "sourceRestored": true,
+    "capture": false,
+    "remoteInference": false
+  },
+  "listen": {
+    "assertions": 44,
+    "checks": [
+      "Startup makes no inference request",
+      "Explicit Connect selects a model from the fixture account catalog",
+      "Local capture acknowledgement cannot replace the separate ChatGPT sharing acknowledgement",
+      "Start activates native local Whisper automatically",
+      "Authorised Start automatically hides dashboard and assistant after speech setup",
+      "Authorised capture continues with both windows hidden",
+      "The real tray menu exposes Listening, restore, independent assistant and immediate Stop while hidden",
+      "Synthetic microphone speech produces final segments through native Whisper",
+      "Synthetic system-audio speech produces separately labelled final segments",
+      "Continuous local transcription and native screen sampling make no inference requests",
+      "All six configured shortcuts registered with the actual Electron globalShortcut service",
+      "A separate native Windows Forms application owns foreground focus before Answer",
+      "Native Ctrl+Alt+Enter opens and focuses the floating assistant from another application",
+      "The actual hotkey request contains recent source-labelled final transcript",
+      "The actual hotkey includes a fresh native image of only the selected owned test window",
+      "Existing response-only, no-store streaming transport is preserved",
+      "Answer sends within session scope without a context review dialog",
+      "Input, Ask, Hide, Pause and Stop fit in the floating viewport without scrolling",
+      "The real shortcut request enforces two-minute, transcript and serialized-text bounds",
+      "The requested screen frame follows the recent transcript in timestamp order",
+      "The streamed fixture answer is visible in the floating assistant",
+      "Typing help then Enter sends recent approved conversation and screen without review",
+      "Shift+Enter inserts a newline without sending",
+      "Ordinary typed questions use the same authorised conversation request path",
+      "Optional View Context exposes the exact last bounded request",
+      "Hiding the floating assistant keeps local listening active",
+      "The registered pause shortcut stops capture and transcription while hidden",
+      "Answer while paused sends no inference request",
+      "The registered resume shortcut restarts local transcription under the same capture consent",
+      "Overlay Pause interrupts a typed streaming answer and pauses capture",
+      "Overlay Resume recovers the authorised local session",
+      "Overlay Cancel aborts typed inference while keeping authorised capture active",
+      "The registered Stop shortcut aborts an in-flight streamed answer",
+      "Stop removes the session sharing grant",
+      "Stop clears the retained conversation-request context",
+      "Settings displays the actual configured Answer binding",
+      "Every configured shortcut remains available alongside the new Answer action",
+      "Rebinding Answer replaces the actual Electron global registration",
+      "Settings follows the rebound Answer binding",
+      "Rebound Answer is received while the native test application has focus",
+      "A rebound Answer cannot infer after Stop removed permission",
+      "Incomplete ChatGPT sharing recovery remains visible instead of being hidden as successful setup",
+      "A local session with incomplete sharing makes no inference request",
+      "No renderer errors occurred during the full Listen & Ask flow"
+    ],
+    "nativeOwnedWindowCapture": true,
+    "foregroundApplication": "Separate owned Windows Forms process",
+    "nativeWhisper": "Cached tiny.en with synthetic microphone/system audio; no physical devices"
+  },
+  "totals": {
+    "retainedElectronAssertions": 399,
+    "newOverlayAssertions": 219,
+    "electronAssertions": 618,
+    "electronSuites": 12,
+    "hmrAssertions": 5
+  },
+  "screenshotFiles": [
+    {
+      "path": "overlay-fix/before-overlap.png",
+      "sha256": "dbaa2e5e2b269098af919ec9589118691dfb3a2f40001ecf9d18e1fcf4d0456f",
+      "source": "artifacts/overlay-fix/before/expanded-session-options.png"
+    },
+    {
+      "path": "overlay-fix/idle.png",
+      "sha256": "e29a7d159a0fdabeced9d9febf82d95ecac46aa09e53e9cfcc72dde5303f1d7d",
+      "source": "artifacts/overlay-fix/after/scale-1.5-480-dark-idle.png"
+    },
+    {
+      "path": "overlay-fix/listening.png",
+      "sha256": "41aeae660ce5a43d248c61a6e0c02119041573c65b2cd526675a0101811b436e",
+      "source": "artifacts/overlay-fix/after/scale-1.5-480-dark-listening.png"
+    },
+    {
+      "path": "overlay-fix/streaming.png",
+      "sha256": "1c7566296bb84921cc829ffb4165fb531e0bd9e43100894b8cedea54338fbeab",
+      "source": "artifacts/overlay-fix/after/scale-1.5-480-dark-streaming.png"
+    },
+    {
+      "path": "overlay-fix/completed.png",
+      "sha256": "547c0a4e4f1b7f0095ad9a6a04390a33409779fcc87906d731b5d03e8dc038d2",
+      "source": "artifacts/overlay-fix/after/scale-1.5-480-dark-completed.png"
+    },
+    {
+      "path": "overlay-fix/narrow-light.png",
+      "sha256": "00f39cd1058c83662a771997617b18017fcdd5265b90588fca2309ee02bcec9f",
+      "source": "artifacts/overlay-fix/after/scale-1.5-360-light-completed.png"
+    },
+    {
+      "path": "overlay-fix/narrow-100.png",
+      "sha256": "fd494ce32b2495c3ad7e3d8034550e19d0723631d4e1b31e694232c62897b508",
+      "source": "artifacts/overlay-fix/after/scale-1-360-dark-completed.png"
+    },
+    {
+      "path": "overlay-fix/narrow-125.png",
+      "sha256": "10ba847ec1af9a8b9c88805a6408c6bcd8d70495f64f91647306ae8bb3304a25",
+      "source": "artifacts/overlay-fix/after/scale-1.25-360-dark-completed.png"
+    }
+  ],
+  "requests": {
+    "genuineAI": 0,
+    "paid": 0,
+    "genuineGoogle": 0,
+    "newModelDownloads": 0
+  },
+  "remaining": [
+    "Physical taskbar/pinned-cache/Alt+Tab/drag/Narrator acceptance",
+    "Physical mixed-DPI monitor changes/hotplug and small displays",
+    "Physical microphone/system playback/long calls",
+    "Discord/Teams/Zoom/Windows recording receiving-device privacy matrix",
+    "Fresh scoped genuine Listen/Live account/model/Google permission",
+    "Signing, clean install/upgrade/uninstall, updated packaged build and distribution"
+  ],
+  "privacy": "Hiding/taskbar exclusion is visibility only. Opt-in Windows content-protection configuration/readback preserved; no receiver certified, invisibility not guaranteed, no monitoring/proctoring evasion.",
+  "preservation": "Capture, Whisper, provider authentication, encrypted database schemas/keys and Live boundaries unchanged. Optional version-1 overlay geometry preserves all existing preferences; invalid new geometry alone is discarded.",
+  "knownLimitations": [
+    "Restart restores position at compact default dimensions, not the custom runtime size.",
+    "App-forced renderer scaling is not a physical OS DPI/multi-monitor test.",
+    "Literal Shell button count/pinned cache not certified."
+  ]
+}

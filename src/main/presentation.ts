@@ -1,6 +1,34 @@
 import type { Settings, WindowBounds } from "../shared/contracts";
 
 export type Presentation = "compact" | "assistant" | "dashboard";
+export function floatingBounds(
+  area: WindowBounds,
+  remembered?: WindowBounds,
+): WindowBounds {
+  const width = Math.min(
+    area.width,
+    Math.max(360, Math.min(800, remembered?.width ?? 480)),
+  );
+  const height = Math.min(
+    area.height,
+    Math.max(320, Math.min(800, remembered?.height ?? 580)),
+  );
+  return {
+    width,
+    height,
+    x: Math.max(
+      area.x,
+      Math.min(
+        remembered?.x ?? area.x + area.width - width - 32,
+        area.x + area.width - width,
+      ),
+    ),
+    y: Math.max(
+      area.y,
+      Math.min(remembered?.y ?? area.y + 48, area.y + area.height - height),
+    ),
+  };
+}
 export const presentation = (settings: Settings): Presentation =>
   settings.compact ? "compact" : (settings.layout ?? "assistant");
 export function presentationBounds(

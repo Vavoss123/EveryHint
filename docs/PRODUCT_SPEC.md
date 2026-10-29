@@ -1,5 +1,11 @@
 # EveryHint product specification
 
+## Current overlay and background contract — 2026-10-29
+
+FIX.1–FIX.4 on `66215d8` replaces the shared floating App with an independent minimal renderer and scoped CSS. One locked primary process owns one ordinary dashboard, one taskbar-excluded focusable assistant and one tray. Successful authorised Start waits for local Whisper and requested sharing completion, then hides both windows while continuing the existing session. Incomplete permissions stay visible. Tray Open EveryHint/Show assistant/Pause/Resume/Stop/Quit and native shortcuts recover or stop work.
+
+The 480 × 580 DIP assistant contains mode/listening/Hide/overflow, the latest streamed answer with one scroll area and a fixed Ask/Cancel input. Optional context lives in overflow; all meeting/history/transcript/configuration forms stay on the dashboard. Ctrl+Alt+Enter answers in the same assistant, Ctrl+Alt+Space toggles it, and Ctrl+Alt+A opens the dashboard's explicit review. Answers never dismiss on a timer or completion. Hidden/minimised assistants are not topmost; last valid position is restored with compact default dimensions. [Actual screenshots, native tests, exact limits and retained NO-GO gates](OVERLAY_FIX_ACCEPTANCE.md) govern the current window behavior. Version and provider/data/permission boundaries remain unchanged.
+
 ## Current Listen & Ask contract — 2026-10-29
 
 The focused milestone on `fab74cc` makes **Start listening → press Ctrl+Alt+Enter → streamed answer** and **type help → Enter** the primary desktop experience. Fresh local capture consent automatically starts the existing local Whisper pipeline for chosen audio; screen capture stays selected-source-only. Separate, unsaved session sharing approves transcript and/or screen for deliberate requests for at most one hour. It never enables inference on capture or grants automatic Live permission. Revoke, Stop, scope/connection/mode changes, expiry, reload and existing fail-closed lifecycle controls invalidate pending work.

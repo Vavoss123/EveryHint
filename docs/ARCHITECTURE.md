@@ -1,5 +1,13 @@
 # EveryHint architecture
 
+## Overlay and background lifecycle correction
+
+FIX.1–FIX.4 retains the existing single-instance lock and memoises initialisation; second-launch/show requests during startup are queued. The ordinary dashboard uses `skipTaskbar: false`; the focusable Windows toolbar assistant uses `skipTaskbar: true` both at creation and explicit show. Hide/minimise removes native topmost state; explicit show restores the pin preference. Both documents reuse existing main-owned controllers and exact-document IPC trust. Capture/state publications never show a window.
+
+The Listen Start IPC awaits the existing controller, local recognition and requested sharing result before hiding both windows. It keeps incomplete recovery, an active close prompt, explicit show requests and tray failure visible. This adds no capture or inference authority. Stop/Pause/Cancel remain immediate. Tray Open EveryHint and Show assistant restore each existing window independently.
+
+The bootstrap dynamically imports `DashboardApp` or `FloatingAssistant` and unmounts its single root during HMR. Dashboard CSS/configuration trees are not loaded in the assistant. Its scoped grid has header, one bounded answer scroll area and fixed composer; lightweight Listen/personal hooks are shared without importing configuration pages. Optional `overlayBounds` in the existing settings version stores valid position independently; restart resets dimensions to 480 × 580 DIP to avoid native fractional-DPI border-rounding drift. Work-area clamping handles display events without showing hidden windows. Existing settings, data schemas, crypto, authentication, consent and Live code remain intact. [Native and visual evidence with limits](OVERLAY_FIX_ACCEPTANCE.md).
+
 ## Listen request and permission boundary
 
 `src/main/listen/controller.ts` coordinates P2/P3/P6/P7 through narrow ports; it owns the unsaved session-sharing grant, deliberate request single-flight, local Start/automatic transcription and resume, latest-question selection, wall/monotonic expiry and one bounded on-demand transparency snapshot. Capture/recognition remain in their original controllers. `AssistantController.requestFromSession` prepares with the shared builder while hiding its internal review, and can submit only with a current main-owned scope guard. Renderer manual Ask cannot submit an internal scoped review, and renderer payloads cannot supply captured context or expand the scope. The guard is checked during preparation, reservation, token acquisition and streaming. Cancellation cannot restore a later preview. Completed response state is published after the request reservation is released.

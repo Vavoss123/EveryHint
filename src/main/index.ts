@@ -80,7 +80,7 @@ import { updatePolicy } from "./updates-policy";
 import { windowsUpdater } from "./updates-electron";
 import updateConfiguration from "../../resources/windows-updates.json";
 import design from "../../resources/design-tokens.json";
-import { presentationBounds } from "./presentation";
+import { presentationBounds, floatingBounds } from "./presentation";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -112,6 +112,10 @@ let chatgpt: ChatGptProvider | undefined;
 let meetings: MeetingController | undefined;
 let historyRoot = "";
 let interfaceReady = false;
+let dashboardRequested = false;
+let assistantRequested = false;
+let visibilityRequests = 0;
+let initialisation: Promise<void> | undefined;
 let meetingAI: MeetingAIController | undefined;
 let postNotes: PostMeetingNotes | undefined;
 let meetingProfile = "";
@@ -276,18 +280,35 @@ function icon(state: SessionState): Electron.NativeImage {
   return nativeImage.createFromBitmap(pixels, { width: 32, height: 32 });
 }
 function show(): void {
+  visibilityRequests++;
+  if (!interfaceReady) {
+    dashboardRequested = true;
+    return;
+  }
   if (window?.isMinimized()) window.restore();
   window?.show();
+  window?.setSkipTaskbar(false);
   window?.focus();
 }
 function showOverlay(): void {
+  visibilityRequests++;
+  if (!interfaceReady) {
+    assistantRequested = true;
+    return;
+  }
   if (!overlay || overlay.isDestroyed()) return;
   if (overlay.isMinimized()) overlay.restore();
   overlay.show();
+  overlay.setSkipTaskbar(true);
+  overlay.setAlwaysOnTop(store.settings.alwaysOnTop);
   overlay.focus();
 }
+function hideOverlay(): void {
+  overlay?.setAlwaysOnTop(false);
+  overlay?.hide();
+}
 function toggleOverlay(): void {
-  if (overlay?.isVisible() && !overlay.isMinimized()) overlay.hide();
+  if (overlay?.isVisible() && !overlay.isMinimized()) hideOverlay();
   else showOverlay();
 }
 async function closeDashboard(): Promise<void> {
@@ -309,7 +330,7 @@ async function closeDashboard(): Promise<void> {
     });
     if (result.response === 0) {
       hide();
-      overlay?.hide();
+      hideOverlay();
     }
     if (result.response === 1) {
       stopCapture();
@@ -362,7 +383,7 @@ function updateTray(): void {
   lastTrayState = key;
   tray.setImage(icon(state));
   tray.setToolTip(
-    `EveryHint · ${remote} · ${recording ? "saving final text" : "temporary"}${postEnabled ? " · End notes enabled" : ""} · ${state} · ${summary}`.slice(
+    `EveryHint · ${state === "PAUSED" ? "Paused" : state === "ACTIVE" ? "Listening / capture active" : state} · ${summary} · ${remote}${recording ? " · saving final text" : ""}${postEnabled ? " · End notes enabled" : ""}`.slice(
       0,
       127,
     ),
@@ -428,18 +449,18 @@ function updateTray(): void {
         label: `${id === "systemAudio" ? "System audio" : id === "microphone" ? "Microphone" : "Screen"}: ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
         enabled: false,
       })),
-      { label: "Show dashboard", click: show },
+      { label: "Open EveryHint", click: show },
       {
-        label: "Show / hide overlay",
+        label: "Show assistant",
         accelerator: store.settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
-        click: toggleOverlay,
+        click: showOverlay,
       },
       {
         label: "Hide to Tray",
         click: () =>
           safely(() => {
             hide();
-            overlay?.hide();
+            hideOverlay();
           }),
       },
       {
@@ -482,7 +503,11 @@ function publish(): void {
 function persistBounds(): void {
   if (!window || window.isDestroyed()) return;
   try {
-    store.save(store.settings, window.getNormalBounds());
+    store.save(
+      store.settings,
+      window.getNormalBounds(),
+      overlay?.getNormalBounds(),
+    );
   } catch (error) {
     warn(`Could not save EveryHint settings. ${errorMessage(error)}`);
   }
@@ -495,7 +520,7 @@ function applyAppearance(): void {
   if (!window || window.isDestroyed()) return;
   window.setAlwaysOnTop(false);
   window.setOpacity(1);
-  overlay?.setAlwaysOnTop(store.settings.alwaysOnTop);
+  overlay?.setAlwaysOnTop(overlay.isVisible() && store.settings.alwaysOnTop);
   overlay?.setOpacity(store.settings.opacity ?? 1);
   const requested = store.settings.protectWindow === true;
   if (!privacy || privacy.requested !== requested) {
@@ -984,16 +1009,32 @@ async function initialise(): Promise<void> {
       backgroundThrottling: true,
     },
   });
+  window.setSkipTaskbar(false);
+  const overlayArea = screen.getDisplayMatching(
+    store.overlayBounds ?? window.getNormalBounds(),
+  ).workArea;
+  // Restore position, with a fresh compact default size. Reusing frameless
+  // outer dimensions can accumulate native border rounding at fractional DPI.
+  const overlayGeometry = floatingBounds(
+    overlayArea,
+    store.overlayBounds
+      ? { ...store.overlayBounds, width: 480, height: 580 }
+      : undefined,
+  );
   overlay = new BrowserWindow({
     title: "EveryHint Assistant",
-    width: 480,
-    height: 580,
+    ...(process.platform === "win32" ? { type: "toolbar" } : {}),
+    ...overlayGeometry,
     minWidth: 360,
-    minHeight: 380,
+    minHeight: 320,
+    maxWidth: 800,
+    maxHeight: 800,
+    maximizable: false,
+    fullscreenable: false,
     frame: false,
     show: false,
-    alwaysOnTop: store.settings.alwaysOnTop,
-    skipTaskbar: false,
+    alwaysOnTop: false,
+    skipTaskbar: true,
     icon: icon("IDLE"),
     webPreferences: {
       preload: join(directory, "../preload/index.cjs"),
@@ -1006,6 +1047,14 @@ async function initialise(): Promise<void> {
       backgroundThrottling: true,
     },
   });
+  overlay.setSkipTaskbar(true);
+  overlay.on("hide", () => overlay?.setAlwaysOnTop(false));
+  overlay.on("minimize", () => overlay?.setAlwaysOnTop(false));
+  const rememberAssistant = (): void => {
+    queueBounds();
+  };
+  overlay.on("move", rememberAssistant);
+  overlay.on("resize", rememberAssistant);
   overlay.setMenu(null);
   overlay.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   overlay.webContents.on("will-navigate", (event) => event.preventDefault());
@@ -1014,16 +1063,16 @@ async function initialise(): Promise<void> {
   );
   overlay.webContents.on("render-process-gone", () => {
     stopCapture();
-    overlay?.hide();
+    hideOverlay();
   });
   overlay.webContents.on("unresponsive", () => {
     stopCapture();
-    overlay?.hide();
+    hideOverlay();
   });
   overlay.on("close", (event) => {
     if (!quitting) {
       event.preventDefault();
-      overlay?.hide();
+      hideOverlay();
     }
   });
   overlay.webContents.on("did-start-navigation", (details) => {
@@ -1040,12 +1089,14 @@ async function initialise(): Promise<void> {
       if (!target || target.isDestroyed()) continue;
       const bounds = target.getNormalBounds();
       target.setBounds(
-        presentationBounds(
-          target === window ? "dashboard" : "assistant",
-          bounds,
-          screen.getDisplayMatching(bounds).workArea,
-          bounds,
-        ),
+        target === overlay
+          ? floatingBounds(screen.getDisplayMatching(bounds).workArea, bounds)
+          : presentationBounds(
+              "dashboard",
+              bounds,
+              screen.getDisplayMatching(bounds).workArea,
+              bounds,
+            ),
       );
     }
   };
@@ -1125,8 +1176,8 @@ async function initialise(): Promise<void> {
         },
         stop: stopCapture,
         assist: () => {
-          showOverlay();
-          overlay?.webContents.send("everyhint:assist");
+          show();
+          window?.webContents.send("everyhint:assist");
         },
         clear: clearAssistantContext,
         answer: () => {
@@ -1154,7 +1205,28 @@ async function initialise(): Promise<void> {
 
   handle("everyhint:get", () => snapshot());
   handle("everyhint:listen-get", () => listen!.value);
-  handle("everyhint:listen-start", (input) => listen!.start(input));
+  handle("everyhint:listen-start", async (input) => {
+    const requestedAt = visibilityRequests;
+    await listen!.start(input);
+    const sharing = record(record(input).sharing);
+    // Incomplete permission recovery stays visible; an explicit show during
+    // Start also takes precedence over automatic backgrounding.
+    if ((sharing.transcript || sharing.screen) && !listen!.value.sharing)
+      return;
+    if (
+      !listen!.value.managed ||
+      closePrompt ||
+      controller.value.state !== "ACTIVE" ||
+      requestedAt !== visibilityRequests
+    )
+      return;
+    if (!tray || tray.isDestroyed()) {
+      warn("The tray is unavailable. Your active session remains visible.");
+      return;
+    }
+    hideOverlay();
+    hide();
+  });
   handle("everyhint:listen-authorise", (input) => listen!.authorise(input));
   handle("everyhint:listen-ask", (input) => listen!.ask(input));
   handle("everyhint:listen-context", () => listen!.context());
@@ -1496,17 +1568,17 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:window", (input, sender) => {
     if (input === "hide") {
-      if (sender === overlay) overlay?.hide();
+      if (sender === overlay) hideOverlay();
       else {
         hide();
-        overlay?.hide();
+        hideOverlay();
       }
     } else if (input === "minimize") sender.minimize();
     else if (input === "maximize") {
       if (sender.isMaximized()) sender.unmaximize();
       else sender.maximize();
     } else if (input === "close") {
-      if (sender === overlay) overlay?.hide();
+      if (sender === overlay) hideOverlay();
       else return closeDashboard();
     } else if (input === "overlay") toggleOverlay();
     else if (input === "dashboard") show();
@@ -1523,12 +1595,7 @@ async function initialise(): Promise<void> {
       bounds.x += input === "move-left" ? -40 : input === "move-right" ? 40 : 0;
       bounds.y += input === "move-up" ? -40 : input === "move-down" ? 40 : 0;
       overlay.setBounds(
-        presentationBounds(
-          "assistant",
-          bounds,
-          screen.getDisplayMatching(bounds).workArea,
-          bounds,
-        ),
+        floatingBounds(screen.getDisplayMatching(bounds).workArea, bounds),
       );
     } else if (input === "quit") app.quit();
     else throw new Error("Unknown window action.");
@@ -1561,8 +1628,10 @@ async function initialise(): Promise<void> {
   interfaceReady = true;
   restoreExistingHistory();
   await workspace.restoreChosen();
-  if (!store.settings.startHidden || !tray || tray.isDestroyed())
+  if (dashboardRequested) show();
+  else if (!store.settings.startHidden || !tray || tray.isDestroyed())
     window.showInactive();
+  if (assistantRequested) showOverlay();
   void assistant
     .inspect()
     .catch(() =>
@@ -1582,7 +1651,7 @@ else {
   app.on("second-instance", show);
   void app
     .whenReady()
-    .then(initialise)
+    .then(() => (initialisation ??= initialise()))
     .catch((error: unknown) => {
       if (quitting) return;
       dialog.showErrorBox("EveryHint could not start", errorMessage(error));

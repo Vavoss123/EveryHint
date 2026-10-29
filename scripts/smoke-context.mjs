@@ -575,24 +575,28 @@ try {
   await app.close();
   app = undefined;
   await start();
-  await page.waitForFunction(async () => {
-    const r = await window.everyhint.workspace.get();
-    return (
-      r.ok &&
-      r.value.unlocked &&
-      !r.value.busy &&
-      r.value.peopleCount === 1 &&
-      r.value.memoryCount > 0 &&
-      r.value.eventCount === 1
-    );
-  });
-  s = await state();
+  // Poll awaited IPC from Node. This Playwright version treats an async
+  // waitForFunction predicate's Promise as truthy even when it resolves false.
+  // The split renderer exposes the still-opening encrypted worker earlier.
+  const restoreDeadline = Date.now() + 15000;
+  do {
+    s = await state();
+    if (
+      s.unlocked &&
+      !s.busy &&
+      s.peopleCount === 1 &&
+      s.memoryCount > 0 &&
+      s.eventCount === 1
+    )
+      break;
+    await new Promise((done) => setTimeout(done, 40));
+  } while (Date.now() < restoreDeadline);
   check(
     s.unlocked &&
       s.peopleCount === 1 &&
       s.memoryCount > 0 &&
       s.eventCount === 1,
-    `chosen encrypted cache and OS-protected Google state restore after restart: ${JSON.stringify({ unlocked: s.unlocked, people: s.peopleCount, memory: s.memoryCount, events: s.eventCount, error: s.error, status: s.status })}`,
+    "chosen encrypted cache and OS-protected Google state restore after restart",
   );
   check(s.scopeId !== beforeRestart, "restart issues a new workspace scope");
   check(

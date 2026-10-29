@@ -1,5 +1,11 @@
 # Windows RC verification — 2026-10-29
 
+## Current overlay fix verification — 2026-10-29
+
+Baseline `66215d8`, version **0.5.0**. `npm run check`: **771 tests / 61 files**, retaining all 765 baseline cases; theme/spec/type/lint/build pass. Plan/SDK **5 + 6 tests** and actual compiled encrypted storage/native key **12 assertions** pass. All 11 retained Electron suites pass **399 assertions**, including 44 Listen cases. `npm run smoke:overlay` adds **219 assertions / 30 actual Electron screenshots** at 100/125/150% app scale and 360/480 DIP widths. `npm run smoke:overlay-hmr` adds **5 actual React/CSS hot-update assertions** with source restoration. Total **618 Electron assertions + 5 HMR**.
+
+[Full report, screenshot links, reproduction commands and manual limits](OVERLAY_FIX_ACCEPTANCE.md); [structured receipt](evidence/overlay-verification.json). Actual native taskbar/tool-window policy and process/window counts are checked; literal Shell button/pinned-cache acceptance remains manual. Forced app scaling is not physical mixed-monitor DPI acceptance. All screenshots were inspected visually. No genuine provider/Google request, paid request or hardware/receiver certification occurred. Release remains NO-GO; earlier milestone reports below are historical.
+
 ## Current Listen & Ask verification — 2026-10-29
 
 Baseline `fab74cc`, source version **0.5.0**. `npm run check` passes **765 tests / 60 files**, preserving all 722 prior cases; 39 new Listen cases, three model-readiness cases and one shortcut-migration case cover the integration. Provider gates pass **5 plan + 6 SDK loopback tests**, and compiled native encrypted storage passes **12 assertions**. All retained P1–P11 Electron suites and the new Windows Listen suite are rerun; **391 assertions across 11 suites**, including 36 Listen assertions; command receipts are in [listen-verification.json](evidence/listen-verification.json).

@@ -32,6 +32,8 @@ export async function finishSetup(page) {
   }
 }
 export async function navigate(page, name) {
+  // UI navigation is an explicit dashboard restore after a background Start.
+  await page.evaluate(() => window.everyhint.window("dashboard"));
   await page
     .getByRole("navigation", { name: "Main navigation" })
     .getByRole("button", { name, exact: true })

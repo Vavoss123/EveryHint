@@ -19,6 +19,8 @@
     "spec:check": "node scripts/build-feature-matrix.mjs --check",
     "smoke:ui": "node scripts/smoke-ui.mjs",
     "smoke:ux": "node scripts/smoke-ux.mjs",
+    "smoke:overlay": "node scripts/smoke-overlay.mjs",
+    "smoke:overlay-hmr": "node scripts/smoke-overlay-hmr.mjs",
     "smoke:intelligence": "node scripts/smoke-intelligence.mjs",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",

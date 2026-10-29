@@ -422,7 +422,7 @@ try {
     noHorizontalOverflow:
       document.documentElement.scrollWidth <= innerWidth + 1,
     footerVisible:
-      document.querySelector("footer").getBoundingClientRect().bottom <=
+      document.querySelector(".overlay-composer").getBoundingClientRect().bottom <=
       innerHeight + 1,
     viewport: { width: innerWidth, height: innerHeight },
   }));
@@ -434,7 +434,7 @@ try {
   await floating.screenshot({ path: "artifacts/p7-compact-live-125.png" });
   check(
     liveGeometry.footerVisible,
-    "floating assistant retains the session control area at 125% zoom",
+    "floating assistant retains its composer at 125% zoom",
   );
   check(
     liveGeometry.noHorizontalOverflow,

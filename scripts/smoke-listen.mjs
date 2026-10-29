@@ -133,6 +133,15 @@ try {
     sampleRate: wave.sampleRate,
   });
   await desktop.evaluate(installListenPlanFixture);
+  await desktop.evaluate(({ Menu }) => {
+    const real = Menu.buildFromTemplate;
+    Menu.buildFromTemplate = function (template) {
+      const menu = real.call(this, template);
+      if (template.some((item) => item.label === "Open EveryHint"))
+        globalThis.__listenTray = menu;
+      return menu;
+    };
+  });
   page = await dashboardPage(desktop);
   page.on("pageerror", (error) => errors.push(error.message));
   await finishSetup(page);
@@ -240,6 +249,41 @@ try {
     (s) => s.state === "LISTENING",
   );
   check(true, "Start activates native local Whisper automatically");
+  await wait(
+    () =>
+      desktop.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .filter((w) => w.webContents.getURL().includes("index.html"))
+          .every((w) => !w.isVisible()),
+      ),
+    (value) => value,
+  );
+  check(
+    true,
+    "Authorised Start automatically hides dashboard and assistant after speech setup",
+  );
+  check(
+    (await appState()).session.state === "ACTIVE",
+    "Authorised capture continues with both windows hidden",
+  );
+  check(
+    await desktop.evaluate(
+      () =>
+        globalThis.__listenTray.items.some(
+          (item) => item.label === "Listening locally",
+        ) &&
+        globalThis.__listenTray.items.some(
+          (item) => item.label === "Stop all capture" && item.enabled,
+        ) &&
+        globalThis.__listenTray.items.some(
+          (item) => item.label === "Open EveryHint",
+        ) &&
+        globalThis.__listenTray.items.some(
+          (item) => item.label === "Show assistant",
+        ),
+    ),
+    "The real tray menu exposes Listening, restore, independent assistant and immediate Stop while hidden",
+  );
   const final = await wait(
     () =>
       page.evaluate(
@@ -274,7 +318,13 @@ try {
     "All six configured shortcuts registered with the actual Electron globalShortcut service",
   );
   const answer = configured.find((h) => h.action === "answer").accelerator;
-  const focused = native("-Action", "Focus", "-Handle", String(other.handle));
+  const focused = await wait(
+    async () => native("-Action", "Focus", "-Handle", String(other.handle)),
+    (foreground) =>
+      foreground.handle === other.handle &&
+      foreground.process === other.process,
+    10000,
+  );
   check(
     focused.handle === other.handle &&
       focused.process === other.process &&
@@ -393,7 +443,10 @@ try {
     "Ordinary typed questions use the same authorised conversation request path",
   );
   await floating
-    .getByRole("button", { name: "View Context", exact: true })
+    .getByRole("button", { name: "Assistant menu", exact: true })
+    .click();
+  await floating
+    .getByRole("menuitem", { name: "View Context", exact: true })
     .click();
   await floating
     .getByRole("region", { name: "Last request context" })
@@ -438,6 +491,43 @@ try {
   await desktop.evaluate(() => {
     globalThis.__listenFixture.hold = true;
   });
+  await input.fill("help");
+  await input.press("Enter");
+  await wait(ai, (s) => s.responses.at(-1)?.status === "generating");
+  await floating.getByRole("button", { name: "Pause", exact: true }).click();
+  await wait(appState, (s) => s.session.state === "PAUSED");
+  check(
+    !(await ai()).responses.some((r) =>
+      ["sending", "generating"].includes(r.status),
+    ),
+    "Overlay Pause interrupts a typed streaming answer and pauses capture",
+  );
+  await floating.getByRole("button", { name: "Resume", exact: true }).click();
+  await wait(
+    () =>
+      page.evaluate(
+        async () => (await window.everyhint.getTranscription()).value,
+      ),
+    (s) => s.state === "LISTENING",
+  );
+  check(
+    (await appState()).session.state === "ACTIVE",
+    "Overlay Resume recovers the authorised local session",
+  );
+  await input.fill("help");
+  await input.press("Enter");
+  await wait(ai, (s) => s.responses.at(-1)?.status === "generating");
+  await floating.getByRole("button", { name: "Cancel", exact: true }).click();
+  await wait(
+    ai,
+    (s) =>
+      !s.responses.some((r) => ["sending", "generating"].includes(r.status)),
+  );
+  check(
+    (await appState()).session.state === "ACTIVE" &&
+      (await desktop.evaluate(() => globalThis.__listenFixture.aborted > 0)),
+    "Overlay Cancel aborts typed inference while keeping authorised capture active",
+  );
   hotkey(answer);
   await wait(ai, (s) => s.responses.at(-1)?.status === "generating");
   hotkey(configured.find((h) => h.action === "stop").accelerator);
@@ -513,10 +603,41 @@ try {
     "Rebound Answer is received while the native test application has focus",
   );
   check(
-    (await calls()).length === 4,
+    (await calls()).length === 6,
     "A rebound Answer cannot infer after Stop removed permission",
   );
   unwrap(await page.evaluate(() => window.everyhint.account("sign-out")));
+  await page.evaluate(() => window.everyhint.window("dashboard"));
+  await floating.evaluate(() => window.everyhint.window("hide"));
+  unwrap(
+    await page.evaluate(() =>
+      window.everyhint.listen.start({
+        capture: {
+          consent: {
+            microphone: true,
+            systemAudio: false,
+            screen: false,
+            acknowledged: true,
+          },
+        },
+        sharing: { transcript: true, screen: false, acknowledged: true },
+      }),
+    ),
+  );
+  check(
+    (await desktop.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL().endsWith("index.html"))
+        .isVisible(),
+    )) &&
+      !(await page.evaluate(() => window.everyhint.listen.get())).value.sharing,
+    "Incomplete ChatGPT sharing recovery remains visible instead of being hidden as successful setup",
+  );
+  check(
+    (await calls()).length === 6,
+    "A local session with incomplete sharing makes no inference request",
+  );
+  unwrap(await page.evaluate(() => window.everyhint.session("stop")));
   check(
     errors.length === 0,
     "No renderer errors occurred during the full Listen & Ask flow",
