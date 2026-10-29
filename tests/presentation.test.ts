@@ -32,6 +32,7 @@ describe("appearance and window presentation", () => {
       theme: "light",
       layout: "assistant",
       opacity: 1,
+      protectWindow:false,
       assistShortcut: "Control+Alt+A",
       clearShortcut: "Control+Alt+Shift+C",
     });

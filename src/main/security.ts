@@ -1,6 +1,7 @@
 import { resolve, sep } from "node:path";
 
-export function developmentUrl(value: string | undefined): string | undefined {
+export function developmentUrl(value: string | undefined, packaged = false): string | undefined {
+  if (packaged) return undefined;
   if (!value) return undefined;
   const url = new URL(value);
   if (

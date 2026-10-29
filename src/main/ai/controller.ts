@@ -44,6 +44,8 @@ export class AssistantController {
   private reviewTimer: ReturnType<typeof setTimeout> | undefined;
   private historyTimer: ReturnType<typeof setTimeout> | undefined;
   private closed = false;
+  private streamTimer: ReturnType<typeof setTimeout> | undefined;
+  private lastStreamAt = 0;
   private captureSession: string | null = null;
   private preparation = 0;
   private referenceGuard:
@@ -129,10 +131,29 @@ export class AssistantController {
     return this.responses.find((response) => response.requestId === id)?.status;
   }
   private publish(): void {
+    if (this.streamTimer) clearTimeout(this.streamTimer);
+    this.streamTimer = undefined;
     if (!this.closed) {
       this.revision++;
       this.changed(this.value);
     }
+  }
+  private publishText(response: AIResponse): void {
+    // Keep a wall-clock correction from delaying the next update beyond 50 ms.
+    const remaining = Math.min(50, 50 - (this.now() - this.lastStreamAt));
+    if (remaining <= 0) {
+      this.lastStreamAt = this.now();
+      this.publish();
+      return;
+    }
+    if (!this.streamTimer)
+      this.streamTimer = setTimeout(() => {
+        this.streamTimer = undefined;
+        if (this.current(response)) {
+          this.lastStreamAt = this.now();
+          this.publish();
+        }
+      }, remaining);
   }
   async inspect(): Promise<void> {
     if (this.inspecting) return this.inspecting;
@@ -680,8 +701,11 @@ export class AssistantController {
               }
             }
           }
-          this.publish();
-          if (event.type === "complete") break;
+          if (event.type === "complete") {
+            this.publish();
+            break;
+          }
+          this.publishText(response);
         }
         if (this.current(response) && response.status !== "completed")
           throw new ProviderError(
@@ -767,8 +791,10 @@ export class AssistantController {
     if (this.captureSession !== capture.sessionId) {
       this.captureSession = capture.sessionId;
       this.clear();
-    } else if (capture.state === "STOPPED" || capture.state === "ERROR")
+    } else if (capture.state === "STOPPED" || capture.state === "ERROR") {
+      this.cancel();
       this.discardReview();
+    }
   }
   async dispose(): Promise<void> {
     this.clear();

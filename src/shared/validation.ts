@@ -12,6 +12,7 @@ export const DEFAULT_SETTINGS: Settings = {
   theme: "light",
   layout: "assistant",
   opacity: 1,
+  protectWindow: false,
   assistShortcut: DEFAULT_HOTKEYS.assist,
   clearShortcut: DEFAULT_HOTKEYS.clear,
 };
@@ -67,6 +68,7 @@ export function parseSettings(value: unknown): Settings {
     "theme",
     "layout",
     "opacity",
+    "protectWindow",
     "assistShortcut",
     "clearShortcut",
     "intelligence",
@@ -88,6 +90,8 @@ export function parseSettings(value: unknown): Settings {
   const theme = input.theme === undefined ? "light" : input.theme,
     layout = input.layout === undefined ? "assistant" : input.layout,
     opacity = input.opacity === undefined ? 1 : input.opacity;
+  if (input.protectWindow !== undefined && typeof input.protectWindow !== "boolean")
+    throw new Error("Choose a window-content privacy preference.");
   if (theme !== "light" && theme !== "dark" && theme !== "system")
     throw new Error("Choose Light, Dark or System theme.");
   if (layout !== "assistant" && layout !== "dashboard")
@@ -128,6 +132,7 @@ export function parseSettings(value: unknown): Settings {
     theme,
     layout,
     opacity,
+    protectWindow: input.protectWindow === true,
     assistShortcut,
     clearShortcut,
     ...(input.intelligence === undefined

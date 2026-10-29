@@ -1529,3 +1529,12 @@ footer {
   color: var(--color-brand);
   vertical-align: middle;
 }
+.desktop-privacy .check {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-2);
+}
+.desktop-privacy .button-row { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.desktop-privacy progress { width: min(100%, 22rem); accent-color: var(--color-brand); }
+.privacy-indicator { font-size: 11px; }
+.is-compact .privacy-indicator { font-size: 9px; white-space: nowrap; flex: none; }

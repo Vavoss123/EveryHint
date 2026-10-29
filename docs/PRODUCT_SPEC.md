@@ -1,6 +1,14 @@
 # EveryHint product specification
 
-Version: P10 Calendar, People, Long-Term Memory and Pre-Call Preparation, 2026-10-28. Baseline: `153846c`. Local implementation and deterministic integration evidence are delivered; genuine Google checks require configured Desktop OAuth and test permission. Genuine P10 AI status is recorded in TESTING.md. Preserve all earlier manual acceptance gaps. P11/P12/P13 are not started.
+Version: **0.5.0 / P11 Windows optimisation, privacy and private desktop release preparation, 2026-10-29**. Baseline: `d9d1ca8`. [P11 acceptance, measurements and release checklist](P11_ACCEPTANCE.md) controls current status. Enterprise is permanently removed; mobile is unstarted. Historical P1–P10 evidence/manual gaps below remain applicable. Genuine Google and receiving-device/physical-hardware testing remain pending at the user's request.
+
+## P11 desktop contract
+
+Windows window-content protection is an opt-in preference, off on migration. Apply before showing EveryHint, report configuration/failure and keep a visible status plus clear receiving-device limitation. It neither certifies a sharing platform nor guarantees omission by every capture method. No sharing app or capture pipeline is changed. Receiver Discord/Teams/Zoom/Windows recording outcomes are pending.
+
+Stop invalidates pending inference and Live permission; restart restores neither capture nor automatic sharing. Response streaming coalesces to at most 20 publications/second with immediate final/cancel delivery. Existing screenshot deduplication, bounded buffers/context and encryption/account separation remain. Workspace teardown joins the bounded shutdown barrier; packaged builds reject development renderer overrides.
+
+The per-user x64 NSIS installer is a private unsigned test artifact with branding, Start menu, optional desktop shortcut, uninstall and preserved user data/models. A manifest-checked pinned Whisper helper is packaged; models require explicit checksum-verified setup. [Manual release updates](UPDATES.md) implement Check, authenticated Download/progress/cancel, and confirmed Restart/install. Bundled HTTPS/publisher/Ed25519 trust is required; checksum and Windows signature verification fail closed. The user chose to keep updates unconfigured until signing/hosting are ready, so this build makes no update requests. No release is published. Clean Windows installation, physical capture/receiver acceptance, genuine signed update acceptance and distribution approvals remain release gates.
 
 ## P10 current product contract
 
@@ -65,7 +73,7 @@ Settings configure global Assist (default Ctrl+Alt+A) and Clear context (Ctrl+Al
 
 EveryHint is a Windows-first desktop assistant for authorised productivity, coding and conversations. It belongs to the EverySession/EveryDesk family. Feature research uses Cluely's public documentation; source code, visual designs, assets and logos are not copied. EveryHint uses the actual EverySession red/white/warm-grey, Poppins/Inter system recorded in [DESIGN_SYSTEM.md](DESIGN_SYSTEM.md). Its compact overlay, dashboard navigation, dark mode and desktop interactions are explicit adaptations of the mobile source.
 
-Long-term completeness spans desktop assistance, live conversation intelligence, meeting records, personalisation, calendar/people/memory, utilities, enterprise and mobile. The matrix assigns every requested feature a stable ID, description, workflow, phase, status, dependencies, acceptance, tests, manual evidence and source classification. Named contextual actions map onto those IDs rather than inflate the total.
+Current scope spans desktop assistance, live conversation intelligence, meeting records, personalisation, calendar/people/memory and Windows utilities/release preparation. Enterprise is permanently removed. Mobile is a future unstarted scope outside P11. The matrix retains 103 historical IDs, including sixteen explicitly OUT OF SCOPE enterprise rows, for traceability; those rows are not planned work. Named actions map onto existing IDs rather than inflate the total.
 
 ## Repository audit and actual baseline
 
@@ -122,11 +130,11 @@ Use permitted official authentication. EveryHint owns its registered ChatGPT con
 
 Claude subscription authentication remains conditional on Anthropic approval for distribution. Its API path requires a locally configured key and explicit, separately billed session opt-in; P7 makes no paid request. Future release eligibility is not established merely by the successful private ChatGPT test.
 
-Captured content is untrusted reference material, never authority. Providers cannot execute arbitrary shell commands, change files, install packages or control the computer. Future factual research must use an explicitly authorised capability with source/uncertainty disclosure. Sharing, email, calendar writes, CRM/ATS sync, invitations and enterprise administration require their own permission/review boundaries; P10 adds separately consented read-only Google Calendar/Contacts, without granting writes or AI sharing.
+Captured content is untrusted reference material, never authority. Providers cannot execute arbitrary shell commands, change files, install packages or control the computer. Future factual research must use an explicitly authorised capability with source/uncertainty disclosure. Sharing, email and calendar writes require independent permission/review; P10 provides separately consented read-only Google Calendar/Contacts without granting writes or AI sharing. Enterprise integrations/administration are permanently removed.
 
 ## Feature acceptance and roadmap
 
-P1–P3 provide the existing desktop/audio/local speech foundation. P4 covers authorised providers. P5 delivered the source-verified design/layout foundation with human acceptance open. P6 implements explicit screen-aware Assist/shortcuts/follow-ups/rich responses; P7 local detection and approved dynamic assistance; P8 meeting records; P9 modes/personal knowledge; P10 calendars/people/memory; P11 enterprise; P12 mobile; P13 accessibility/performance/privacy/packaging/updates/security/release. [BACKLOG.md](BACKLOG.md) supplies phase gates and testable acceptance. Phases are not automatically authorised by this specification.
+P1–P3 provide the desktop/audio/local speech foundation; P4 authorised providers; P5 the source-verified design/layout foundation; P6 reviewed screen Assist; P7 local intelligence/scoped Live; P8 meeting records; P9 modes/personal knowledge; P10 calendar/people/memory. P11 now covers Windows privacy/performance/reliability/security/installer/update preparation, superseding the old enterprise P11 and release P13 labels. Enterprise is removed, and mobile remains unstarted. [BACKLOG.md](BACKLOG.md) and [P11 acceptance](P11_ACCEPTANCE.md) supply current gates; historical delivery records are not authorisation for future work.
 
 A requirement is COMPLETE only after its full acceptance criteria, required automated coverage and manual/platform verification have passed and dependencies are resolved. A planned screen or disabled selector is not completion. Partial implementations remain identified as partial. Passing one provider request does not prove all models or providers. No 95%-accuracy, 300ms, universal privacy, commercial-approval or cross-device-sync claim is inherited from competitor marketing.
 

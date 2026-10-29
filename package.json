@@ -1,9 +1,9 @@
 {
   "name": "everyhint",
   "productName": "EveryHint",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "private": true,
-  "description": "EveryHint \u00e2\u20ac\u201d Intelligence when you need it.",
+  "description": "EveryHint — Intelligence when you need it.",
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {
@@ -39,12 +39,17 @@
     "smoke:personal": "node scripts/smoke-personal.mjs",
     "personal:bench": "node scripts/benchmark-personal.mjs",
     "smoke:context": "node scripts/smoke-context.mjs",
-    "context:bench": "node scripts/benchmark-context.mjs"
+    "context:bench": "node scripts/benchmark-context.mjs",
+    "dist:win": "node scripts/build-windows.mjs",
+    "windows:profile": "node scripts/profile-windows.mjs",
+    "windows:endurance": "node scripts/endurance-windows.mjs",
+    "windows:live-endurance": "node scripts/endurance-live.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.311",
     "@napi-rs/keyring": "2.1.2",
     "@openai/codex-sdk": "0.164.0",
+    "electron-updater": "6.8.11",
     "fflate": "0.8.3",
     "jose": "6.2.13",
     "pdfjs-dist": "6.4.299",
@@ -59,6 +64,7 @@
     "@types/react-dom": "19.3.0",
     "@vitejs/plugin-react": "6.1.2",
     "electron": "45.0.0",
+    "electron-builder": "26.18.0",
     "electron-vite": "6.0.0",
     "eslint": "10.13.0",
     "globals": "17.13.0",

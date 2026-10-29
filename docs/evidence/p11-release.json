@@ -1,0 +1,98 @@
+{
+  "asOf": "2026-10-29",
+  "version": "0.5.0",
+  "unit": {
+    "tests": 706,
+    "files": 57
+  },
+  "providerFixtureIntegrations": 11,
+  "nativeEncryptedStorageAssertions": 12,
+  "electronAssertions": {
+    "core": 47,
+    "ai": 44,
+    "speech": 11,
+    "ui": 44,
+    "intelligence": 28,
+    "meetings": 42,
+    "personal": 34,
+    "context": 36,
+    "p11Desktop": 20,
+    "p11Packaged": 12,
+    "total": 318
+  },
+  "package": {
+    "status": "passed",
+    "archiveEntries": 920,
+    "asarBytes": 33759515,
+    "helper": {
+      "schema": 1,
+      "arch": "x64",
+      "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+      "bytes": 1690112,
+      "sha256": "60f616ff4d45e6eb29090d109fa5f4f74d73acaea05c659b56ac7bc9cb791b9f"
+    },
+    "fuses": {
+      "0": 49,
+      "1": 48,
+      "2": 48,
+      "3": 48,
+      "4": 49,
+      "5": 49,
+      "6": 48,
+      "7": 48,
+      "8": 49,
+      "version": "1"
+    },
+    "developerHomePathsFound": 0,
+    "modelsBundled": false,
+    "installer": {
+      "path": "release/EveryHint-0.5.0-x64-private-unsigned-setup.exe",
+      "bytes": 241628302,
+      "sha256": "e2c491a2cf8c6b3e00b3d8dd4bf346a8f4fdb90cf774ceba10debf6acea47370"
+    },
+    "signing": "unsigned private test build; not trusted for distribution",
+    "unsignedInstallerRejectedByUpdateVerifier": true,
+    "runAsNode": "retained for optional Claude adapter compatibility"
+  },
+  "desktop": {
+    "checks": 20,
+    "errors": [],
+    "receivingDevice": "pending",
+    "physicalAudio": "pending",
+    "privacy": "Windows configuration readback only",
+    "restarts": 3
+  },
+  "packaged": {
+    "checks": 12,
+    "errors": [],
+    "url": "everyhint://app/index.html",
+    "status": {
+      "version": "0.5.0",
+      "platform": "win32",
+      "arch": "x64",
+      "packaged": true,
+      "updates": {
+        "state": "unconfigured",
+        "message": "Updates are not configured. Signing, an authenticated release feed and a trusted release key are required. No update network request is made.",
+        "availableVersion": null,
+        "progress": null,
+        "checkedAt": null
+      }
+    },
+    "hardware": "pending",
+    "cleanWindowsInstaller": "pending",
+    "oauthRealBrowser": "pending"
+  },
+  "nativeUpdateVerifier": {
+    "status": "passed",
+    "validWindowsSystemBinaryAccepted": true,
+    "wrongPublisherRejected": true,
+    "unsignedInstallerRejected": true,
+    "genuineReleaseFeed": false
+  },
+  "dependencyAuditKnownVulnerabilities": 0,
+  "realAIRequests": 0,
+  "published": false,
+  "updates": "Implemented manual flow; bundled policy disabled by explicit user choice until real hosting/signing/key readiness.",
+  "pending": "Receiving-device/hardware, genuine Google, clean Windows install/upgrade/uninstall, real packaged OAuth/capture/tray, human accessibility/DPI/OS lifecycle, signed release feed and distribution approvals."
+}

@@ -70,6 +70,12 @@ import { AsyncEntry } from "@napi-rs/keyring";
 import { exportBrief } from "./workspace/export";
 import { parseReview } from "../shared/ai";
 import { record } from "../shared/validation";
+import { configureWindowPrivacy } from "./window-privacy";
+import type { WindowPrivacy } from "../shared/desktop";
+import { UpdateController } from "./updates";
+import { updatePolicy } from "./updates-policy";
+import { windowsUpdater } from "./updates-electron";
+import updateConfiguration from "../../resources/windows-updates.json";
 import design from "../../resources/design-tokens.json";
 import {
   presentation,
@@ -117,11 +123,13 @@ let revision = 0;
 let quitting = false;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let lastTrayState: string | undefined;
+let privacy: WindowPrivacy | undefined;
+let updates: UpdateController | undefined;
 const presentationSizes = new Map<
   Presentation,
   { width: number; height: number }
 >();
-const devUrl = developmentUrl(process.env.ELECTRON_RENDERER_URL);
+const devUrl = developmentUrl(process.env.ELECTRON_RENDERER_URL, app.isPackaged);
 const documentUrl = devUrl
   ? new URL(devUrl).href
   : "everyhint://app/index.html";
@@ -180,6 +188,9 @@ function clearAssistantContext(): void {
 }
 function stopCapture(): void {
   cancelMeetingWork();
+  intelligence?.revoke("Session stopped. Renew remote sharing explicitly.");
+  assistant?.cancel();
+  assistant?.discardReview();
   controller?.stop();
 }
 function lockMeetingHistory(reason: string): void {
@@ -213,6 +224,7 @@ function updateMeetingProfile(): void {
 function snapshot(): AppSnapshot {
   return {
     revision,
+    privacy,
     session: controller.value,
     settings: { ...store.settings },
     hotkeys,
@@ -414,6 +426,9 @@ function applyAppearance(): void {
   if (!window || window.isDestroyed()) return;
   window.setAlwaysOnTop(store.settings.alwaysOnTop);
   window.setOpacity(store.settings.opacity ?? 1);
+  const requested = store.settings.protectWindow === true;
+  if (!privacy || privacy.requested !== requested)
+    privacy = configureWindowPrivacy(window, requested);
   const dark =
     store.settings.theme === "dark" ||
     (store.settings.theme === "system" && nativeTheme.shouldUseDarkColors);
@@ -513,8 +528,12 @@ async function initialise(): Promise<void> {
       "EveryHint",
       "speech",
     );
-  const installation = new SpeechInstallation(speechRoot, () =>
-    speech?.publish(),
+  const installation = new SpeechInstallation(
+    speechRoot,
+    () => speech?.publish(),
+    app.isPackaged
+      ? { directory: join(process.resourcesPath, "speech"), manifestPath: join(directory, "speech-runtime.json") }
+      : undefined,
   );
   speech = new TranscriptionController(
     installation,
@@ -904,6 +923,43 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  updates = new UpdateController(
+    app.isPackaged && process.platform === "win32" ? updatePolicy(updateConfiguration) : null,
+    app.getVersion(),
+    policy => windowsUpdater(policy, join(directory, "update-config.yml")),
+    value => {
+      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
+        window.webContents.send("everyhint:updates", value);
+    },
+    async () => {
+      if (!window || window.isDestroyed()) return false;
+      const result = await dialog.showMessageBox(window, {
+        type: "question", buttons: ["Restart and install", "Later"], defaultId: 1, cancelId: 1,
+        message: `Install EveryHint ${updates?.value.availableVersion ?? "update"}?`,
+        detail: "Save your work first. Restarting stops capture and remote AI requests. Your encrypted local data and models are preserved.",
+      });
+      if (result.response !== 0) return false;
+      stopCapture();
+      await meetings?.flush();
+      lockMeetingHistory("Restarting to install a verified update.");
+      accounts?.cancel();
+      return true;
+    },
+  );
+  handle("everyhint:update", async input => {
+    await updates!.command(input as import("../shared/updates").UpdateAction);
+    return updates!.value;
+  });
+  handle("everyhint:desktop-status", (input) => {
+    if (input !== undefined) throw new Error("Desktop status takes no input.");
+    return {
+      version: app.getVersion(),
+      platform: process.platform,
+      arch: process.arch,
+      packaged: app.isPackaged,
+      updates: updates!.value,
+    };
+  });
   registerMeetingIPC({
     snapshotAI: meetingAISnapshot,
     sourcesChanged: () => workspace?.sourceChanged("meeting"),
@@ -1224,8 +1280,9 @@ app.on("before-quit", (event) => {
   if (quitting) return;
   event.preventDefault();
   quitting = true;
+  updates?.dispose();
   personal?.lock();
-  void workspace?.dispose();
+  const workspaceClosed = workspace?.dispose();
   postNotes?.dispose();
   meetingAI?.cancel();
   accounts?.dispose();
@@ -1239,6 +1296,7 @@ app.on("before-quit", (event) => {
   // Allow SDK teardown and temporary-directory removal to finish before exiting.
   void Promise.race([
     Promise.all([
+      workspaceClosed ?? Promise.resolve(),
       assistant?.dispose() ?? Promise.resolve(),
       (async () => {
         try {

@@ -86,6 +86,43 @@ async function flush() {
   await vi.advanceTimersByTimeAsync(0);
 }
 describe("manual AI request lifecycle", () => {
+  it("cancels inference on same-session Stop and suppresses later output", async () => {
+    const s = setup(), pending = deferred<void>();
+    s.controller.captureChanged(s.sources.capture);
+    s.codex.respond.mockImplementationOnce(async function* () {
+      yield { type: "text", text: "Before stop" };
+      await pending.promise;
+      yield { type: "complete", text: "After stop" };
+    });
+    s.prepare(); await s.ask(); await flush();
+    s.controller.captureChanged({ ...s.sources.capture, state: "STOPPED" });
+    expect(s.controller.value.responses.at(-1)?.status).toBe("cancelled");
+    pending.resolve(); await flush();
+    expect(s.controller.value.responses.at(-1)?.text).not.toBe("After stop");
+  });
+  it("coalesces text across clock corrections without losing final text or retaining a timer", async () => {
+    const s = setup();
+    s.codex.respond.mockImplementationOnce(async function* () {
+      for (let i = 0; i < 200; i++) {
+        if (i === 60) vi.setSystemTime(Date.now() - 60000);
+        yield { type: "text", text: String(i) };
+        await new Promise(r => setTimeout(r, 1));
+      }
+      yield { type: "complete", text: "Final complete text" };
+    });
+    s.prepare(); await s.ask();
+    await vi.advanceTimersByTimeAsync(150);
+    expect(s.controller.value.responses.at(-1)?.status).toBe("generating");
+    const updates = s.changed.mock.calls.map(([snapshot]) => snapshot.responses.at(-1)?.text);
+    expect(updates.some(text => Number(text) > 60)).toBe(true);
+    await vi.advanceTimersByTimeAsync(60);
+    expect(s.controller.value.responses.at(-1)?.text).toBe("Final complete text");
+    expect(s.controller.value.responses.at(-1)?.status).toBe("completed");
+    expect(s.changed.mock.calls.length).toBeLessThan(20);
+    const count = s.changed.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(100);
+    expect(s.changed).toHaveBeenCalledTimes(count);
+  });
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(1000000);

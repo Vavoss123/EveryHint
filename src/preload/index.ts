@@ -6,6 +6,13 @@ import type {
 } from "../shared/contracts";
 
 const bridge: EveryHintBridge = {
+  desktopStatus: () => ipcRenderer.invoke("everyhint:desktop-status"),
+  update: (action) => ipcRenderer.invoke("everyhint:update", action),
+  onUpdates: (callback) => {
+    const listener = (_event: unknown, value: import("../shared/updates").UpdateSnapshot): void => callback(value);
+    ipcRenderer.on("everyhint:updates", listener);
+    return () => ipcRenderer.removeListener("everyhint:updates", listener);
+  },
   workspace: Object.freeze({
     get: () => ipcRenderer.invoke("everyhint:workspace-get"),
     command: (

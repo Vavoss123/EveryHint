@@ -111,7 +111,7 @@ export function TranscriptionPanel({
         <p className="muted">
           {snapshot.runtimeInstalled
             ? "Local Whisper runtime installed."
-            : "Runtime missing. Run npm run speech:build from the project directory."}{" "}
+            : "Runtime missing or invalid. Reinstall a trusted EveryHint build, or rebuild the helper if running from source."}{" "}
           Models download only when you choose Install. Audio and text stay on
           this device.
         </p>

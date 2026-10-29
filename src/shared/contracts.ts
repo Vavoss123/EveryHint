@@ -76,6 +76,7 @@ export interface Settings {
   theme?: "light" | "dark" | "system";
   layout?: "assistant" | "dashboard";
   opacity?: number;
+  protectWindow?: boolean;
   assistShortcut?: string;
   clearShortcut?: string;
   intelligence?: import("./intelligence").IntelligenceSettings;
@@ -94,6 +95,7 @@ export interface HotkeyStatus {
   registered: boolean;
 }
 export interface AppSnapshot {
+  privacy?: import("./desktop").WindowPrivacy;
   revision: number;
   session: SessionSnapshot;
   settings: Settings;
@@ -104,6 +106,9 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  desktopStatus(): Promise<Result<import("./desktop").DesktopStatus>>;
+  update(action: import("./updates").UpdateAction): Promise<Result<import("./updates").UpdateSnapshot>>;
+  onUpdates(callback: (value: import("./updates").UpdateSnapshot) => void): () => void;
   workspace: import("./workspace").WorkspaceBridge;
   personal: import("./personal").PersonalBridge;
   meetings: import("./meeting-bridge").MeetingBridge;

@@ -11,3 +11,4 @@ artifacts/
 .speech/
 speech-data/
 *.bin
+release/

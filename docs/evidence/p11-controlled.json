@@ -1,0 +1,203 @@
+{
+  "asOf": "2026-10-29",
+  "environment": "Windows 11 Home x64 build 26200; Electron 45.0.0; Electron Node 24.22.0; development Node 24.14.1",
+  "physicalHardware": false,
+  "remoteRequests": 0,
+  "notes": [
+    "Controlled media only; no real desktop, microphone or playback captured.",
+    "Capture runs used cached development Whisper; rebuilt source-labelled release helper separately passed actual inference.",
+    "Crash field in original capture harness was not an event counter. Completion, ACTIVE state on 180 samples/run and no page errors are the evidence of no observed failure.",
+    "IPC round trip is a responsiveness proxy, not foreground frame-rate or accessibility acceptance.",
+    "CPU is summed Electron process percentage; native Whisper CPU is separately reported per core and may exceed 100%.",
+    "Runs ran concurrently; results are local samples, not product-wide performance guarantees.",
+    "The 30-minute capture/mock Live checkpoint preceded the gated updater addition. Final unit/Electron/packaged checks cover the disabled updater; no genuine signed-update endurance claim."
+  ],
+  "captureRuns": [
+    {
+      "scenario": "screen",
+      "startedAt": "2026-10-28T23:13:10.527Z",
+      "elapsedSeconds": 1800.0204427,
+      "status": "passed",
+      "cycles": 3,
+      "cleanup": {
+        "state": "STOPPED",
+        "speech": "OFF",
+        "queue": 0,
+        "live": null
+      },
+      "audioWindows": 0,
+      "observedPageErrors": [],
+      "frames": 1777,
+      "retainedEvents": 0,
+      "completedJobs": 0,
+      "summary": {
+        "samples": 180,
+        "mainRssFirst": 154947584,
+        "mainRssLast": 130777088,
+        "mainRssMax": 155299840,
+        "mainHeapMax": 17322420,
+        "electronCpuMean": 0.2769918679710932,
+        "ipcMaxMs": 24.277600000001257,
+        "queueMax": 0,
+        "workerMemoryMax": 0
+      },
+      "workerCpuMean": 0,
+      "retainedEventsMax": 0
+    },
+    {
+      "scenario": "transcription",
+      "startedAt": "2026-10-28T23:13:11.277Z",
+      "elapsedSeconds": 1800.0143386,
+      "status": "passed",
+      "cycles": 3,
+      "cleanup": {
+        "state": "STOPPED",
+        "speech": "PAUSED",
+        "queue": 0,
+        "live": null
+      },
+      "audioWindows": 0,
+      "observedPageErrors": [],
+      "frames": 0,
+      "retainedEvents": 88,
+      "completedJobs": 772,
+      "summary": {
+        "samples": 180,
+        "mainRssFirst": 163143680,
+        "mainRssLast": 202354688,
+        "mainRssMax": 207261696,
+        "mainHeapMax": 35865828,
+        "electronCpuMean": 0.8540422830996205,
+        "ipcMaxMs": 14.279199999989942,
+        "queueMax": 1,
+        "workerMemoryMax": 175427584
+      },
+      "workerCpuMean": 380.5578833333333,
+      "retainedEventsMax": 96
+    },
+    {
+      "scenario": "combined",
+      "startedAt": "2026-10-28T23:13:11.333Z",
+      "elapsedSeconds": 1800.0207799,
+      "status": "passed",
+      "cycles": 3,
+      "cleanup": {
+        "state": "STOPPED",
+        "speech": "PAUSED",
+        "queue": 0,
+        "live": null
+      },
+      "audioWindows": 0,
+      "observedPageErrors": [],
+      "frames": 1777,
+      "retainedEvents": 178,
+      "completedJobs": 1527,
+      "summary": {
+        "samples": 180,
+        "mainRssFirst": 170008576,
+        "mainRssLast": 207491072,
+        "mainRssMax": 212951040,
+        "mainHeapMax": 37813544,
+        "electronCpuMean": 1.34063118267928,
+        "ipcMaxMs": 26.748800000175834,
+        "queueMax": 2,
+        "workerMemoryMax": 173776896
+      },
+      "workerCpuMean": 380.293288888889,
+      "retainedEventsMax": 189
+    }
+  ],
+  "mockLive": {
+    "status": "passed",
+    "elapsedSeconds": 1800.0159316999998,
+    "calls": 1,
+    "remoteRequests": 0,
+    "finalGrant": null,
+    "queueMax": 0,
+    "maxRss": 51462144,
+    "deduplication": "One request; similar subsequent questions suppressed; this run does not exercise all twenty attempts."
+  },
+  "profile": {
+    "baseline": {
+      "readyMs": 624.9739999999999,
+      "scenarios": {
+        "idle": {
+          "cpuMean": 0.0410895805298128,
+          "mainRssMean": 146429952,
+          "ipcMeanMs": 7.4029875000002505
+        },
+        "syntheticScreen": {
+          "cpuMean": 0.21524859221336157,
+          "mainRssMean": 148159488,
+          "ipcMeanMs": 7.745387500000106
+        },
+        "rendererStreamFixture": {
+          "cpuMean": 1.5982667365478351,
+          "mainRssMean": 144827392,
+          "ipcMeanMs": 6.251899999999296
+        }
+      }
+    },
+    "current": {
+      "readyMs": 832.1954999999999,
+      "scenarios": {
+        "idle": {
+          "cpuMean": 0.072482812556688,
+          "mainRssMean": 147994624,
+          "ipcMeanMs": 7.075012500000298
+        },
+        "syntheticScreen": {
+          "cpuMean": 0.20940703320305384,
+          "mainRssMean": 149480448,
+          "ipcMeanMs": 8.446837500000129
+        },
+        "rendererStreamFixture": {
+          "cpuMean": 0.7723677236465054,
+          "mainRssMean": 141987328,
+          "ipcMeanMs": 6.018987500000549
+        }
+      }
+    },
+    "note": "Renderer-only stream fixture changes publication from 50Hz to 20Hz at the same text-growth rate. Production coalescer behavior is independently unit-tested. Eight one-second samples per scenario; baseline and current have different concurrent machine load.",
+    "cpuRule": "Raw process CPU counters retained in local artifacts; negative counter readings clamped to zero in short-profile aggregates."
+  },
+  "storage": {
+    "status": "passed",
+    "cycles": 25,
+    "workerRestarts": 5,
+    "remoteRequests": 0,
+    "meanCycleMs": 23.864776000000017,
+    "maxCycleMs": 47.1096
+  },
+  "packagedHelperInference": {
+    "fixture": "upstream JFK",
+    "model": "tiny.en",
+    "threads": 4,
+    "loadMs": 143.085,
+    "initialMemoryBytes": 130600960,
+    "results": [
+      {
+        "source": "microphone",
+        "text": " And so my fellow Americans ask not what your country can do for you, ask what you can do for your country.",
+        "latencyMs": 478.406,
+        "cpuPercent": 372.33,
+        "memoryBytes": 173182976
+      },
+      {
+        "source": "systemAudio",
+        "text": " And so my fellow Americans ask not what your country can do for you, ask what you can do for your country.",
+        "latencyMs": 427.168,
+        "cpuPercent": 387.728,
+        "memoryBytes": 173223936
+      }
+    ]
+  },
+  "cachedEnduranceHelperSha256": "3ac91c9c1f2b9646a4d30ab9b102b46cb129a9973c0d4546734d285afc145133",
+  "updateVerification": {
+    "status": "passed",
+    "validWindowsSystemBinaryAccepted": true,
+    "wrongPublisherRejected": true,
+    "unsignedInstallerRejected": true,
+    "genuineReleaseFeed": false
+  }
+}

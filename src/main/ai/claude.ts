@@ -35,7 +35,7 @@ export function claudeOptions(
       CLAUDE_CODE_MAX_OUTPUT_TOKENS: "4096",
       MAX_THINKING_TOKENS: "1024",
       CLAUDE_CODE_DISABLE_BUNDLED_SKILLS: "1",
-      CLAUDE_AGENT_SDK_CLIENT_APP: "everyhint/0.4.0",
+      CLAUDE_AGENT_SDK_CLIENT_APP: "everyhint/0.5.0",
     },
     tools: [],
     disallowedTools: ["*"],

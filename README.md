@@ -6,10 +6,10 @@ EveryHint is a Windows-first, local-first desktop assistant. P1 provides the ove
 
 ## Install and run
 
-Use Windows 10/11 x64 or ARM64 with Node.js **24 LTS** and npm:
+Development targets Windows 10/11 with Node.js **24 LTS** and npm; the P11 private installer targets AVX2-capable x64. This host's Windows 11 build was tested with controlled fixtures; Windows 10/ARM64/clean-machine acceptance remains pending:
 
 ```powershell
-cd C:\Users\Victor\Projects\EveryHint
+cd C:\path\to\EveryHint
 npm ci
 npm run dev
 ```
@@ -21,7 +21,7 @@ npm run build
 npm start
 ```
 
-Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Windows installers and signing belong to P13.
+Dependency installation and Electron's first native binary download need internet access. Application capture stays local. P11 adds opt-in Windows window-content protection, private per-user NSIS packaging and a [manual new-version update flow](docs/UPDATES.md). Updates stay unconfigured by user choice until real signing, hosting and trusted keys are ready; no update request is made now. [Build instructions, measurements, acceptance matrix and release blockers](docs/P11_ACCEPTANCE.md) distinguish controlled automation from real devices. No screen-sharing receiver scenario is certified; the user kept those and physical hardware checks pending. Enterprise is permanently removed; mobile is unstarted. No public release was made.
 
 ## Interface and product roadmap
 

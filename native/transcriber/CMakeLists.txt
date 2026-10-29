@@ -13,9 +13,12 @@ set(GGML_OPENMP OFF CACHE BOOL "" FORCE)
 FetchContent_Declare(whisper
   GIT_REPOSITORY https://github.com/ggml-org/whisper.cpp.git
   GIT_TAG d1be6fde11ac6e0407606b4e42fe72d34add8037
-  GIT_PROGRESS TRUE)
+  GIT_PROGRESS TRUE
+  PATCH_COMMAND ${CMAKE_COMMAND} -DROOT=<SOURCE_DIR> -P ${CMAKE_CURRENT_SOURCE_DIR}/source-labels.cmake)
 FetchContent_MakeAvailable(whisper)
-add_executable(everyhint-transcriber main.cpp)
+file(READ "${CMAKE_CURRENT_SOURCE_DIR}/main.cpp" wrapper_source)
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/everyhint-main.cpp" "#line 1 \"everyhint/main.cpp\"\n${wrapper_source}")
+add_executable(everyhint-transcriber "${CMAKE_CURRENT_BINARY_DIR}/everyhint-main.cpp")
 target_compile_features(everyhint-transcriber PRIVATE cxx_std_17)
 target_link_libraries(everyhint-transcriber PRIVATE whisper)
 if(WIN32)

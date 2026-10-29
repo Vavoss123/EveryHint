@@ -1,5 +1,11 @@
 # EveryHint design system — source audit, 2026-10-28
 
+## P11 privacy and release polish (2026-10-29)
+
+Update controls use existing buttons/status surfaces, a brand-coloured native progress bar, explicit Cancel and Restart/install, and a native Later-default restart confirmation. The disabled Check button is accompanied by the exact missing signing/feed/key explanation. Untrusted remote HTML/release notes are not rendered. The user chose to retain the unconfigured state pending signing/hosting; it does not silently check or download.
+
+Preserve EverySession #E01A34, offline Poppins headings/Inter body, warm neutrals and light/dark/system tokens. Settings adds a labelled native checkbox, configuration/error/limitation text and local version/unconfigured update state using existing panels and spacing. Persistent status says “Window protection: configured/off/not confirmed”; narrow compact mode uses “Privacy: set/off/?” with a complete accessible label and limitation tooltip. Configuration wording never asserts receiver invisibility. The compact 125% Live geometry regression exposed status wrapping; shorter nowrap copy restores visible question/answer/emergency controls and passes the existing check. No UI library or component redesign was introduced. Human Narrator/high-contrast/mixed-DPI/visual acceptance stays pending; automated screenshots are not human verification.
+
 ## P10 Calendar, People, memory and pre-call surfaces
 
 Calendar/People reuse existing dashboard navigation, semantic surfaces, brand #E01A34, Poppins/Inter, cards, pill actions, forms/checkboxes/focus and scroll conventions. No EverySession source, palette, font, token, icon dependency or theme generator changed. Calendar has real locked/disconnected/empty/stale/cache states, day/seven-day/upcoming filters and supplied event/preparation/reminder details. People separates imported snapshots/manual overrides; saved choices show real titles/dates. Memory lives on People; privacy preferences live in Settings.

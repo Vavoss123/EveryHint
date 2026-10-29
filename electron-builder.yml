@@ -1,0 +1,49 @@
+appId: com.everyhint.desktop
+productName: EveryHint
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**/*
+  - package.json
+  - '!**/*.map'
+  - '!node_modules/@openai/**/*'
+asar: true
+asarUnpack:
+  - '**/*.node'
+  - '**/claude-agent-sdk-win32-x64/**'
+extraResources:
+  - from: artifacts/release-speech/runtime
+    to: speech
+    filter:
+      - everyhint-transcriber.exe
+      - whisper-LICENSE
+electronFuses:
+  # The optional Claude adapter retains a bundled-Node compatibility path.
+  runAsNode: true
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  enableEmbeddedAsarIntegrityValidation: true
+  onlyLoadAppFromAsar: true
+  grantFileProtocolExtraPrivileges: false
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.ico
+  requestedExecutionLevel: asInvoker
+  signAndEditExecutable: true
+nsis:
+  include: build/installer.nsh
+  oneClick: false
+  perMachine: false
+  allowElevation: false
+  packElevateHelper: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: false
+  createStartMenuShortcut: true
+  shortcutName: EveryHint
+  deleteAppDataOnUninstall: false
+  runAfterFinish: false
+  artifactName: EveryHint-${version}-x64-private-unsigned-setup.${ext}
+publish: null

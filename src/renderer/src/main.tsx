@@ -27,6 +27,8 @@ import { useAssistantSnapshot } from "./useAssistantSnapshot";
 import { TranscriptionPanel } from "./TranscriptionPanel";
 import { AssistantPanel } from "./AssistantPanel";
 import { useMeetings } from "./useMeetings";
+import { DesktopPrivacy } from "./DesktopPrivacy";
+import {version as APP_VERSION} from "../../../package.json";
 import {
   MeetingStatus,
   MeetingSessionControls,
@@ -464,6 +466,9 @@ function App() {
         role="status"
       >
         <span className="status-dot" />
+        <span className="privacy-indicator" title={app.privacy?.message} aria-label={`Window protection: ${app.privacy?.state??"off"}`}>
+          {settings.compact?`Privacy: ${app.privacy?.state==="configured"?"set":app.privacy?.state==="error"?"?":app.privacy?.state==="unsupported"?"N/A":"off"}`:`Window protection: ${app.privacy?.state==="configured"?"configured":app.privacy?.state==="error"?"not confirmed":app.privacy?.state==="unsupported"?"unavailable":"off"}`}
+        </span>
         <span>
           {settings.compact
             ? active
@@ -777,6 +782,7 @@ function App() {
                 <ShortcutSettings settings={settings} save={save} />
                 <PersonalSettings />
                 <WorkspaceSettings />
+                <DesktopPrivacy app={app} save={save}/>
                 <TranscriptionPanel settings canEnable={active} />
                 {app.hotkeys.map((hotkey) => (
                   <div className="shortcut" key={hotkey.action}>
@@ -1215,7 +1221,7 @@ function App() {
             {active
               ? "Hiding keeps capture on · Stop works globally"
               : "Capture starts only with your authorisation"}
-            <span className="version">v0.4</span>
+            <span className="version">v{APP_VERSION}</span>
           </div>
         )}
       </footer>

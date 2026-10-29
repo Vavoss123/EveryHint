@@ -16,6 +16,7 @@ import {
   parseTranscriptionSettings,
 } from "../../shared/transcription";
 import { downloadModel, SPEECH_MODELS, verifyModel } from "./model-files";
+import { verifyRuntime, type BundledRuntime } from "./runtime-integrity";
 export class SpeechInstallation {
   settings: TranscriptionSettings = { ...DEFAULT_TRANSCRIPTION_SETTINGS };
   settingsError: string | null = null;
@@ -32,6 +33,7 @@ export class SpeechInstallation {
   constructor(
     readonly root: string,
     private readonly changed: () => void,
+    private readonly bundled?: BundledRuntime,
   ) {
     mkdirSync(root, { recursive: true });
     if (existsSync(join(root, "settings.json"))) {
@@ -49,15 +51,16 @@ export class SpeechInstallation {
   }
   get executable(): string {
     return join(
-      this.root,
-      "runtime",
+      this.bundled?.directory ?? join(this.root, "runtime"),
       process.platform === "win32"
         ? "everyhint-transcriber.exe"
         : "everyhint-transcriber",
     );
   }
   get runtimeInstalled(): boolean {
-    return existsSync(this.executable);
+    return this.bundled
+      ? verifyRuntime(this.executable, this.bundled.manifestPath)
+      : existsSync(this.executable);
   }
   modelPath(model: SpeechModel): string {
     return join(this.root, "models", SPEECH_MODELS[model].filename);
@@ -88,7 +91,9 @@ export class SpeechInstallation {
   async ensureReady(model: SpeechModel): Promise<string> {
     if (!this.runtimeInstalled)
       throw new Error(
-        "Build the local Whisper helper first: npm run speech:build.",
+        this.bundled
+          ? "The packaged Whisper helper is missing or failed its integrity check. Reinstall EveryHint from a trusted build."
+          : "Build the local Whisper helper first: npm run speech:build.",
       );
     if (!(await verifyModel(join(this.root, "models"), model)))
       throw new Error(

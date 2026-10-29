@@ -16,7 +16,7 @@ const fixture = await loadSpeechFixture(
   process.argv.includes("--install-fixture"),
 );
 const worker = new WhisperWorker(
-  join(root, "runtime", "everyhint-transcriber.exe"),
+  join(process.argv.includes("--release-runtime")?"artifacts/release-speech/runtime":join(root,"runtime"), "everyhint-transcriber.exe"),
 );
 try {
   const ready = await worker.start(
@@ -38,7 +38,7 @@ try {
     results,
   };
   await mkdir("artifacts", { recursive: true });
-  await writeFile("artifacts/inference.json", JSON.stringify(report, null, 2));
+  await writeFile(process.argv.includes("--release-runtime")?"artifacts/p11-inference.json":"artifacts/inference.json", JSON.stringify(report, null, 2));
   console.log(JSON.stringify(report, null, 2));
 } finally {
   worker.stop();

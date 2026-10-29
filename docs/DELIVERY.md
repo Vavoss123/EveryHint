@@ -1,4 +1,16 @@
-# P10 delivery — Calendar, People and memory
+# P11 delivery — Windows privacy and private desktop release preparation
+
+Version **0.5.0**, baseline `d9d1ca8`, 2026-10-29. [Decision/checkpoints](DECISIONS/P11-windows.md), [acceptance matrix, measurements, build instructions and release checklist](P11_ACCEPTANCE.md). Enterprise is permanently removed; mobile is unstarted. Historical sections below describe delivery-time state and retain unperformed manual acceptance.
+
+Delivered opt-in Windows content-protection apply/readback/failure UI and permanent limitation/status; 20 Hz response publication with immediate final/cancel; explicit Stop and same-session failure cancellation; awaited workspace quit cleanup; packaged dev-URL rejection; source-labelled pinned native rebuild and packaged SHA-256 manifest verification; per-user branded NSIS x64 private installer/optional desktop shortcut/retained user data. [Manual new-version updates](UPDATES.md) include check/download/progress/cancel/restart, pinned release-metadata authentication and checksum/publisher rechecks. The user chose to keep updates unconfigured until hosting/signing are ready. No real update or AI request, invented host/certificate, public release or publication occurred.
+
+Verification: **706 unit tests / 57 files**, **6 SDK + 5 plan integration tests**, **12 actual native encrypted-storage assertions**, **286 existing Electron + 20 P11 desktop + 12 final unpacked-binary assertions**. Three concurrent actual 30-minute synthetic capture/real Whisper scenarios and 30-minute stub-provider Live completed; 25 meeting cycles/five worker restarts and bounded encrypted knowledge/context load passed. Theme/spec/type/lint/build/audit/package/fuse/helper gates pass; see TESTING and committed `docs/evidence/p11-controlled.json` for exact scope. Compact Live 125% overflow found during regression was fixed and retested. No hardware, human UI or clean installer acceptance is inferred.
+
+Private outputs: `release/EveryHint-0.5.0-x64-private-unsigned-setup.exe`, `.exe.blockmap`, `release/win-unpacked/EveryHint.exe`; local artifact audit `artifacts/p11-package-audit.json`. Build with `npm ci`, the separate `speech:build` script targeting `artifacts/release-speech`, then `npm run dist:win`; complete commands in acceptance. Authenticode inspection reports **NotSigned** for installer/app/helper. Signing/hosting/update verification, clean Windows 10/11 install/upgrade/uninstall, real packaged OAuth/capture/tray, receiving-device/physical hardware, manual accessibility/DPI/OS lifecycle, provider/redistribution approvals and retained P1–P10 manual checks are outstanding release gates. Genuine Google remains pending by user choice. This is preparation for personal testing and eventual distribution, not a trusted public release.
+
+Final artifact identity and verification scope are committed in [p11-release.json](evidence/p11-release.json); local rebuilds produce new timestamps/hashes and require a fresh audit. The installer and model/runtime build outputs remain ignored, never committed or distributed.
+
+## Historical P10 delivery — Calendar, People and memory
 
 Implemented P10.1–P10.5 on baseline `153846c`. Version remains 0.4.0; no dependency/provider was added. [Design/checkpoint gates](DECISIONS/P10-context.md), [setup/privacy](ARCHITECTURE.md), [full testing/manual checklist](TESTING.md). P11/P12/P13 are not started.
 
