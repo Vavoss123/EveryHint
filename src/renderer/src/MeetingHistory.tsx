@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import type { AssistantSnapshot } from "../../shared/ai";
 import {
   DEFAULT_MEETING_QUERY,
@@ -11,7 +11,6 @@ import {
 } from "../../shared/meetings";
 import type { MeetingAIState } from "../../shared/meeting-ai";
 import { meetingResult, meetingScope } from "./useMeetings";
-import { MeetingPreferencesPanel } from "./MeetingSessionControls";
 import { MeetingDetail, Highlight } from "./MeetingDetail";
 import { MeetingAIReview } from "./MeetingAIReview";
 
@@ -63,13 +62,13 @@ function ScopedHistory({
     [error, setError] = useState<string | null>(null),
     [title, setTitle] = useState(""),
     [createAck, setCreateAck] = useState(false),
-    [deleteAck, setDeleteAck] = useState(false),
     [temporary, setTemporary] = useState<{
       document: MeetingDocument | null;
       segments: MeetingSegment[];
     } | null>(null),
     [showTemporary, setShowTemporary] = useState(false),
     [saveTemporaryAck, setSaveTemporaryAck] = useState(false);
+  const [choosingAI, setChoosingAI] = useState(false);
   const generation = useRef(0),
     mounted = useRef(true),
     dirtyRef = useRef(dirty),
@@ -198,28 +197,32 @@ function ScopedHistory({
       <div hidden={showDetail} className="panel-stack">
         <div className="page-heading">
           <div>
-            <p className="eyebrow">YOUR LOCAL WORKSPACE</p>
             <h1>Meetings</h1>
-            <p className="muted">
-              Saved conversations, notes and decisions, under your control.
-            </p>
           </div>
           <button className="primary" onClick={prepareCapture}>
-            Prepare new capture
+            New Meeting
           </button>
         </div>
-        <p className="muted">
-          {state.profileLabel} · {state.status}
-        </p>
+        <button
+          className="text-button"
+          onClick={() => setChoosingAI(!choosingAI)}
+        >
+          {choosingAI ? "Done selecting" : "Ask about meetings"}
+        </button>
         {state.locked ? (
           <section
             className="empty-state card"
             aria-label="Locked meeting history"
           >
-            <h2>History is locked</h2>
+            <h2>
+              {state.preferences.enabled || state.error
+                ? "Unlock History"
+                : "Your meeting history starts here"}
+            </h2>
             <p>
-              Unlock this profile's encrypted local history to browse saved
-              meetings. Opening history never starts recording.
+              {state.preferences.enabled || state.error
+                ? "Use your Windows-protected key to open saved meetings."
+                : "Save a meeting when you want to keep its notes. Enable local history in Settings → Privacy & Data."}
             </p>
             <button
               className="primary"
@@ -234,7 +237,7 @@ function ScopedHistory({
                 })
               }
             >
-              Unlock meeting history
+              Unlock History
             </button>
           </section>
         ) : (
@@ -248,7 +251,7 @@ function ScopedHistory({
               aria-label="History search filters"
             >
               <label>
-                Search saved content
+                Search meetings
                 <input
                   aria-label="Search meeting history"
                   value={query.query}
@@ -258,86 +261,94 @@ function ScopedHistory({
                   }
                 />
               </label>
-              <label>
-                Tag
-                <input
-                  aria-label="Filter meetings by tag"
-                  maxLength={50}
-                  value={query.tag}
-                  onChange={(event) =>
-                    setQuery({ ...query, tag: event.target.value })
-                  }
-                />
-              </label>
-              <label>
-                From
-                <input
-                  aria-label="Meeting date from"
-                  type="date"
-                  onChange={(event) =>
-                    setQuery({
-                      ...query,
-                      from: event.target.value
-                        ? new Date(`${event.target.value}T00:00:00`).getTime()
-                        : null,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Through
-                <input
-                  aria-label="Meeting date through"
-                  type="date"
-                  onChange={(event) =>
-                    setQuery({
-                      ...query,
-                      to: event.target.value
-                        ? new Date(
-                            `${event.target.value}T23:59:59.999`,
-                          ).getTime()
-                        : null,
-                    })
-                  }
-                />
-              </label>
-              <label>
-                Status
-                <select
-                  aria-label="Filter meeting status"
-                  value={query.status}
-                  onChange={(event) =>
-                    setQuery({
-                      ...query,
-                      status: event.target.value as MeetingQuery["status"],
-                    })
-                  }
-                >
-                  {["all", "draft", "active", "ended", "interrupted"].map(
-                    (value) => (
-                      <option key={value} value={value}>
-                        {value}
-                      </option>
-                    ),
-                  )}
-                </select>
-              </label>
-              <label>
-                Order
-                <select
-                  aria-label="Sort meeting history"
-                  value={query.sort}
-                  onChange={(event) =>
-                    setQuery({
-                      ...query,
-                      sort: event.target.value as MeetingQuery["sort"],
-                    })
-                  }
-                >
-                  <option value="newest">Newest first</option>
-                  <option value="oldest">Oldest first</option>
-                </select>
-              </label>
+              <details className="history-advanced-filters">
+                <summary>Filters</summary>
+                <div className="filter-fields">
+                  {" "}
+                  <label>
+                    Tag
+                    <input
+                      aria-label="Filter meetings by tag"
+                      maxLength={50}
+                      value={query.tag}
+                      onChange={(event) =>
+                        setQuery({ ...query, tag: event.target.value })
+                      }
+                    />
+                  </label>
+                  <label>
+                    From
+                    <input
+                      aria-label="Meeting date from"
+                      type="date"
+                      onChange={(event) =>
+                        setQuery({
+                          ...query,
+                          from: event.target.value
+                            ? new Date(
+                                `${event.target.value}T00:00:00`,
+                              ).getTime()
+                            : null,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Through
+                    <input
+                      aria-label="Meeting date through"
+                      type="date"
+                      onChange={(event) =>
+                        setQuery({
+                          ...query,
+                          to: event.target.value
+                            ? new Date(
+                                `${event.target.value}T23:59:59.999`,
+                              ).getTime()
+                            : null,
+                        })
+                      }
+                    />
+                  </label>
+                  <label>
+                    Status
+                    <select
+                      aria-label="Filter meeting status"
+                      value={query.status}
+                      onChange={(event) =>
+                        setQuery({
+                          ...query,
+                          status: event.target.value as MeetingQuery["status"],
+                        })
+                      }
+                    >
+                      {["all", "draft", "active", "ended", "interrupted"].map(
+                        (value) => (
+                          <option key={value} value={value}>
+                            {value}
+                          </option>
+                        ),
+                      )}
+                    </select>
+                  </label>
+                  <label>
+                    Order
+                    <select
+                      aria-label="Sort meeting history"
+                      value={query.sort}
+                      onChange={(event) =>
+                        setQuery({
+                          ...query,
+                          sort: event.target.value as MeetingQuery["sort"],
+                        })
+                      }
+                    >
+                      <option value="newest">Newest first</option>
+                      <option value="oldest">Oldest first</option>
+                    </select>
+                  </label>
+                </div>
+              </details>
               <button className="secondary" type="submit" disabled={busy}>
                 Search history
               </button>
@@ -356,72 +367,81 @@ function ScopedHistory({
                 <p>
                   {page.partial
                     ? "Search is deliberately bounded. Continue to scan the remaining encrypted history."
-                    : "Explicitly save an authorised session, or create a meeting for your own notes. Temporary conversations stay out of history."}
+                    : "Saved meetings and notes will appear here."}
                 </p>
               </section>
             )}
             <div className="meeting-list" aria-label="Saved meetings">
-              {page?.items.map((item) => (
-                <article className="card meeting-list-item" key={item.id}>
-                  <label className="ai-choice">
-                    <input
-                      type="checkbox"
-                      aria-label={`Include ${item.title} in meeting AI`}
-                      checked={selected.includes(item.id)}
-                      disabled={
-                        !selected.includes(item.id) && selected.length >= 3
-                      }
-                      onChange={(event) =>
-                        setSelected(
-                          event.target.checked
-                            ? [...selected, item.id]
-                            : selected.filter((id) => id !== item.id),
-                        )
-                      }
-                    />
-                    Include in AI
-                  </label>
-                  <button
-                    className="meeting-open"
-                    onClick={() => void open(item.id)}
-                  >
-                    <h2>
-                      <Highlight text={item.title} query={applied.query} />
-                    </h2>
-                  </button>
-                  <p>
-                    {new Date(
+              {page?.items.map((item, index) => (
+                <Fragment key={item.id}>
+                  {(index === 0 ||
+                    new Date(
                       item.startedAt ?? item.createdAt,
-                    ).toLocaleString()}{" "}
-                    · {Math.round(item.durationMs / 60000)} min · {item.status}
-                  </p>
-                  <small>
-                    {item.noteStatus === "generated"
-                      ? "AI notes saved"
-                      : item.noteStatus === "manual"
-                        ? "Manual notes saved"
-                        : "No notes yet"}{" "}
-                    · {item.actionCount} action items ·{" "}
-                    {item.segmentCount
-                      ? `${item.segmentCount} final transcript segments`
-                      : "No transcript"}
-                  </small>
-                  <small>
-                    Updated {new Date(item.updatedAt).toLocaleString()} ·{" "}
-                    {item.tags.join(", ") || "No tags"}
-                  </small>
-                  {item.snippet && (
-                    <p className="meeting-snippet">
-                      <Highlight text={item.snippet} query={applied.query} />
-                    </p>
+                    ).toDateString() !==
+                      new Date(
+                        page.items[index - 1]!.startedAt ??
+                          page.items[index - 1]!.createdAt,
+                      ).toDateString()) && (
+                    <h2 className="meeting-date-group">
+                      {new Date(
+                        item.startedAt ?? item.createdAt,
+                      ).toLocaleDateString(undefined, {
+                        weekday: "long",
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </h2>
                   )}
-                  <button
-                    className="text-button"
-                    onClick={() => void open(item.id)}
-                  >
-                    Open, edit or export meeting
-                  </button>
-                </article>
+                  <article className="meeting-list-item">
+                    {choosingAI && (
+                      <label className="ai-choice">
+                        <input
+                          type="checkbox"
+                          aria-label={`Include ${item.title} in meeting AI`}
+                          checked={selected.includes(item.id)}
+                          disabled={
+                            !selected.includes(item.id) && selected.length >= 3
+                          }
+                          onChange={(event) =>
+                            setSelected(
+                              event.target.checked
+                                ? [...selected, item.id]
+                                : selected.filter((id) => id !== item.id),
+                            )
+                          }
+                        />
+                        Include in AI
+                      </label>
+                    )}
+                    <button
+                      className="meeting-open"
+                      onClick={() => void open(item.id)}
+                    >
+                      <h2>
+                        <Highlight text={item.title} query={applied.query} />
+                      </h2>
+                    </button>
+                    <p>
+                      {new Date(
+                        item.startedAt ?? item.createdAt,
+                      ).toLocaleString()}{" "}
+                      · {Math.round(item.durationMs / 60000)} min ·{" "}
+                      {item.status}
+                    </p>
+                    {item.snippet && (
+                      <p className="meeting-snippet">
+                        <Highlight text={item.snippet} query={applied.query} />
+                      </p>
+                    )}
+                    <button
+                      className="text-button"
+                      onClick={() => void open(item.id)}
+                    >
+                      Open, edit or export meeting
+                    </button>
+                  </article>
+                </Fragment>
               ))}
             </div>
             <div className="button-row">
@@ -457,21 +477,6 @@ function ScopedHistory({
                 onClick={() => void run(() => load({ ...applied, offset: 0 }))}
               >
                 Refresh history
-              </button>
-              <button
-                className="secondary"
-                disabled={busy || dirty}
-                onClick={() =>
-                  void run(async () => {
-                    meetingResult(
-                      await window.everyhint.meetings.lock(
-                        meetingScope(state, undefined),
-                      ),
-                    );
-                  })
-                }
-              >
-                Lock history
               </button>
             </div>
             {page?.partial && (
@@ -556,45 +561,10 @@ function ScopedHistory({
               </button>
               {!state.preferences.enabled && (
                 <small>
-                  Enable local history below before creating records.
+                  Enable local history in Settings → Privacy & Data to create
+                  saved records.
                 </small>
               )}
-            </details>
-            <details className="card panel-stack">
-              <summary>Delete all locally saved meetings</summary>
-              <p>
-                Export first if needed. This removes this profile's local
-                transcript, notes, decisions, actions and in-memory search
-                state. It cannot remove exports or provider-retained text.
-              </p>
-              <label className="ai-choice">
-                <input
-                  type="checkbox"
-                  aria-label="Confirm deleting all saved meetings"
-                  checked={deleteAck}
-                  onChange={(event) => setDeleteAck(event.target.checked)}
-                />
-                Delete every saved meeting in {state.profileLabel}.
-              </label>
-              <button
-                className="danger"
-                disabled={!deleteAck || busy || dirty || state.saving}
-                onClick={() =>
-                  void run(async () => {
-                    meetingResult(
-                      await window.everyhint.meetings.deleteAll(
-                        meetingScope(state, { acknowledged: true }),
-                      ),
-                    );
-                    setDeleteAck(false);
-                    setSelected([]);
-                    setDetail(null);
-                    await load({ ...DEFAULT_MEETING_QUERY });
-                  })
-                }
-              >
-                Delete all saved meetings
-              </button>
             </details>
           </>
         )}
@@ -603,10 +573,7 @@ function ScopedHistory({
           open={showTemporary}
           onToggle={(event) => setShowTemporary(event.currentTarget.open)}
         >
-          <summary>
-            Temporary session · review retained text or generate an unsaved
-            draft
-          </summary>
+          <summary>Meeting notes</summary>
           <p>
             Only retained final transcripts from the current profile/session are
             available. Refresh shows a snapshot; nothing is saved by opening
@@ -708,7 +675,6 @@ function ScopedHistory({
             )
           )}
         </details>
-        <MeetingPreferencesPanel state={state} />
       </div>
       {detail && (
         <div hidden={!showDetail}>

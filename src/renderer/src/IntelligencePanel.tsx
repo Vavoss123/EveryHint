@@ -111,7 +111,7 @@ export function IntelligencePanel({
       aria-label="Conversation intelligence"
     >
       <label>
-        Operating mode
+        How EveryHint helps
         <select
           aria-label="Operating mode"
           value={snapshot.mode}
@@ -126,9 +126,9 @@ export function IntelligencePanel({
             )
           }
         >
-          <option value="manual">Manual Assist</option>
-          <option value="auto-hint">Auto-Hint · local suggestions</option>
-          <option value="live">Live Assist · separate authorisation</option>
+          <option value="manual">Ask manually</option>
+          <option value="auto-hint">Suggest answers</option>
+          <option value="live">Live assistance</option>
         </select>
       </label>
       <p className="muted" role="status">

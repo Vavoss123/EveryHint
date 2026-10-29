@@ -22,6 +22,30 @@ describe("settings validation and storage", () => {
       new SettingsStore(join(directory, "settings.json"), vi.fn()).settings,
     ).toEqual(DEFAULT_SETTINGS);
   });
+  it("reuses an existing installation without forcing onboarding or changing saved appearance", () => {
+    const path = join(directory, "settings.json");
+    writeFileSync(
+      path,
+      JSON.stringify({
+        version: 1,
+        settings: {
+          alwaysOnTop: true,
+          compact: true,
+          captureIntervalMs: 5000,
+          theme: "light",
+          layout: "assistant",
+        },
+      }),
+    );
+    const settings = new SettingsStore(path, vi.fn()).settings;
+    expect(settings).toMatchObject({
+      setupComplete: true,
+      theme: "light",
+      alwaysOnTop: true,
+      captureIntervalMs: 5000,
+    });
+    expect(settings).not.toHaveProperty("consent");
+  });
   it.each([
     null,
     [],

@@ -1,3 +1,8 @@
+import {
+  dashboardPage,
+  finishSetup,
+  settingsSection,
+} from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
 import {
   mkdtemp,
@@ -45,7 +50,8 @@ async function start() {
     env,
     timeout: 30000,
   });
-  page = await desktop.firstWindow();
+  page = await dashboardPage(desktop);
+  await finishSetup(page);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.waitForFunction(
     () => window.everyhint && document.querySelector(".capture-controls"),
@@ -150,7 +156,7 @@ try {
     "opening history never starts capture",
   );
   await page
-    .getByRole("button", { name: "Unlock meeting history", exact: true })
+    .getByRole("button", { name: "Unlock History", exact: true })
     .click();
   await page
     .getByRole("heading", {
@@ -164,6 +170,7 @@ try {
     "real native credential + worker unlock produces an honest empty state",
   );
   await shot("empty");
+  await settingsSection(page, "Privacy & Data");
   await page.getByLabel("Save meeting history", { exact: true }).check();
   await page
     .getByLabel("Acknowledge meeting persistence and retention", {
@@ -177,6 +184,7 @@ try {
     const r = await window.everyhint.meetings.getState();
     return r.ok && r.value.preferences.enabled;
   });
+  await nav("Meetings");
   await page
     .getByText("Create a meeting for manual notes", { exact: true })
     .click();
@@ -455,15 +463,12 @@ try {
     ).trim(),
   );
   await start();
+  await page.getByLabel("Search meeting history", { exact: true }).waitFor();
   check(
-    await page
-      .getByLabel("Locked meeting history", { exact: true })
-      .isVisible(),
-    "restart restores neither unlock nor capture",
+    !(await page.evaluate(() => window.everyhint.meetings.getState())).value
+      .locked && (await state()).session.state === "IDLE",
+    "restart securely unlocks existing history without restoring capture",
   );
-  await page
-    .getByRole("button", { name: "Unlock meeting history", exact: true })
-    .click();
   await page
     .getByRole("button", {
       name: "Labelled release transcript fixture",
@@ -535,10 +540,13 @@ try {
   const actualAI = await page.evaluate(() => window.everyhint.meetings.getAI());
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:meeting-ai-state",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:meeting-ai-state", value),
     {
       ...actualAI.value,
       revision: actualAI.value.revision + 100,
@@ -614,69 +622,32 @@ try {
     })
     .click();
   await page
-    .getByRole("heading", { name: "Prepare a session", exact: true })
+    .getByRole("heading", { name: "Start EveryHint", exact: true })
     .waitFor();
   check(
     (await state()).session.state === "IDLE" &&
       (await state()).session.consent === null,
     "Resume arms context and opens consent without starting any source",
   );
-  const settingsBeforeCompact = (await state()).settings;
-  await page.evaluate(async (settings) => {
-    const r = await window.everyhint.saveSettings({
-      ...settings,
-      compact: true,
-      layout: "assistant",
-    });
-    if (!r.ok) throw Error(r.error);
-  }, settingsBeforeCompact);
   await desktop.evaluate(({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0];
+    const win = BrowserWindow.getAllWindows().find((w) =>
+      w.webContents.getURL().endsWith("index.html"),
+    );
     win.webContents.setZoomFactor(1.25);
-    win.setBounds({ width: 360, height: 230 });
+    win.setBounds({ width: 360, height: 500 });
   });
-  await page.waitForFunction(() => document.querySelector(".app.is-compact"));
-  await shot("compact-125");
   check(
-    await page.evaluate(() => {
-      const targets = [
-        document.querySelector(
-          '[aria-label="Meeting persistence and notes status"]',
-        ),
-        document.querySelector(".meeting-status button"),
-        document.querySelector(
-          '.capture-controls button[title="Stop all capture and revoke consent"]',
-        ),
-      ];
-      return (
-        targets.length === 3 &&
-        targets.every((node) => {
-          if (!node) return false;
-          const rect = node.getBoundingClientRect();
-          return (
-            rect.width > 0 &&
-            rect.height > 0 &&
-            rect.left >= 0 &&
-            rect.top >= 0 &&
-            rect.right <= innerWidth + 1 &&
-            rect.bottom <= innerHeight + 1
-          );
-        })
-      );
-    }),
-    "compact 360-DIP window at 125% keeps saved-meeting status, Open meetings and emergency Stop inside the viewport",
+    await page.getByLabel("Meeting persistence and notes status").isVisible(),
+    "narrow zoomed dashboard retains saved-meeting status",
   );
-  await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1),
-  );
-  await page.evaluate(async (settings) => {
-    const r = await window.everyhint.saveSettings({
-      ...settings,
-      compact: false,
-      layout: "dashboard",
-    });
-    if (!r.ok) throw Error(r.error);
-  }, settingsBeforeCompact);
+  await desktop.evaluate(({ BrowserWindow }) => {
+    const win = BrowserWindow.getAllWindows().find((w) =>
+      w.webContents.getURL().endsWith("index.html"),
+    );
+    win.webContents.setZoomFactor(1);
+    win.setBounds({ width: 1040, height: 760 });
+  });
+
   await nav("Meetings");
   await page.getByText("Delete local content", { exact: true }).click();
   await page
@@ -700,7 +671,9 @@ try {
     ).items.some((item) => item.id === fixture.id),
     "delete removes transcript fixture, associated content and pending resume",
   );
+  await settingsSection(page, "Privacy & Data");
   await page.getByRole("button", { name: "Lock history", exact: true }).click();
+  await nav("Meetings");
   await page.getByLabel("Locked meeting history", { exact: true }).waitFor();
   check(
     !(

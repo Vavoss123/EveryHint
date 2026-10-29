@@ -1,4 +1,12 @@
-# Windows RC verification delivery — 2026-10-29
+# Desktop UX restructuring delivery — 2026-10-29
+
+Implemented UX.1–UX.4 from `e00813a` without a version increment or publication. The dashboard is an ordinary Windows application; the separate floating assistant is optional and unpinned by default. Added real minimise/restore, labelled tray/quit actions, custom displayed overlay shortcuts and explicit active-close choices. Session controls now follow actual capture state. Home, chat/context review, one-time setup, account readiness, grouped history, two-column modes and six Settings sections replace the verbose daily workflows. Existing encryption, local records, custom modes/documents, source permissions and time-limited AI sharing remain intact.
+
+Verification: **722 tests / 59 files**, **11 provider fixture tests**, **12 native encrypted-storage assertions**, **354 Electron assertions** across ten suites. The real Windows host exercised native styles, global keys, actual close dialogs, minimise/tray restoration/background Stop/restart, cached Whisper with both synthetic sources, encryption/history and P1–P10 flows. Theme/spec/type/lint/production build and diff whitespace checks pass. No physical receiving-device test, genuine new OAuth/Google/AI request, paid request, installer build or distribution was performed.
+
+[Full before/after, changed files, navigation, session/auth/history verification, local screenshot evidence and every remaining manual/release gate](UX_ACCEPTANCE.md); [machine-readable receipt](evidence/ux-verification.json). Version remains **0.5.0** and existing private release artifacts are unchanged. Distribution remains NO-GO until the retained RC gates and new source/package acceptance are completed.
+
+# Historical Windows RC verification delivery — 2026-10-29
 
 **NO-GO for 0.5.1 promotion/distribution.** Verified the unchanged **0.5.0 runtime at `ead3ec9`**; no reproducible product defect or version increment was justified. This delivery adds verification scripts, exact manual procedures, a category-separated acceptance matrix, a 51-row observation CSV and measured receipts. Product features, EverySession styling, secure IPC, local-first processing and update configuration are unchanged. No installer was replaced, published or installed over personal data.
 

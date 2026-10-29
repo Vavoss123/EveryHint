@@ -1,5 +1,9 @@
 # EveryHint design system — source audit, 2026-10-28
 
+## Desktop UX restructuring — 2026-10-29
+
+New-install default is now a near-black dark theme. Existing Light and System preferences are preserved. #E01A34 and the local Poppins/Inter assets remain the identity; dark surfaces use neutral subtle borders. This is a desktop extension of the source audit below, not a change to EverySession's mobile code. One compact rail, ordinary Windows controls, an answer-first separate assistant, a single Home Start, grouped history, two-column modes and six focused Settings sections replace the earlier layouts. Context/diagnostics use progressive disclosure. High-contrast focus, reduced motion and narrow icon labels remain supported. No competitor assets were supplied or copied. [Current visual/keyboard evidence and remaining human checks](UX_ACCEPTANCE.md). Earlier light-default and shared compact-window descriptions below are historical.
+
 ## P11 privacy and release polish (2026-10-29)
 
 Update controls use existing buttons/status surfaces, a brand-coloured native progress bar, explicit Cancel and Restart/install, and a native Later-default restart confirmation. The disabled Check button is accompanied by the exact missing signing/feed/key explanation. Untrusted remote HTML/release notes are not rendered. The user chose to retain the unconfigured state pending signing/hosting; it does not silently check or download.

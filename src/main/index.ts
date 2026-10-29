@@ -18,7 +18,7 @@ import {
 } from "electron";
 import type { IpcMainInvokeEvent, Session } from "electron";
 import { readFile } from "node:fs/promises";
-import { mkdirSync } from "node:fs";
+import { existsSync, mkdirSync } from "node:fs";
 import { dirname, extname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
@@ -69,6 +69,8 @@ import { MeetingKeys } from "./meetings/keys";
 import { AsyncEntry } from "@napi-rs/keyring";
 import { exportBrief } from "./workspace/export";
 import { parseReview } from "../shared/ai";
+import { meetingId } from "../shared/meetings";
+import { defaultCatalogModel } from "../shared/connection";
 import { record } from "../shared/validation";
 import { configureWindowPrivacy } from "./window-privacy";
 import type { WindowPrivacy } from "../shared/desktop";
@@ -77,11 +79,7 @@ import { updatePolicy } from "./updates-policy";
 import { windowsUpdater } from "./updates-electron";
 import updateConfiguration from "../../resources/windows-updates.json";
 import design from "../../resources/design-tokens.json";
-import {
-  presentation,
-  presentationBounds,
-  type Presentation,
-} from "./presentation";
+import { presentationBounds } from "./presentation";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
@@ -97,6 +95,8 @@ protocol.registerSchemesAsPrivileged([
 ]);
 
 let window: BrowserWindow | undefined;
+let overlay: BrowserWindow | undefined;
+let closePrompt = false;
 let tray: Tray | undefined;
 let store: SettingsStore;
 let controller: CaptureSessionController;
@@ -108,13 +108,14 @@ let intelligence: IntelligenceController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
 let meetings: MeetingController | undefined;
+let historyRoot = "";
+let interfaceReady = false;
 let meetingAI: MeetingAIController | undefined;
 let postNotes: PostMeetingNotes | undefined;
 let meetingProfile = "";
 let personal: PersonalController | undefined;
 let workspace: WorkspaceController | undefined;
 let meetingAIRevision = 0;
-let meetingCompactRow = false;
 let lastMeetingAIState = "";
 let shortcuts: HotkeyController;
 let hotkeys: HotkeyStatus[] = [];
@@ -125,14 +126,20 @@ let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let lastTrayState: string | undefined;
 let privacy: WindowPrivacy | undefined;
 let updates: UpdateController | undefined;
-const presentationSizes = new Map<
-  Presentation,
-  { width: number; height: number }
->();
-const devUrl = developmentUrl(process.env.ELECTRON_RENDERER_URL, app.isPackaged);
+const devUrl = developmentUrl(
+  process.env.ELECTRON_RENDERER_URL,
+  app.isPackaged,
+);
 const documentUrl = devUrl
   ? new URL(devUrl).href
   : "everyhint://app/index.html";
+const overlayUrl = new URL(documentUrl);
+overlayUrl.searchParams.set("overlay", "1");
+function broadcast(channel: string, value: unknown): void {
+  for (const target of [window, overlay])
+    if (target && !target.isDestroyed() && !target.webContents.isDestroyed())
+      target.webContents.send(channel, value);
+}
 
 function warn(message: string): void {
   console.error(message);
@@ -147,20 +154,8 @@ function meetingAISnapshot() {
     revision: meetingAIRevision,
   };
 }
-function syncMeetingSize(): void {
-  const row = Boolean(
-    meetings?.indicator.saving ||
-    meetings?.indicator.pendingResumeId ||
-    postNotes?.enabled ||
-    meetingAI?.status === "draft",
-  );
-  if (row === meetingCompactRow) return;
-  meetingCompactRow = row;
-  if (window && store?.settings.compact) configureSize("compact");
-}
 function publishMeetingAI(): void {
   postNotes?.observe();
-  syncMeetingSize();
   updateTray();
   const signature = JSON.stringify({
     revision: meetingAI?.revision,
@@ -176,7 +171,7 @@ function publishMeetingAI(): void {
     !window.isDestroyed() &&
     !window.webContents.isDestroyed()
   )
-    window.webContents.send("everyhint:meeting-ai-state", meetingAISnapshot());
+    broadcast("everyhint:meeting-ai-state", meetingAISnapshot());
 }
 function cancelMeetingWork(): void {
   postNotes?.revoke();
@@ -220,6 +215,17 @@ function updateMeetingProfile(): void {
       ? `${selected.label} · local encrypted history`
       : "Local-only history · this Windows user",
   );
+  if (interfaceReady) restoreExistingHistory();
+}
+function restoreExistingHistory(): void {
+  if (
+    historyRoot &&
+    meetingProfile &&
+    existsSync(join(historyRoot, `${meetingProfile}.sqlite`))
+  )
+    void meetings?.unlock().catch(() => {
+      /* Existing controller exposes Unlock History and preserves encrypted data. */
+    });
 }
 function snapshot(): AppSnapshot {
   return {
@@ -267,8 +273,48 @@ function icon(state: SessionState): Electron.NativeImage {
   return nativeImage.createFromBitmap(pixels, { width: 32, height: 32 });
 }
 function show(): void {
+  if (window?.isMinimized()) window.restore();
   window?.show();
   window?.focus();
+}
+function showOverlay(): void {
+  if (!overlay || overlay.isDestroyed()) return;
+  if (overlay.isMinimized()) overlay.restore();
+  overlay.show();
+  overlay.focus();
+}
+function toggleOverlay(): void {
+  if (overlay?.isVisible() && !overlay.isMinimized()) overlay.hide();
+  else showOverlay();
+}
+async function closeDashboard(): Promise<void> {
+  if (closePrompt || quitting) return;
+  if (!["ACTIVE", "PAUSED", "READY"].includes(controller.value.state)) {
+    app.quit();
+    return;
+  }
+  closePrompt = true;
+  try {
+    const result = await dialog.showMessageBox(window!, {
+      type: "question",
+      message: "Your session is still open",
+      detail:
+        "Keep it running with a tray indicator and Stop control, or stop capture and quit EveryHint.",
+      buttons: ["Keep running in background", "Stop and quit", "Cancel"],
+      defaultId: 2,
+      cancelId: 2,
+    });
+    if (result.response === 0) {
+      hide();
+      overlay?.hide();
+    }
+    if (result.response === 1) {
+      stopCapture();
+      app.quit();
+    }
+  } finally {
+    closePrompt = false;
+  }
 }
 function hide(): void {
   if (!tray || tray.isDestroyed())
@@ -347,7 +393,20 @@ function updateTray(): void {
         label: `${id === "systemAudio" ? "System audio" : id === "microphone" ? "Microphone" : "Screen"}: ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
         enabled: false,
       })),
-      { label: "Show EveryHint", click: show },
+      { label: "Show dashboard", click: show },
+      {
+        label: "Show / hide overlay",
+        accelerator: store.settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
+        click: toggleOverlay,
+      },
+      {
+        label: "Hide to Tray",
+        click: () =>
+          safely(() => {
+            hide();
+            overlay?.hide();
+          }),
+      },
       {
         label:
           state === "PAUSED" ? "Resume authorised capture" : "Pause capture",
@@ -358,16 +417,18 @@ function updateTray(): void {
       },
       {
         label: "Stop all capture",
-        accelerator: "Control+Alt+Shift+X",
+        accelerator: store.settings.stopShortcut ?? DEFAULT_HOTKEYS.stop,
+        enabled: ["ACTIVE", "PAUSED", "READY"].includes(state),
         click: stopCapture,
       },
       { type: "separator" },
       { label: "Quit EveryHint", click: () => app.quit() },
     ]),
   );
-  window?.setTitle(
-    `EveryHint · ${mode}${sharing?.enabled ? " · remote enabled" : ""}${postEnabled ? " · End notes enabled" : ""}${recording ? " · saving final text" : ""} · ${state}`,
-  );
+  if (window && !window.isDestroyed())
+    window.setTitle(
+      `EveryHint · ${mode}${sharing?.enabled ? " · remote enabled" : ""}${postEnabled ? " · End notes enabled" : ""}${recording ? " · saving final text" : ""} · ${state}`,
+    );
 }
 function publish(): void {
   if (speech && controller) speech.captureChanged(controller.value);
@@ -380,7 +441,7 @@ function publish(): void {
   revision++;
   updateTray();
   if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-    window.webContents.send("everyhint:snapshot", snapshot());
+    broadcast("everyhint:snapshot", snapshot());
 }
 function persistBounds(): void {
   if (!window || window.isDestroyed()) return;
@@ -394,49 +455,33 @@ function queueBounds(): void {
   if (saveTimer) clearTimeout(saveTimer);
   saveTimer = setTimeout(persistBounds, 250);
 }
-function configureSize(previous: Presentation): void {
-  if (!window) return;
-  const current = window.getBounds(),
-    mode = presentation(store.settings);
-  presentationSizes.set(previous, {
-    width: current.width,
-    height: current.height,
-  });
-  const intelligenceMode = intelligence?.value.mode ?? "manual";
-  window.setMinimumSize(
-    360,
-    mode === "compact"
-      ? (intelligenceMode === "manual"
-          ? 180
-          : intelligenceMode === "live"
-            ? 400
-            : 280) + (meetingCompactRow ? 50 : 0)
-      : 380,
-  );
-  window.setBounds(
-    presentationBounds(
-      mode,
-      current,
-      screen.getDisplayMatching(current).workArea,
-      presentationSizes.get(mode),
-    ),
-  );
-}
 function applyAppearance(): void {
   if (!window || window.isDestroyed()) return;
-  window.setAlwaysOnTop(store.settings.alwaysOnTop);
-  window.setOpacity(store.settings.opacity ?? 1);
+  window.setAlwaysOnTop(false);
+  window.setOpacity(1);
+  overlay?.setAlwaysOnTop(store.settings.alwaysOnTop);
+  overlay?.setOpacity(store.settings.opacity ?? 1);
   const requested = store.settings.protectWindow === true;
-  if (!privacy || privacy.requested !== requested)
+  if (!privacy || privacy.requested !== requested) {
     privacy = configureWindowPrivacy(window, requested);
+    if (overlay) {
+      const overlayPrivacy = configureWindowPrivacy(overlay, requested);
+      if (
+        overlayPrivacy.state === "error" ||
+        overlayPrivacy.state === "unsupported"
+      )
+        privacy = overlayPrivacy;
+    }
+  }
   const dark =
     store.settings.theme === "dark" ||
     (store.settings.theme === "system" && nativeTheme.shouldUseDarkColors);
   window.setBackgroundColor((dark ? design.dark : design.light).background);
+  overlay?.setBackgroundColor((dark ? design.dark : design.light).background);
 }
 function handle(
   channel: string,
-  action: (input: unknown) => unknown | Promise<unknown>,
+  action: (input: unknown, sender: BrowserWindow) => unknown | Promise<unknown>,
 ): void {
   ipcMain.handle(
     channel,
@@ -445,15 +490,23 @@ function handle(
       input: unknown,
     ): Promise<Result<unknown>> => {
       try {
+        const sender = [window, overlay].find(
+          (target) =>
+            target &&
+            !target.isDestroyed() &&
+            event.sender === target.webContents,
+        );
         if (
-          !window ||
-          event.sender !== window.webContents ||
-          event.senderFrame !== window.webContents.mainFrame ||
-          !trustedDocument(event.senderFrame.url, documentUrl)
+          !sender ||
+          event.senderFrame !== sender.webContents.mainFrame ||
+          !trustedDocument(
+            event.senderFrame.url,
+            sender === overlay ? overlayUrl.href : documentUrl,
+          )
         ) {
           throw new Error("Untrusted EveryHint IPC sender.");
         }
-        return { ok: true, value: await action(input) };
+        return { ok: true, value: await action(input, sender) };
       } catch (error) {
         return { ok: false, error: errorMessage(error) };
       }
@@ -532,7 +585,10 @@ async function initialise(): Promise<void> {
     speechRoot,
     () => speech?.publish(),
     app.isPackaged
-      ? { directory: join(process.resourcesPath, "speech"), manifestPath: join(directory, "speech-runtime.json") }
+      ? {
+          directory: join(process.resourcesPath, "speech"),
+          manifestPath: join(directory, "speech-runtime.json"),
+        }
       : undefined,
   );
   speech = new TranscriptionController(
@@ -540,7 +596,7 @@ async function initialise(): Promise<void> {
     (value) => {
       transcriptionListening = value.state === "LISTENING";
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:transcription", value);
+        broadcast("everyhint:transcription", value);
       if (controller) intelligence?.update(controller.value, value.events);
       if (controller) meetings?.observe(controller.metadata, value.events);
       publishMeetingAI();
@@ -554,7 +610,7 @@ async function initialise(): Promise<void> {
     audio,
     (event) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:audio-meters", event);
+        broadcast("everyhint:audio-meters", event);
     },
     process.platform === "win32",
   );
@@ -574,7 +630,7 @@ async function initialise(): Promise<void> {
       }
       updateMeetingProfile();
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:account", value);
+        broadcast("everyhint:account", value);
       void assistant?.inspect();
     },
     (url) => shell.openExternal(url),
@@ -585,7 +641,7 @@ async function initialise(): Promise<void> {
     () => ({ capture: controller.value, events: speech?.value.events ?? [] }),
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:assistant", value);
+        broadcast("everyhint:assistant", value);
       intelligence?.assistantChanged(value);
       meetingAI?.assistantChanged(value);
       publishMeetingAI();
@@ -605,7 +661,7 @@ async function initialise(): Promise<void> {
     assistant,
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:intelligence", value);
+        broadcast("everyhint:intelligence", value);
       updateTray();
     },
     Date.now,
@@ -640,11 +696,12 @@ async function initialise(): Promise<void> {
         "EveryHint",
         "meetings",
       );
+  historyRoot = meetingRoot;
   personal = new PersonalController(
     (profile) => new PersonalStore(join(meetingRoot, "personal"), profile),
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:personal-state", value);
+        broadcast("everyhint:personal-state", value);
     },
     () => {
       workspace?.invalidate();
@@ -680,10 +737,9 @@ async function initialise(): Promise<void> {
     },
     new MeetingPreferencesStore(join(meetingRoot, "preferences")),
     (value) => {
-      syncMeetingSize();
       updateTray();
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:meetings-state", value);
+        broadcast("everyhint:meetings-state", value);
       publishMeetingAI();
     },
   );
@@ -732,7 +788,7 @@ async function initialise(): Promise<void> {
           !window.isDestroyed() &&
           !window.webContents.isDestroyed()
         )
-          window.webContents.send("everyhint:workspace-state", value);
+          broadcast("everyhint:workspace-state", value);
       },
       invalidate: () => {
         if (intelligence?.value.live?.sharing.workspace?.enabled)
@@ -756,7 +812,7 @@ async function initialise(): Promise<void> {
         toast.on("click", () => {
           if (window && !window.isDestroyed()) {
             show();
-            window.webContents.send("everyhint:workspace-navigate", event.id);
+            broadcast("everyhint:workspace-navigate", event.id);
           }
         });
         toast.show();
@@ -792,14 +848,8 @@ async function initialise(): Promise<void> {
   const area = screen.getDisplayMatching(
     saved ?? { x: 0, y: 0, width: 540, height: 720 },
   ).workArea;
-  const width = Math.min(
-    area.width,
-    saved?.width ?? (store.settings.layout === "dashboard" ? 1040 : 540),
-  );
-  const height = Math.min(
-    area.height,
-    store.settings.compact ? 190 : Math.max(380, saved?.height ?? 720),
-  );
+  const width = Math.min(area.width, Math.max(860, saved?.width ?? 1040));
+  const height = Math.min(area.height, Math.max(540, saved?.height ?? 760));
   window = new BrowserWindow({
     title: "EveryHint",
     width,
@@ -816,9 +866,10 @@ async function initialise(): Promise<void> {
       Math.min(saved?.y ?? area.y + 80, area.y + area.height - height),
     ),
     minWidth: 360,
-    minHeight: store.settings.compact ? 180 : 380,
+    minHeight: 380,
     frame: false,
-    alwaysOnTop: store.settings.alwaysOnTop,
+    alwaysOnTop: false,
+    skipTaskbar: false,
     backgroundColor: design.light.background,
     show: false,
     icon: icon("IDLE"),
@@ -833,6 +884,74 @@ async function initialise(): Promise<void> {
       backgroundThrottling: true,
     },
   });
+  overlay = new BrowserWindow({
+    title: "EveryHint Assistant",
+    width: 480,
+    height: 580,
+    minWidth: 360,
+    minHeight: 380,
+    frame: false,
+    show: false,
+    alwaysOnTop: store.settings.alwaysOnTop,
+    skipTaskbar: false,
+    icon: icon("IDLE"),
+    webPreferences: {
+      preload: join(directory, "../preload/index.cjs"),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+      webSecurity: true,
+      webviewTag: false,
+      spellcheck: false,
+      backgroundThrottling: true,
+    },
+  });
+  overlay.setMenu(null);
+  overlay.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
+  overlay.webContents.on("will-navigate", (event) => event.preventDefault());
+  overlay.webContents.on("will-attach-webview", (event) =>
+    event.preventDefault(),
+  );
+  overlay.webContents.on("render-process-gone", () => {
+    stopCapture();
+    overlay?.hide();
+  });
+  overlay.webContents.on("unresponsive", () => {
+    stopCapture();
+    overlay?.hide();
+  });
+  overlay.on("close", (event) => {
+    if (!quitting) {
+      event.preventDefault();
+      overlay?.hide();
+    }
+  });
+  overlay.webContents.on("did-start-navigation", (details) => {
+    if (!interfaceReady || !details.isMainFrame || details.isSameDocument)
+      return;
+    stopCapture();
+    lockMeetingHistory("Assistant reloaded. Permissions were revoked.");
+    accounts?.cancel();
+    chatgpt?.invalidate();
+    assistant?.clear();
+  });
+  const fitWindows = (): void => {
+    for (const target of [window, overlay]) {
+      if (!target || target.isDestroyed()) continue;
+      const bounds = target.getNormalBounds();
+      target.setBounds(
+        presentationBounds(
+          target === window ? "dashboard" : "assistant",
+          bounds,
+          screen.getDisplayMatching(bounds).workArea,
+          bounds,
+        ),
+      );
+    }
+  };
+  screen.on("display-removed", fitWindows);
+  screen.on("display-metrics-changed", fitWindows);
+  screen.on("display-added", fitWindows);
   applyAppearance();
   nativeTheme.on("updated", applyAppearance);
   window.setMenu(null);
@@ -841,7 +960,10 @@ async function initialise(): Promise<void> {
   window.webContents.on("will-attach-webview", (event) =>
     event.preventDefault(),
   );
-  window.webContents.on("did-start-loading", () => {
+  window.webContents.on("did-start-navigation", (details) => {
+    // A loading spinner can restart without replacing the trusted document.
+    if (!interfaceReady || !details.isMainFrame || details.isSameDocument)
+      return;
     lockMeetingHistory(
       "Interface reload locked local history; no recording or remote permission is restored.",
     );
@@ -875,10 +997,10 @@ async function initialise(): Promise<void> {
     if (!quitting && (!tray || tray.isDestroyed())) stopCapture();
   });
   window.on("close", (event) => {
-    if (!quitting && tray && !tray.isDestroyed()) {
+    if (!quitting) {
       event.preventDefault();
-      safely(hide);
-    } else if (!quitting) app.quit();
+      void closeDashboard().catch((error) => warn(errorMessage(error)));
+    }
   });
   try {
     tray = new Tray(icon("IDLE"));
@@ -892,19 +1014,19 @@ async function initialise(): Promise<void> {
   }
   shortcuts = new HotkeyController(globalShortcut);
   const registerShortcuts = (): void => {
+    lastTrayState = undefined;
     hotkeys = shortcuts.register(
       {
         toggle: () => {
-          safely(() => (window?.isVisible() ? hide() : show()));
+          safely(toggleOverlay);
         },
         pause: () => {
           safely(() => controller.togglePause());
         },
         stop: stopCapture,
         assist: () => {
-          show();
-          if (window && !window.isDestroyed())
-            window.webContents.send("everyhint:assist");
+          showOverlay();
+          overlay?.webContents.send("everyhint:assist");
         },
         clear: clearAssistantContext,
       },
@@ -912,6 +1034,9 @@ async function initialise(): Promise<void> {
         ...DEFAULT_HOTKEYS,
         assist: store.settings.assistShortcut ?? DEFAULT_HOTKEYS.assist,
         clear: store.settings.clearShortcut ?? DEFAULT_HOTKEYS.clear,
+        toggle: store.settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
+        pause: store.settings.pauseShortcut ?? DEFAULT_HOTKEYS.pause,
+        stop: store.settings.stopShortcut ?? DEFAULT_HOTKEYS.stop,
       },
     );
   };
@@ -924,19 +1049,25 @@ async function initialise(): Promise<void> {
 
   handle("everyhint:get", () => snapshot());
   updates = new UpdateController(
-    app.isPackaged && process.platform === "win32" ? updatePolicy(updateConfiguration) : null,
+    app.isPackaged && process.platform === "win32"
+      ? updatePolicy(updateConfiguration)
+      : null,
     app.getVersion(),
-    policy => windowsUpdater(policy, join(directory, "update-config.yml")),
-    value => {
+    (policy) => windowsUpdater(policy, join(directory, "update-config.yml")),
+    (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        window.webContents.send("everyhint:updates", value);
+        broadcast("everyhint:updates", value);
     },
     async () => {
       if (!window || window.isDestroyed()) return false;
       const result = await dialog.showMessageBox(window, {
-        type: "question", buttons: ["Restart and install", "Later"], defaultId: 1, cancelId: 1,
+        type: "question",
+        buttons: ["Restart and install", "Later"],
+        defaultId: 1,
+        cancelId: 1,
         message: `Install EveryHint ${updates?.value.availableVersion ?? "update"}?`,
-        detail: "Save your work first. Restarting stops capture and remote AI requests. Your encrypted local data and models are preserved.",
+        detail:
+          "Save your work first. Restarting stops capture and remote AI requests. Your encrypted local data and models are preserved.",
       });
       if (result.response !== 0) return false;
       stopCapture();
@@ -946,7 +1077,7 @@ async function initialise(): Promise<void> {
       return true;
     },
   );
-  handle("everyhint:update", async input => {
+  handle("everyhint:update", async (input) => {
     await updates!.command(input as import("../shared/updates").UpdateAction);
     return updates!.value;
   });
@@ -991,7 +1122,7 @@ async function initialise(): Promise<void> {
     revokeLive: () => intelligence?.revoke("Meeting AI was chosen."),
     changed: () => {
       if (meetings && window && !window.isDestroyed())
-        window.webContents.send("everyhint:meetings-state", meetings.value);
+        broadcast("everyhint:meetings-state", meetings.value);
       publishMeetingAI();
     },
   });
@@ -1008,7 +1139,6 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:intelligence-mode", (input) => {
     intelligence!.mode(input);
-    if (store.settings.compact) configureSize("compact");
   });
   handle("everyhint:intelligence-configure", (input) => {
     const settings = parseIntelligenceSettings(input);
@@ -1046,11 +1176,21 @@ async function initialise(): Promise<void> {
     if (input === "sign-in" || input === "grant-plan")
       await accounts!.signIn(input === "grant-plan");
     else await accounts!.signOut();
-    if (
-      accounts!.value.state !== "error" &&
-      accounts!.value.state !== "cancelled"
-    )
+    try {
+      if (
+        (input === "sign-in" || input === "grant-plan") &&
+        accounts!.value.state === "signed-in" &&
+        accounts!.value.planUsage
+      ) {
+        await chatgpt!.discoverModels();
+        const model = defaultCatalogModel(
+          (await chatgpt!.inspect()).modelDetails,
+        );
+        if (model) chatgpt!.selectModel(model.id);
+      }
+    } finally {
       await assistant!.inspect();
+    }
   });
   handle("everyhint:account-select", async (input) => {
     cancelMeetingWork();
@@ -1066,6 +1206,9 @@ async function initialise(): Promise<void> {
     assistant!.clear();
     try {
       await chatgpt!.discoverModels();
+      const status = await chatgpt!.inspect();
+      const model = defaultCatalogModel(status.modelDetails);
+      if (model) chatgpt!.selectModel(model.id);
     } catch (error) {
       throw new ProviderError(
         providerError(error).code,
@@ -1197,13 +1340,15 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:settings", (input) => {
     // Appearance is safe to edit during capture; interval changes apply on next start/resume.
-    const oldPresentation = presentation(store.settings);
     const oldIntelligence = JSON.stringify(
       store.settings.intelligence ?? DEFAULT_INTELLIGENCE,
     );
     const oldShortcuts = [
       store.settings.assistShortcut,
       store.settings.clearShortcut,
+      store.settings.toggleShortcut,
+      store.settings.pauseShortcut,
+      store.settings.stopShortcut,
     ].join("|");
     store.save(input, window?.getNormalBounds());
     if (
@@ -1217,18 +1362,61 @@ async function initialise(): Promise<void> {
     }
     if (
       oldShortcuts !==
-      [store.settings.assistShortcut, store.settings.clearShortcut].join("|")
+      [
+        store.settings.assistShortcut,
+        store.settings.clearShortcut,
+        store.settings.toggleShortcut,
+        store.settings.pauseShortcut,
+        store.settings.stopShortcut,
+      ].join("|")
     )
       registerShortcuts();
     applyAppearance();
-    if (oldPresentation !== presentation(store.settings))
-      configureSize(oldPresentation);
     publish();
   });
-  handle("everyhint:window", (input) => {
-    if (input === "hide") hide();
-    else if (input === "quit") app.quit();
+  handle("everyhint:window", (input, sender) => {
+    if (input === "hide") {
+      if (sender === overlay) overlay?.hide();
+      else {
+        hide();
+        overlay?.hide();
+      }
+    } else if (input === "minimize") sender.minimize();
+    else if (input === "maximize") {
+      if (sender.isMaximized()) sender.unmaximize();
+      else sender.maximize();
+    } else if (input === "close") {
+      if (sender === overlay) overlay?.hide();
+      else return closeDashboard();
+    } else if (input === "overlay") toggleOverlay();
+    else if (input === "dashboard") show();
+    else if (input === "account") {
+      show();
+      window?.webContents.send("everyhint:account-settings");
+    } else if (
+      ["move-left", "move-right", "move-up", "move-down"].includes(
+        input as string,
+      ) &&
+      overlay
+    ) {
+      const bounds = overlay.getBounds();
+      bounds.x += input === "move-left" ? -40 : input === "move-right" ? 40 : 0;
+      bounds.y += input === "move-up" ? -40 : input === "move-down" ? 40 : 0;
+      overlay.setBounds(
+        presentationBounds(
+          "assistant",
+          bounds,
+          screen.getDisplayMatching(bounds).workArea,
+          bounds,
+        ),
+      );
+    } else if (input === "quit") app.quit();
     else throw new Error("Unknown window action.");
+  });
+  handle("everyhint:meeting-navigate", (input) => {
+    const id = input === undefined ? undefined : meetingId(input);
+    show();
+    window?.webContents.send("everyhint:meeting-navigate", id);
   });
   powerMonitor.on("suspend", () => {
     lockMeetingHistory(
@@ -1249,8 +1437,12 @@ async function initialise(): Promise<void> {
     stopCapture();
   });
   await window.loadURL(documentUrl);
+  await overlay.loadURL(overlayUrl.href);
+  interfaceReady = true;
+  restoreExistingHistory();
   await workspace.restoreChosen();
-  show();
+  if (!store.settings.startHidden || !tray || tray.isDestroyed())
+    window.showInactive();
   void assistant
     .inspect()
     .catch(() =>
@@ -1272,6 +1464,7 @@ else {
     .whenReady()
     .then(initialise)
     .catch((error: unknown) => {
+      if (quitting) return;
       dialog.showErrorBox("EveryHint could not start", errorMessage(error));
       app.quit();
     });

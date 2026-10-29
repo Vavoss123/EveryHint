@@ -32,9 +32,12 @@ describe("appearance and window presentation", () => {
       theme: "light",
       layout: "assistant",
       opacity: 1,
-      protectWindow:false,
+      protectWindow: false,
       assistShortcut: "Control+Alt+A",
       clearShortcut: "Control+Alt+Shift+C",
+      toggleShortcut: "Control+Alt+Space",
+      pauseShortcut: "Control+Alt+P",
+      stopShortcut: "Control+Alt+Shift+X",
     });
   });
   it.each([

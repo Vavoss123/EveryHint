@@ -1,3 +1,8 @@
+import {
+  dashboardPage,
+  finishSetup,
+  navigate as uxNavigate,
+} from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
 import { mkdir, mkdtemp, readFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -45,7 +50,8 @@ async function launch() {
     env,
     timeout: 30000,
   });
-  const page = await desktop.firstWindow();
+  const page = await dashboardPage(desktop);
+  await finishSetup(page);
   page.on("pageerror", (error) => failures.push(error.message));
   await page.waitForFunction(
     () => !!window.everyhint && document.querySelector(".capture-controls"),
@@ -68,7 +74,11 @@ try {
   );
   check((await page.title()) === "EveryHint", "renderer branding");
   const native = await desktop.evaluate(({ app, BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0];
+    const win = BrowserWindow.getAllWindows().find(
+      (w) =>
+        w.webContents.getURL().includes("index.html") &&
+        !w.webContents.getURL().includes("overlay=1"),
+    );
     const prefs = win.webContents.getLastWebPreferences();
     return {
       name: app.getName(),
@@ -87,7 +97,7 @@ try {
     native.sandbox && native.isolated && !native.node,
     "sandbox and context isolation",
   );
-  check(native.onTop, "always-on-top defaults on");
+  check(!native.onTop, "dashboard always-on-top defaults off");
   const rejected = await page.evaluate(async () => ({
     start: await window.everyhint.session("start"),
     resume: await window.everyhint.session("resume"),
@@ -115,7 +125,8 @@ try {
   );
   check(rejected.node === "undefined", "renderer has no Node access");
   check(
-    await page.getByLabel("AI provider").isEnabled(),
+    (await page.evaluate(() => window.everyhint.getAssistant())).value.providers
+      .length === 2,
     "AI provider selection is available without starting a request",
   );
   await mkdir(join(project, "artifacts"), { recursive: true });
@@ -123,15 +134,13 @@ try {
     path: join(project, "artifacts", "everyhint-overlay.png"),
   });
   await page
-    .getByRole("button", { name: "Prepare session", exact: true })
+    .getByRole("button", { name: "Start EveryHint", exact: true })
     .click();
   const choose = page.getByRole("button", {
     name: "Choose a screen or window",
   });
   check(
-    await page
-      .getByRole("button", { name: "Prepare selected sources" })
-      .isDisabled(),
+    await page.getByRole("button", { name: "Start EveryHint" }).isDisabled(),
     "session preparation requires source consent",
   );
   check(
@@ -153,33 +162,46 @@ try {
   );
   // Deliberately do not click: automated smoke tests never enumerate or capture the desktop.
   await page.getByLabel("Back", { exact: true }).click();
-  await page.getByLabel("EveryHint settings").click();
-  await page.getByRole("checkbox", { name: /Always on top/ }).click();
-  await waitForSnapshot(page, (state) => !state.settings.alwaysOnTop);
+  await page.evaluate(async () => {
+    const r = await window.everyhint.getSnapshot();
+    await window.everyhint.saveSettings({
+      ...r.value.settings,
+      alwaysOnTop: true,
+    });
+  });
   check(
-    !(await desktop.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isAlwaysOnTop(),
-    )),
-    "settings changes the native window",
+    await desktop.evaluate(({ BrowserWindow }) => {
+      const windows = BrowserWindow.getAllWindows();
+      return (
+        windows
+          .find((w) => w.webContents.getURL().includes("overlay=1"))
+          .isAlwaysOnTop() &&
+        !windows
+          .find((w) => w.webContents.getURL().endsWith("index.html"))
+          .isAlwaysOnTop()
+      );
+    }),
+    "pinning applies only to separate overlay",
   );
-  await page.getByRole("checkbox", { name: /Always on top/ }).click();
-  await waitForSnapshot(page, (state) => state.settings.alwaysOnTop);
-  await page.getByLabel("EveryHint settings").click();
-  await page.getByLabel("Compact mode", { exact: true }).click();
-  await page.locator(".is-compact").waitFor();
+  await page.evaluate(() => window.everyhint.window("overlay"));
   check(
-    await desktop.evaluate(
-      ({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0].getBounds().height <= 200,
+    await desktop.evaluate(({ BrowserWindow }) =>
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL().includes("overlay=1"))
+        .isVisible(),
     ),
-    "compact mode resizes window",
+    "floating overlay restores independently",
   );
-  await page.getByLabel("Expand EveryHint", { exact: true }).click();
-  await page.waitForFunction(() => !document.querySelector(".is-compact"));
   await page.evaluate(() => window.everyhint.window("hide"));
   check(
     !(await desktop.evaluate(({ BrowserWindow }) =>
-      BrowserWindow.getAllWindows()[0].isVisible(),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .isVisible(),
     )),
     "overlay can hide to tray",
   );
@@ -188,7 +210,13 @@ try {
   );
   check(hiddenStop.ok, "stop IPC works independently of visibility");
   await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].show(),
+    BrowserWindow.getAllWindows()
+      .find(
+        (w) =>
+          w.webContents.getURL().includes("index.html") &&
+          !w.webContents.getURL().includes("overlay=1"),
+      )
+      .show(),
   );
   await desktop.context().addInitScript(installSyntheticAudio);
   for (const [microphone, systemAudio] of [
@@ -196,13 +224,16 @@ try {
     [false, true],
     [true, true],
   ]) {
+    await uxNavigate(page, "Home");
     await page
-      .getByRole("button", { name: "Prepare session", exact: true })
+      .getByRole("button", { name: "Start EveryHint", exact: true })
       .click();
-    if (microphone)
-      await page.getByRole("checkbox", { name: /^Microphone/ }).check();
-    if (systemAudio)
-      await page.getByRole("checkbox", { name: /^System audio/ }).check();
+    await page
+      .getByRole("checkbox", { name: /^Microphone/ })
+      .setChecked(microphone);
+    await page
+      .getByRole("checkbox", { name: /^System audio/ })
+      .setChecked(systemAudio);
     await page.getByRole("checkbox", { name: /I authorise/ }).check();
     if (microphone) {
       await page.getByRole("button", { name: "Refresh microphones" }).click();
@@ -210,12 +241,7 @@ try {
         .getByLabel("Microphone device", { exact: true })
         .selectOption("synthetic-mic");
     }
-    await page
-      .getByRole("button", { name: "Prepare selected sources" })
-      .click();
-    await page
-      .getByRole("button", { name: "Start capture", exact: true })
-      .click();
+    await page.getByRole("button", { name: "Start EveryHint" }).click();
     await waitForSnapshot(
       page,
       (state) =>
@@ -282,9 +308,7 @@ try {
         "accompanying video track is released",
       );
     if (microphone) {
-      await page
-        .getByRole("button", { name: "Mute microphone", exact: true })
-        .click();
+      await page.evaluate(() => window.everyhint.setMicrophoneMuted(true));
       await waitForSnapshot(
         page,
         (state) =>
@@ -292,9 +316,7 @@ try {
           state.session.sources.microphone.level === 0,
       );
       check(true, "microphone mute zeroes its meter");
-      await page
-        .getByRole("button", { name: "Unmute microphone", exact: true })
-        .click();
+      await page.evaluate(() => window.everyhint.setMicrophoneMuted(false));
       await waitForSnapshot(
         page,
         (state) =>
@@ -322,7 +344,7 @@ try {
         .some((candidate) => candidate.url().endsWith("/audio.html")),
       "pause destroys the capture context",
     );
-    await page.getByRole("button", { name: "Resume capture" }).click();
+    await page.getByRole("button", { name: "Resume" }).click();
     await waitForSnapshot(page, (state) =>
       Object.values(state.session.sources).some(
         (source) => source.state === "CAPTURING",

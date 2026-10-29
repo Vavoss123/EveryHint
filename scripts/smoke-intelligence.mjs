@@ -1,3 +1,9 @@
+import {
+  dashboardPage,
+  finishSetup,
+  settingsSection,
+  sessionOptions,
+} from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
 import { mkdtemp, mkdir, readFile, writeFile, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
@@ -34,19 +40,13 @@ async function open() {
     env,
     timeout: 30000,
   });
-  const page = await desktop.firstWindow();
+  const page = await dashboardPage(desktop);
+  await finishSetup(page);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.waitForFunction(() =>
     Boolean(window.everyhint && document.querySelector(".capture-controls")),
   );
-  if (
-    await page
-      .getByRole("button", { name: "Expand EveryHint", exact: true })
-      .isVisible()
-  )
-    await page
-      .getByRole("button", { name: "Expand EveryHint", exact: true })
-      .click();
+  await sessionOptions(page);
   await page.getByLabel("Operating mode", { exact: true }).waitFor();
   await desktop.evaluate(() => {
     globalThis.__p7Network = [];
@@ -170,8 +170,9 @@ try {
       .isChecked()) && (await ai()).responses.length === 0,
     "action preparation cannot bypass per-request approval",
   );
+  await settingsSection(page, "Advanced");
   await page
-    .getByRole("button", { name: "EveryHint settings", exact: true })
+    .getByText("Detection and Live assistance limits", { exact: true })
     .click();
   await page.getByLabel("Analyse microphone locally", { exact: true }).check();
   await page
@@ -199,41 +200,27 @@ try {
   await page
     .getByLabel("Automatic request cooldown seconds", { exact: true })
     .fill("30");
-  await page
-    .getByRole("button", { name: "EveryHint settings", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Compact mode", exact: true }).click();
-  await page
-    .getByLabel("Compact conversation intelligence", { exact: true })
-    .waitFor();
+  await sessionOptions(page);
+  await page.evaluate(() => window.everyhint.window("overlay"));
+  const floating = desktop.windows().find((p) => p.url().includes("overlay=1"));
+  await floating.getByLabel("EveryHint assistant", { exact: true }).waitFor();
   check(
-    (await state()).settings.compact,
-    "compact layout exposes selected operating mode",
+    await floating.getByLabel("Active AI mode", { exact: true }).isVisible(),
+    "floating assistant exposes current mode",
   );
   check(
     await desktop.evaluate(
       ({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0].getBounds().height >= 280,
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL().includes("overlay=1"))
+          .getBounds().height >= 380,
     ),
-    "automatic-mode compact window allocates room for question/suggestion/answer",
+    "floating assistant allocates space for answers",
   );
-  const geometry = await page.evaluate(() => {
-    const footer = document
-      .querySelector(".capture-controls")
-      .getBoundingClientRect();
-    const panel = document
-      .querySelector(".intelligence-compact")
-      .getBoundingClientRect();
-    return (
-      footer.bottom <= innerHeight &&
-      panel.top >= 0 &&
-      panel.bottom <= footer.top
-    );
-  });
-  check(geometry, "compact intelligence and emergency controls remain visible");
-  await page
-    .getByRole("button", { name: "Expand EveryHint", exact: true })
-    .click();
+  check(
+    await floating.getByLabel("Your question", { exact: true }).isVisible(),
+    "floating assistant has an accessible composer",
+  );
   await page.getByLabel("Operating mode", { exact: true }).selectOption("live");
   await wait((value) => value.mode === "live");
   await page.getByLabel("Live Assist permission", { exact: true }).waitFor();
@@ -290,10 +277,13 @@ try {
   }));
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:intelligence",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:intelligence", value),
     fixture,
   );
   await page
@@ -351,10 +341,13 @@ try {
   };
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:intelligence",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:intelligence", value),
     liveFixture,
   );
   const responseFixture = {
@@ -380,10 +373,13 @@ try {
   };
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:assistant",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:assistant", value),
     responseFixture,
   );
   await page
@@ -395,9 +391,7 @@ try {
       .isVisible(),
     "remote-enabled state remains visible even between answers with immediate Pause Live",
   );
-  await page
-    .getByRole("button", { name: "EveryHint settings", exact: true })
-    .click();
+  await settingsSection(page, "Advanced");
   check(
     (await page
       .getByRole("button", { name: "Pause Live Assist", exact: true })
@@ -414,91 +408,37 @@ try {
     (await get()).live === null,
     "fixture display cannot mint a real automatic-sharing grant",
   );
-  await page
-    .getByRole("button", { name: "EveryHint settings", exact: true })
-    .click();
-  await page.getByRole("button", { name: "Compact mode", exact: true }).click();
-  await page.locator(".assistant-compact").waitFor({ state: "visible" });
   await desktop.evaluate(({ BrowserWindow }) => {
-    const win = BrowserWindow.getAllWindows()[0];
+    const win = BrowserWindow.getAllWindows().find((w) =>
+      w.webContents.getURL().includes("overlay=1"),
+    );
     win.webContents.setZoomFactor(1.25);
-    win.setBounds({ width: 360, height: 320 });
+    win.setBounds({ width: 360, height: 600 });
   });
-  await page.waitForFunction(() => innerWidth <= 300);
-  await page.evaluate(
-    () =>
-      new Promise((resolve) =>
-        requestAnimationFrame(() => requestAnimationFrame(resolve)),
-      ),
-  );
-  const liveGeometry = await page.evaluate(() => {
-    const content = document.querySelector(".content").getBoundingClientRect(),
-      answer = document
-        .querySelector(".assistant-compact")
-        .getBoundingClientRect(),
-      question = document
-        .querySelector(".intelligence-compact")
-        .getBoundingClientRect(),
-      controls = document
-        .querySelector(".capture-controls")
-        .getBoundingClientRect();
-    const clippedButtons = Array.from(document.querySelectorAll("button"))
-      .filter(
-        (button) =>
-          button.getClientRects().length &&
-          getComputedStyle(button).visibility !== "hidden" &&
-          (!button.classList.contains("skip-link") ||
-            button === document.activeElement),
-      )
-      .map((button) => ({
-        label: button.getAttribute("aria-label") || button.textContent,
-        rect: button.getBoundingClientRect().toJSON(),
-      }))
-      .filter(
-        ({ rect }) =>
-          rect.left < -1 ||
-          rect.right > innerWidth + 1 ||
-          rect.top < -1 ||
-          rect.bottom > innerHeight + 1,
-      );
-    return {
-      clippedButtons,
-      fits:
-        answer.top >= content.top &&
-        answer.bottom <= content.bottom &&
-        question.top >= content.top &&
-        question.bottom <= content.bottom &&
-        controls.bottom <= innerHeight,
-      noHorizontalOverflow:
-        document.documentElement.scrollWidth <= innerWidth + 1,
-      viewport: { width: innerWidth, height: innerHeight },
-      content: content.toJSON(),
-      answer: answer.toJSON(),
-      question: question.toJSON(),
-      controls: controls.toJSON(),
-    };
-  });
+  await floating
+    .getByLabel("Your question", { exact: true })
+    .scrollIntoViewIfNeeded();
+  const liveGeometry = await floating.evaluate(() => ({
+    noHorizontalOverflow:
+      document.documentElement.scrollWidth <= innerWidth + 1,
+    footerVisible:
+      document.querySelector("footer").getBoundingClientRect().bottom <=
+      innerHeight + 1,
+    viewport: { width: innerWidth, height: innerHeight },
+  }));
   await mkdir("artifacts", { recursive: true });
   await writeFile(
     "artifacts/p7-compact-geometry.json",
     JSON.stringify(liveGeometry, null, 2),
   );
-  const compactImage = await desktop.evaluate(async ({ BrowserWindow }) =>
-    (await BrowserWindow.getAllWindows()[0].webContents.capturePage())
-      .toPNG()
-      .toString("base64"),
-  );
-  await writeFile(
-    "artifacts/p7-compact-live-125.png",
-    Buffer.from(compactImage, "base64"),
+  await floating.screenshot({ path: "artifacts/p7-compact-live-125.png" });
+  check(
+    liveGeometry.footerVisible,
+    "floating assistant retains the session control area at 125% zoom",
   );
   check(
-    liveGeometry.fits,
-    "narrow compact Live view keeps question, suggestion, answer and emergency controls visible at 125% zoom",
-  );
-  check(
-    liveGeometry.noHorizontalOverflow && !liveGeometry.clippedButtons.length,
-    "narrow compact Live view has no horizontal overflow or clipped visible controls",
+    liveGeometry.noHorizontalOverflow,
+    "narrow floating assistant has no horizontal overflow at 125% zoom",
   );
   check(
     (await desktop.evaluate(() => globalThis.__p7Network.length)) === 0,

@@ -18,6 +18,7 @@
     "spec:build": "node scripts/build-feature-matrix.mjs",
     "spec:check": "node scripts/build-feature-matrix.mjs --check",
     "smoke:ui": "node scripts/smoke-ui.mjs",
+    "smoke:ux": "node scripts/smoke-ux.mjs",
     "smoke:intelligence": "node scripts/smoke-intelligence.mjs",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",

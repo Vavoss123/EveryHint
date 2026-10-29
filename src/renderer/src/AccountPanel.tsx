@@ -1,147 +1,180 @@
 import { useEffect, useState } from "react";
 import type { AccountAction, AccountConnection } from "../../shared/accounts";
 import type { ProviderId } from "../../shared/ai";
+import { connectionLabel } from "../../shared/connection";
+import { useAssistantSnapshot } from "./useAssistantSnapshot";
 
-export function AccountPanel({ provider }: { provider: ProviderId }) {
+export function AccountPanel({
+  provider = "codex",
+}: {
+  provider?: ProviderId;
+}) {
+  const assistant = useAssistantSnapshot();
   const [connection, setConnection] = useState<AccountConnection | null>(null);
-  const [working, setWorking] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [working, setWorking] = useState(false),
+    [error, setError] = useState("");
   useEffect(() => {
-    const accept = (value: AccountConnection): void =>
-      setConnection((previous) =>
-        !previous || value.revision >= previous.revision ? value : previous,
+    const accept = (next: AccountConnection) =>
+      setConnection((old) =>
+        !old || next.revision >= old.revision ? next : old,
       );
     const off = window.everyhint.onAccountConnection(accept);
-    void window.everyhint
-      .getAccountConnection()
-      .then((result) => {
-        if (!result.ok) throw new Error(result.error);
-        accept(result.value);
-      })
-      .catch(() => setError("Could not read account connection."));
+    void window.everyhint.getAccountConnection().then((result) => {
+      if (result.ok) accept(result.value);
+      else setError(result.error);
+    });
     return off;
   }, []);
-  async function act(action: AccountAction): Promise<void> {
+  async function run(task: () => Promise<{ ok: boolean; error?: string }>) {
     setWorking(true);
-    setError(null);
+    setError("");
     try {
-      const result = await window.everyhint.account(action);
+      const result = await task();
       if (!result.ok) throw new Error(result.error);
-    } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Account connection failed.",
-      );
+    } catch (e) {
+      setError((e as Error).message);
     } finally {
       setWorking(false);
     }
   }
+  const act = (action: AccountAction) =>
+    void run(() => window.everyhint.account(action));
+  const status = assistant?.providers.find((p) => p.id === "codex");
+  const label = error
+    ? "Connection problem"
+    : connectionLabel(status, connection);
+  const selected = connection?.accounts?.find(
+    (a) => a.id === connection.selectedAccount,
+  );
+  const pending =
+    working ||
+    connection?.state === "signing-in" ||
+    connection?.state === "signing-out";
   if (provider === "claude")
     return (
-      <div className="context-review" aria-label="Claude account connection">
-        <strong>Claude account sign-in</strong>
-        <button
-          className="secondary"
-          disabled
-          title="Anthropic approval is required for third-party Claude subscription sign-in"
-        >
-          Sign in with Claude — unavailable
-        </button>
-        <p className="muted">
-          Anthropic requires approval before apps like EveryHint can offer
-          Claude subscription sign-in. This app has no such approval. The API
-          option below uses separate billing and stays disabled until you opt
-          in.
-        </p>
-      </div>
+      <p>
+        Claude subscription sign-in is unavailable. Its optional API integration
+        requires a separate billing opt-in in Advanced.
+      </p>
     );
-  const pending =
-    connection?.state === "signing-in" || connection?.state === "signing-out";
   return (
-    <div className="context-review" aria-label="ChatGPT account connection">
-      <strong>ChatGPT account</strong>
-      <p role="status">
-        {connection?.message ?? "Reading account connection…"}
-      </p>
-      <label>
-        ChatGPT registration
-        <select
-          aria-label="ChatGPT registration"
-          value={connection?.selectedAccount ?? "new"}
-          disabled={working || pending || !connection}
-          onChange={(event) => {
-            const id = event.target.value;
-            setWorking(true);
-            setError(null);
-            void window.everyhint
-              .selectChatgptAccount(id)
-              .then((result) => {
-                if (!result.ok) setError(result.error);
-              })
-              .catch(() => setError("Could not select this account."))
-              .finally(() => setWorking(false));
-          }}
-        >
-          <option value="new">Add account</option>
-          {connection?.accounts?.map((account) => (
-            <option key={account.id} value={account.id}>
-              {account.label}
-              {account.signedIn ? " · connected" : " · signed out"}
-            </option>
-          ))}
-        </select>
-      </label>
-      <div className="ai-actions">
-        <button
-          className="primary"
-          disabled={working || pending || !connection}
-          onClick={() => void act("sign-in")}
-        >
-          Continue with ChatGPT
-        </button>
-        {connection?.state === "signed-in" && !connection.planUsage && (
+    <section
+      className="account-panel panel-stack"
+      aria-label="ChatGPT account connection"
+    >
+      <div className="section-heading">
+        <h2>ChatGPT</h2>
+        <span className="status-pill" role="status">
+          {label}
+        </span>
+      </div>
+      {selected?.signedIn && <p>{selected.label}</p>}
+      <div className="button-row">
+        {label !== "Ready" && (
           <button
-            className="secondary"
-            disabled={working}
-            onClick={() => void act("grant-plan")}
+            className="primary"
+            disabled={pending || !connection}
+            onClick={() => {
+              if (connection?.planUsage && selected?.signedIn)
+                void run(() => window.everyhint.discoverModels());
+              else act("grant-plan");
+            }}
           >
-            Grant ChatGPT plan permission
+            {connection?.planUsage && selected?.signedIn
+              ? "Set up model"
+              : "Connect ChatGPT"}
           </button>
         )}
-        {connection?.state === "signing-in" ? (
-          <button className="secondary" onClick={() => void act("cancel")}>
-            Cancel sign-in
-          </button>
-        ) : (
+        {connection?.state === "signing-in" && (
+          <button onClick={() => act("cancel")}>Cancel sign-in</button>
+        )}
+        {selected?.signedIn && (
           <button
             className="secondary"
-            disabled={
-              working ||
-              pending ||
-              !connection?.accounts?.some(
-                (account) =>
-                  account.id === connection.selectedAccount && account.signedIn,
-              )
-            }
-            onClick={() => void act("sign-out")}
+            disabled={pending}
+            onClick={() => act("sign-out")}
           >
-            Sign out of ChatGPT
+            Sign out
           </button>
         )}
       </div>
-      <small>
-        Your browser handles OpenAI sign-in and ChatGPT plan consent. EveryHint
-        keeps credentials in your operating-system credential store. Signing in
-        does not send a question or enable separately billed API requests.
-      </small>
-      <p className="muted">
-        Sign-out removes this registration’s tokens and retains its identity for
-        your next sign-in. Select Add account to connect another account.
-      </p>
-      {(error || connection?.state === "error") && (
-        <p className="error-message" role="alert">
-          {error ?? connection?.message}
+      {label !== "Ready" && (
+        <small>
+          Connect in your browser, then check available models. No question is
+          sent.
+        </small>
+      )}
+      {status?.selectedModel && (
+        <small>
+          Model:{" "}
+          {status.modelDetails?.find((m) => m.id === status.selectedModel)
+            ?.name ?? status.selectedModel}
+          . Availability checked against your account’s catalog; answer access
+          is confirmed by a completed response.
+        </small>
+      )}
+      <details>
+        <summary>Choose account or model</summary>
+        <div className="panel-stack">
+          <label>
+            ChatGPT account
+            <select
+              aria-label="ChatGPT registration"
+              value={connection?.selectedAccount ?? "new"}
+              disabled={pending}
+              onChange={(e) =>
+                void run(() =>
+                  window.everyhint.selectChatgptAccount(e.target.value),
+                )
+              }
+            >
+              <option value="new">Add account</option>
+              {connection?.accounts?.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.label}
+                  {a.signedIn ? "" : " · signed out"}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label>
+            Model
+            <select
+              aria-label="ChatGPT model"
+              value={status?.selectedModel ?? ""}
+              disabled={pending || !status?.modelDetails?.length}
+              onChange={(e) =>
+                void run(() => window.everyhint.selectModel(e.target.value))
+              }
+            >
+              <option value="" disabled>
+                Set up a model first
+              </option>
+              {status?.modelDetails?.map((m) => (
+                <option value={m.id} key={m.id}>
+                  {m.name}
+                </option>
+              ))}
+            </select>
+          </label>
+          <button
+            className="secondary"
+            disabled={pending || !connection?.planUsage}
+            onClick={() => void run(() => window.everyhint.discoverModels())}
+          >
+            Refresh available models
+          </button>
+          <small>
+            Refresh requests your authorised model list from OpenAI. It does not
+            send conversation content.
+          </small>
+        </div>
+      </details>
+      {error && (
+        <p role="alert" className="error-message">
+          {error}
         </p>
       )}
-    </div>
+    </section>
   );
 }

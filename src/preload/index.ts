@@ -9,7 +9,10 @@ const bridge: EveryHintBridge = {
   desktopStatus: () => ipcRenderer.invoke("everyhint:desktop-status"),
   update: (action) => ipcRenderer.invoke("everyhint:update", action),
   onUpdates: (callback) => {
-    const listener = (_event: unknown, value: import("../shared/updates").UpdateSnapshot): void => callback(value);
+    const listener = (
+      _event: unknown,
+      value: import("../shared/updates").UpdateSnapshot,
+    ): void => callback(value);
     ipcRenderer.on("everyhint:updates", listener);
     return () => ipcRenderer.removeListener("everyhint:updates", listener);
   },
@@ -253,6 +256,20 @@ const bridge: EveryHintBridge = {
     const wrapped = (): void => listener();
     ipcRenderer.on("everyhint:assist", wrapped);
     return () => ipcRenderer.removeListener("everyhint:assist", wrapped);
+  },
+  onAccountSettings: (listener) => {
+    const wrapped = (): void => listener();
+    ipcRenderer.on("everyhint:account-settings", wrapped);
+    return () =>
+      ipcRenderer.removeListener("everyhint:account-settings", wrapped);
+  },
+  openMeetings: (id) => ipcRenderer.invoke("everyhint:meeting-navigate", id),
+  onMeetingNavigate: (listener) => {
+    const wrapped = (_event: Electron.IpcRendererEvent, id?: string): void =>
+      listener(id);
+    ipcRenderer.on("everyhint:meeting-navigate", wrapped);
+    return () =>
+      ipcRenderer.removeListener("everyhint:meeting-navigate", wrapped);
   },
   getAccountConnection: () => ipcRenderer.invoke("everyhint:account-get"),
   account: (action) => ipcRenderer.invoke("everyhint:account-action", action),

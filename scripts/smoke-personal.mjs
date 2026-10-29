@@ -1,3 +1,8 @@
+import {
+  dashboardPage,
+  finishSetup,
+  settingsSection,
+} from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
 import {
   mkdtemp,
@@ -46,7 +51,8 @@ async function start() {
     env,
     timeout: 30000,
   });
-  page = await app.firstWindow();
+  page = await dashboardPage(app);
+  await finishSetup(page);
   page.on("pageerror", (e) => errors.push(e.message));
   await page.waitForFunction(
     () => window.everyhint && document.querySelector(".capture-controls"),
@@ -117,15 +123,13 @@ try {
   await page
     .getByRole("button", { name: "Unlock local library", exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Create mode", exact: true })
-    .waitFor();
+  await page.getByRole("button", { name: "New Mode", exact: true }).waitFor();
   keyCreated = true;
   check(
     (await state()).config.modes.length === 6,
     "five requested built-ins and legacy Conversation available",
   );
-  await page.getByRole("button", { name: "Create mode", exact: true }).click();
+  await page.getByRole("button", { name: "New Mode", exact: true }).click();
   const editor = page.getByRole("form", { name: "Mode editor" });
   await editor
     .getByLabel("Name", { exact: true })
@@ -135,7 +139,7 @@ try {
     .fill("P9_PRIVATE_MODE_MARKER Give concise grounded release guidance.");
   await editor.getByRole("button", { name: "Save mode", exact: true }).click();
   await page
-    .getByRole("heading", { name: "Release coach fixture", exact: true })
+    .getByRole("button", { name: "Release coach fixture", exact: true })
     .waitFor();
   const mode = (await state()).config.modes.find(
     (m) => m.name === "Release coach fixture",
@@ -278,7 +282,8 @@ try {
       "Renamed reference",
     "document renaming persists",
   );
-  await nav("Settings");
+  await settingsSection(page, "Advanced");
+  await page.getByText("Note templates", { exact: true }).click();
   await page
     .getByRole("button", { name: "Create meeting template", exact: true })
     .click();

@@ -6,15 +6,19 @@ import {
 } from "./intelligence";
 
 export const DEFAULT_SETTINGS: Settings = {
-  alwaysOnTop: true,
+  alwaysOnTop: false,
   compact: false,
   captureIntervalMs: 3000,
-  theme: "light",
-  layout: "assistant",
+  theme: "dark",
+  layout: "dashboard",
   opacity: 1,
   protectWindow: false,
   assistShortcut: DEFAULT_HOTKEYS.assist,
   clearShortcut: DEFAULT_HOTKEYS.clear,
+  toggleShortcut: DEFAULT_HOTKEYS.toggle,
+  pauseShortcut: DEFAULT_HOTKEYS.pause,
+  stopShortcut: DEFAULT_HOTKEYS.stop,
+  setupComplete: false,
 };
 export function record(value: unknown): Record<string, unknown> {
   if (!value || typeof value !== "object" || Array.isArray(value))
@@ -72,6 +76,14 @@ export function parseSettings(value: unknown): Settings {
     "assistShortcut",
     "clearShortcut",
     "intelligence",
+    "toggleShortcut",
+    "pauseShortcut",
+    "stopShortcut",
+    "setupComplete",
+    "preferredSources",
+    "preferredHelp",
+    "startHidden",
+    "contextLimits",
   ]);
   if (
     typeof input.alwaysOnTop !== "boolean" ||
@@ -90,7 +102,10 @@ export function parseSettings(value: unknown): Settings {
   const theme = input.theme === undefined ? "light" : input.theme,
     layout = input.layout === undefined ? "assistant" : input.layout,
     opacity = input.opacity === undefined ? 1 : input.opacity;
-  if (input.protectWindow !== undefined && typeof input.protectWindow !== "boolean")
+  if (
+    input.protectWindow !== undefined &&
+    typeof input.protectWindow !== "boolean"
+  )
     throw new Error("Choose a window-content privacy preference.");
   if (theme !== "light" && theme !== "dark" && theme !== "system")
     throw new Error("Choose Light, Dark or System theme.");
@@ -113,11 +128,71 @@ export function parseSettings(value: unknown): Settings {
       ? DEFAULT_HOTKEYS.clear
       : input.clearShortcut,
   );
+  const toggleShortcut = parseShortcut(
+    input.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
+  );
+  const pauseShortcut = parseShortcut(
+    input.pauseShortcut ?? DEFAULT_HOTKEYS.pause,
+  );
+  const stopShortcut = parseShortcut(
+    input.stopShortcut ?? DEFAULT_HOTKEYS.stop,
+  );
+  if (
+    input.setupComplete !== undefined &&
+    typeof input.setupComplete !== "boolean"
+  )
+    throw new Error("Invalid setup preference.");
+  if (
+    input.preferredHelp !== undefined &&
+    !["manual", "auto-hint", "live"].includes(input.preferredHelp as string)
+  )
+    throw new Error("Choose how EveryHint helps.");
+  let preferredSources: Settings["preferredSources"];
+  if (input.startHidden !== undefined && typeof input.startHidden !== "boolean")
+    throw new Error("Invalid startup preference.");
+  let contextLimits: Settings["contextLimits"];
+  if (input.contextLimits !== undefined) {
+    const limits = record(input.contextLimits);
+    exactKeys(limits, [
+      "recentSeconds",
+      "transcriptChars",
+      "totalChars",
+      "imageBytes",
+    ]);
+    for (const [key, min, max] of [
+      ["recentSeconds", 10, 600],
+      ["transcriptChars", 100, 12000],
+      ["totalChars", 1000, 40000],
+      ["imageBytes", 50000, 4000000],
+    ] as const)
+      if (
+        !Number.isInteger(limits[key]) ||
+        (limits[key] as number) < min ||
+        (limits[key] as number) > max
+      )
+        throw new Error("Invalid context limit.");
+    contextLimits = limits as Settings["contextLimits"];
+  }
+  if (input.preferredSources !== undefined) {
+    const sources = record(input.preferredSources);
+    exactKeys(sources, ["microphone", "systemAudio", "screen"]);
+    if (
+      ["microphone", "systemAudio", "screen"].some(
+        (key) => typeof sources[key] !== "boolean",
+      )
+    )
+      throw new Error("Invalid source preferences.");
+    preferredSources = {
+      microphone: sources.microphone as boolean,
+      systemAudio: sources.systemAudio as boolean,
+      screen: sources.screen as boolean,
+    };
+  }
   if (
     new Set([
-      DEFAULT_HOTKEYS.toggle,
-      DEFAULT_HOTKEYS.pause,
-      DEFAULT_HOTKEYS.stop,
+      toggleShortcut,
+      pauseShortcut,
+      stopShortcut,
       assistShortcut,
       clearShortcut,
     ]).size !== 5
@@ -135,6 +210,20 @@ export function parseSettings(value: unknown): Settings {
     protectWindow: input.protectWindow === true,
     assistShortcut,
     clearShortcut,
+    toggleShortcut,
+    pauseShortcut,
+    stopShortcut,
+    ...(input.setupComplete === undefined
+      ? {}
+      : { setupComplete: input.setupComplete as boolean }),
+    ...(preferredSources ? { preferredSources } : {}),
+    ...(input.preferredHelp === undefined
+      ? {}
+      : { preferredHelp: input.preferredHelp as Settings["preferredHelp"] }),
+    ...(input.startHidden === undefined
+      ? {}
+      : { startHidden: input.startHidden as boolean }),
+    ...(contextLimits ? { contextLimits } : {}),
     ...(input.intelligence === undefined
       ? {}
       : { intelligence: parseIntelligenceSettings(input.intelligence) }),

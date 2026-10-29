@@ -1,3 +1,8 @@
+import {
+  dashboardPage,
+  finishSetup,
+  settingsSection,
+} from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
 import {
   mkdir,
@@ -61,13 +66,12 @@ try {
     args: [resolve(".")],
     env,
   });
-  await desktop
-    .context()
-    .addInitScript(installSyntheticAudio, {
-      samples: Array.from(fixture.samples),
-      sampleRate: fixture.sampleRate,
-    });
-  const page = await desktop.firstWindow();
+  await desktop.context().addInitScript(installSyntheticAudio, {
+    samples: Array.from(fixture.samples),
+    sampleRate: fixture.sampleRate,
+  });
+  const page = await dashboardPage(desktop);
+  await finishSetup(page);
   await page.waitForFunction(
     () => !!window.everyhint && !!document.querySelector(".capture-controls"),
   );
@@ -85,14 +89,22 @@ try {
     "transcription cannot acquire audio or bypass consent",
   );
   await page
-    .getByRole("button", { name: "Prepare session", exact: true })
+    .getByRole("button", { name: "Start EveryHint", exact: true })
     .click();
   await page.getByRole("checkbox", { name: /^Microphone/ }).check();
   await page.getByRole("checkbox", { name: /^System audio/ }).check();
   await page.getByRole("checkbox", { name: /I authorise/ }).check();
-  await page.getByRole("button", { name: "Prepare selected sources" }).click();
+  await page.getByRole("button", { name: "Start EveryHint" }).click();
+  await page.waitForFunction(
+    async () =>
+      (await window.everyhint.getSnapshot()).value.session.sources.microphone
+        .state === "CAPTURING" &&
+      (await window.everyhint.getSnapshot()).value.session.sources.systemAudio
+        .state === "CAPTURING",
+  );
+  await settingsSection(page, "Advanced");
   await page
-    .getByRole("button", { name: "Start capture", exact: true })
+    .getByText("Capture diagnostics and transcription logs", { exact: true })
     .click();
   await page
     .getByRole("button", { name: "Enable transcription", exact: true })

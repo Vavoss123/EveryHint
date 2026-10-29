@@ -1,0 +1,570 @@
+/* Shared desktop surfaces: all colours come from the EveryHint theme tokens. */
+.titlebar {
+  min-height: 52px;
+  padding: 6px 14px;
+}
+.titlebar .brand-mark {
+  width: 26px;
+  height: 26px;
+  font-size: 19px;
+  border-radius: 8px;
+}
+.titlebar .brand > span {
+  font-size: 14px;
+}
+.window-menu {
+  position: relative;
+  -webkit-app-region: no-drag;
+}
+.window-menu > summary,
+.chat-toolbar summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 5px 10px;
+  border-radius: 6px;
+}
+.menu-popover {
+  position: absolute;
+  top: 34px;
+  right: 0;
+  z-index: 20;
+  min-width: 205px;
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  background: var(--color-elevated);
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-overlay);
+}
+.menu-popover button,
+.menu-popover label {
+  text-align: left;
+  border-radius: 6px;
+  min-height: 36px;
+  padding: 8px 10px;
+}
+.menu-popover label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.home-page {
+  max-width: 940px;
+}
+.home-topline {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+.connection-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  font-size: 12px;
+  background: transparent;
+  color: var(--color-text-secondary);
+}
+.connected {
+  color: var(--color-success);
+}
+.home-hero {
+  padding: 38px 10px 28px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+.home-hero .hero-mark {
+  width: 48px;
+  height: 48px;
+  font-size: 32px;
+  border-radius: 15px;
+}
+.home-hero h1 {
+  max-width: 490px;
+  font-size: clamp(23px, 3vw, 32px);
+  line-height: 1.3;
+  letter-spacing: -0.7px;
+}
+.home-hero .start-session {
+  padding: 12px 32px;
+  min-height: 46px;
+}
+.source-indicators {
+  display: flex;
+  justify-content: center;
+  gap: 20px;
+  flex-wrap: wrap;
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.source-indicators > span {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+.source-indicators small {
+  border-radius: 4px;
+  padding: 1px 5px;
+  background: var(--color-surface);
+  font-size: 10px;
+}
+.source-indicators .source-on {
+  color: var(--color-success);
+}
+.quick-links {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 10px 0 28px;
+}
+.quick-links button {
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+  padding: 14px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  background: transparent;
+}
+.quick-links button > span:last-child {
+  margin-left: auto;
+  color: var(--color-text-secondary);
+}
+.recent-meetings {
+  padding-top: 20px;
+  border-top: 1px solid var(--color-border);
+}
+.home-empty {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 28px 0;
+  flex-wrap: wrap;
+}
+.home-empty > div {
+  flex: 1;
+  min-width: 180px;
+}
+.home-empty p {
+  margin-top: 4px;
+  font-size: 12px;
+}
+.recent-meeting {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  background: transparent;
+  border-radius: 6px;
+  border-bottom: 1px solid var(--color-border);
+  text-align: left;
+}
+.recent-meeting strong {
+  flex: 1;
+}
+.recent-meeting > span {
+  color: var(--color-text-secondary);
+  font-size: 12px;
+}
+.home-shortcut {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+  padding: 24px 0 4px;
+  color: var(--color-text-secondary);
+}
+.app footer.idle-footer {
+  padding: 0;
+  border: 0;
+  height: 0;
+}
+.session-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+.settings-page {
+  max-width: 880px;
+  margin-inline: auto;
+}
+.settings-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--color-border);
+}
+.settings-tabs button {
+  border-radius: 6px;
+  font-size: 12px;
+  min-height: 32px;
+  padding: 6px 10px;
+  background: transparent;
+}
+.settings-tabs [aria-current="page"] {
+  color: var(--color-selected-text);
+  background: var(--color-selected);
+}
+.settings-section {
+  padding-top: 8px;
+}
+.settings-section > h2 {
+  font-size: 18px;
+}
+.settings-section .card {
+  background: transparent;
+  border: 0;
+  padding: 12px 0;
+}
+.settings-section details > summary,
+.session-options > summary {
+  cursor: pointer;
+  padding: 10px 0;
+  color: var(--color-text-secondary);
+}
+.settings-section label:not(.check, .ai-choice, .setting-row),
+.account-panel label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.settings-section input:not([type="checkbox"], [type="range"]) {
+  padding: 10px;
+  border: 1px solid var(--color-control-border);
+  background: var(--color-surface);
+  color: var(--color-text);
+  border-radius: 8px;
+}
+.setup-wizard {
+  max-width: 560px;
+  padding: 24px 8px;
+  margin: auto;
+}
+.setup-wizard h1 {
+  font-size: 26px;
+}
+.help-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.help-choices .selected {
+  border-color: var(--color-brand-ink);
+}
+.modes-layout {
+  display: grid;
+  grid-template-columns: 205px minmax(0, 1fr);
+  gap: 24px;
+}
+.mode-list {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  border-right: 1px solid var(--color-border);
+  padding-right: 16px;
+}
+.mode-list-item {
+  display: flex;
+  gap: 9px;
+  align-items: center;
+  text-align: left;
+  background: transparent;
+  border-radius: 7px;
+}
+.mode-list-item > span {
+  flex: 1;
+}
+.mode-list-item small {
+  font-size: 10px;
+  color: var(--color-brand-ink);
+}
+.mode-list-item[aria-current="true"] {
+  background: var(--color-selected);
+}
+.mode-detail {
+  min-width: 0;
+}
+.mode-detail .card {
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.mode-detail details,
+.mode-list details {
+  margin-top: 12px;
+}
+.mode-detail summary,
+.mode-list summary {
+  cursor: pointer;
+  color: var(--color-text-secondary);
+  padding: 8px 0;
+}
+.chat-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+.chat-toolbar .mode-selector {
+  margin: 0;
+}
+.chat-toolbar .mode-selector label {
+  font-size: 0;
+}
+.chat-toolbar .mode-selector select {
+  font-size: 12px;
+  max-width: 190px;
+}
+.chat-toolbar details {
+  position: relative;
+}
+.chat-toolbar details > button {
+  position: absolute;
+  right: 0;
+  z-index: 5;
+  width: 180px;
+  box-shadow: var(--shadow-overlay);
+}
+.assistant-panel {
+  max-width: 880px;
+  margin: 0 auto;
+  width: 100%;
+}
+.assistant-panel .ai-responses {
+  min-height: 170px;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  padding: 8px 0;
+}
+.assistant-panel .ai-responses > .muted {
+  text-align: center;
+  margin: auto;
+}
+.assistant-panel .ai-response {
+  background: transparent;
+  border: 0;
+  border-bottom: 1px solid var(--color-border);
+  border-radius: 0;
+  padding: 14px 0;
+}
+.assistant-panel .ai-question {
+  margin-top: 6px;
+}
+.assistant-panel .ai-question textarea {
+  min-height: 74px;
+  background: var(--color-surface);
+}
+.assistant-panel .attach-context {
+  border: 0;
+  padding: 0;
+}
+.attach-context > summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.attach-context fieldset {
+  margin-top: 12px;
+}
+.review-sheet {
+  max-height: 65dvh;
+  overflow-y: auto;
+}
+.review-question {
+  white-space: pre-wrap;
+  font-weight: 600;
+}
+.assistant-panel .ai-actions > button:first-child {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  border-color: var(--color-brand);
+}
+.app .session-workspace {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.session-options {
+  margin: 8px auto 0;
+  width: 100%;
+  max-width: 880px;
+  border-top: 1px solid var(--color-border);
+}
+.session-options .meeting-session,
+.session-options .intelligence-panel {
+  padding: 12px 0;
+}
+.dashboard-nav > .nav-item:last-of-type {
+  margin-top: auto;
+}
+.app.is-dashboard .workspace {
+  grid-template-columns: 165px minmax(0, 1fr);
+}
+.is-assistant .content {
+  padding: 12px 16px;
+}
+.is-assistant .brand > .mode-selector {
+  display: none;
+}
+.is-assistant .assistant-panel {
+  gap: 10px;
+}
+.is-assistant .ai-responses {
+  min-height: 100px;
+  max-height: 36dvh;
+  overflow-y: auto;
+}
+.is-assistant .assistant-panel .ai-response {
+  padding: 6px 0;
+}
+.is-assistant .ai-question {
+  font-size: 12px;
+}
+.is-assistant .ai-question textarea {
+  min-height: 56px;
+}
+.chat-connect {
+  align-self: flex-start;
+  min-height: 28px;
+  font-size: 12px;
+  padding: 3px 0;
+}
+.is-assistant .capture-status .privacy-indicator {
+  margin-left: auto;
+  order: 2;
+}
+.is-assistant .capture-status .status-detail {
+  margin-left: 0;
+}
+.capture-status {
+  flex-wrap: wrap;
+}
+.meeting-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.meeting-date-group {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  margin: 20px 0 8px;
+}
+.meeting-list-item {
+  padding: 14px 0;
+  border-bottom: 1px solid var(--color-border);
+  gap: 6px;
+}
+.meeting-list-item h2 {
+  font-size: 16px;
+  color: var(--color-text);
+}
+.meeting-list-item > p {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+}
+.meeting-filters.card {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  background: transparent;
+  border: 0;
+  padding: 0;
+}
+.meeting-filters > label:first-child {
+  flex: 1;
+  min-width: 170px;
+}
+.history-advanced-filters {
+  align-self: center;
+}
+.history-advanced-filters > summary {
+  margin: 0;
+}
+.filter-fields {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 12px;
+  padding: 12px;
+}
+@media (max-width: 700px) {
+  .app.is-dashboard .workspace {
+    display: flex;
+    flex-direction: column;
+  }
+  .app .dashboard-nav {
+    flex-direction: row;
+    flex-shrink: 0;
+    padding: 5px;
+    gap: 2px;
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+    overflow-x: auto;
+  }
+  .app .dashboard-nav .nav-item {
+    min-width: 42px;
+    justify-content: center;
+    margin: 0;
+    padding: 8px;
+  }
+  .app .dashboard-nav .nav-item span {
+    display: none;
+  }
+  .app .dashboard-nav .nav-item[aria-current="page"] span {
+    display: block;
+  }
+  .quick-links {
+    gap: 6px;
+  }
+  .quick-links button {
+    gap: 5px;
+    padding: 10px 8px;
+    font-size: 12px;
+  }
+  .quick-links button > span:last-child {
+    display: none;
+  }
+  .home-hero {
+    padding-top: 20px;
+  }
+  .modes-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 12px;
+  }
+  .mode-list {
+    border-right: 0;
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: 12px;
+  }
+  .recent-meeting {
+    flex-wrap: wrap;
+  }
+  .capture-status .status-detail {
+    margin-left: 0;
+  }
+}
+@media (forced-colors: active) {
+  .nav-item[aria-current="page"],
+  .settings-tabs [aria-current="page"],
+  .mode-list-item[aria-current="true"] {
+    outline: 2px solid Highlight;
+  }
+  button,
+  input,
+  select,
+  textarea {
+    border: 1px solid ButtonText;
+  }
+}

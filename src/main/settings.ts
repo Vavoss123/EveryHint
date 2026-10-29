@@ -28,6 +28,9 @@ export class SettingsStore {
       if (stored.version !== 1)
         throw new Error("Unsupported settings version.");
       this.settings = parseSettings(stored.settings);
+      // An ordinary upgrade never forces existing users into first-run setup.
+      if (this.settings.setupComplete === undefined)
+        this.settings.setupComplete = true;
       if (stored.bounds !== undefined) this.bounds = parseBounds(stored.bounds);
     } catch (error) {
       this.settings = { ...DEFAULT_SETTINGS };

@@ -1,0 +1,339 @@
+{
+  "date": "2026-10-29",
+  "timezone": "Europe/London",
+  "baseline": "e00813a",
+  "version": "0.5.0",
+  "scope": "UX.1–UX.4 source implementation and automation; no artifact promotion or publication",
+  "host": {
+    "os": "Windows 11 Home",
+    "kernel": "10.0.26200",
+    "arch": "x64",
+    "electron": "45.0.0",
+    "shellNode": "24.14.1"
+  },
+  "sourceGate": {
+    "command": "npm run check",
+    "result": "PASS",
+    "unitCases": 722,
+    "unitFiles": 59,
+    "baselineCasesPreserved": 706,
+    "addedCases": 16,
+    "checks": [
+      "theme generation",
+      "feature inventory generation",
+      "TypeScript",
+      "zero-warning ESLint",
+      "unit regression suite",
+      "production build"
+    ]
+  },
+  "providerFixtures": [
+    {
+      "command": "npm run test:plan",
+      "result": "PASS",
+      "cases": 5,
+      "scope": "local HTTP/JWT/SSE and native-vault fixtures; no genuine authentication/inference"
+    },
+    {
+      "command": "npm run test:ai-sdk",
+      "result": "PASS",
+      "cases": 6,
+      "scope": "installed SDK/CLI on loopback fixtures; no paid request"
+    }
+  ],
+  "encryptedStorage": {
+    "command": "npm run test:meetings",
+    "result": "PASS",
+    "assertions": 12,
+    "scope": "actual compiled worker, encrypted SQLite, Windows-protected keys, 500 generated transcript segments"
+  },
+  "electronSuites": [
+    {
+      "command": "node scripts/smoke.mjs",
+      "result": "PASS",
+      "assertions": 47
+    },
+    {
+      "command": "node scripts/smoke-ai.mjs",
+      "result": "PASS",
+      "assertions": 44
+    },
+    {
+      "command": "node scripts/smoke-transcription.mjs",
+      "result": "PASS",
+      "assertions": 11
+    },
+    {
+      "command": "node scripts/smoke-ui.mjs",
+      "result": "PASS",
+      "assertions": 47
+    },
+    {
+      "command": "node scripts/smoke-intelligence.mjs",
+      "result": "PASS",
+      "assertions": 28
+    },
+    {
+      "command": "node scripts/smoke-meetings.mjs",
+      "result": "PASS",
+      "assertions": 42
+    },
+    {
+      "command": "node scripts/smoke-personal.mjs",
+      "result": "PASS",
+      "assertions": 34
+    },
+    {
+      "command": "node scripts/smoke-context.mjs",
+      "result": "PASS",
+      "assertions": 36
+    },
+    {
+      "command": "node scripts/smoke-windows.mjs",
+      "result": "PASS",
+      "assertions": 20
+    },
+    {
+      "command": "node scripts/smoke-ux.mjs",
+      "result": "PASS",
+      "assertions": 45
+    }
+  ],
+  "electronAssertions": 354,
+  "windowChecks": [
+    "Stop is absent in Idle",
+    "Pause is absent in Idle",
+    "Idle has one prominent Start action",
+    "Settings has one navigation entry",
+    "Chat has a compact Attach Context control",
+    "Provider diagnostics removed from chat",
+    "Navigation retains composer draft",
+    "Native Windows styles allow ordinary taskbar and Alt+Tab behavior",
+    "Dashboard is ordinary, focusable and never topmost",
+    "Overlay is separate and starts dismissed",
+    "Real native minimize works",
+    "Dashboard restoration calls restore and show",
+    "Hide to Tray hides dashboard",
+    "Visibility never grants capture",
+    "Explicit overlay toggle restores separate assistant",
+    "Dismissed overlay stays dismissed through state updates",
+    "Pin preference affects overlay alone",
+    "Pin, hide and restore retain no capture permission",
+    "All global shortcuts register on Windows",
+    "Real Windows global shortcut shows the overlay with a custom binding",
+    "Real Windows global shortcut hides the overlay",
+    "UI displays the actual customised overlay shortcut",
+    "Floating Connect opens dashboard account settings without a provider request",
+    "Floating meeting navigation opens dashboard history without enabling saving or unlocking an empty store",
+    "Cross-window meeting navigation validates record identifiers",
+    "Active session exposes Pause and Stop",
+    "Capture updates never reopen a dismissed overlay",
+    "Minimising leaves authorised capture active",
+    "Real tray action restores a minimised dashboard",
+    "Hiding preserves authorised capture state",
+    "Native tray menu retains active status and an enabled Stop control in the background",
+    "Global Pause works while hidden and exposes Resume",
+    "Actual native close prompt offers background capture and keeps the active session",
+    "Global Stop works while hidden and revokes capture consent",
+    "Stopped session removes obsolete Stop controls",
+    "Reloading the floating assistant stops capture and revokes sharing",
+    "Reload never reopens the dismissed floating assistant",
+    "Reloading the dashboard stops capture and discards consent",
+    "Document reload retains the secure history lock boundary",
+    "No renderer errors: ",
+    "Actual native Stop and quit closes an active session cleanly",
+    "Full restart restores no capture or Live sharing permission",
+    "Chosen tray startup keeps the dashboard hidden without activating capture",
+    "Dashboard is recoverable after tray startup",
+    "Idle Close quits without leaving capture or an unexplained foreground window"
+  ],
+  "nativeDashboardStyles": {
+    "topmost": false,
+    "owner": 0,
+    "noActivate": false,
+    "affinity": 0,
+    "affinityRead": true,
+    "appWindow": false,
+    "toolWindow": false
+  },
+  "optionalOverlayPinSample": [
+    {
+      "id": 2,
+      "url": "everyhint://app/index.html?overlay=1",
+      "top": true,
+      "visible": false,
+      "minimized": false,
+      "focusable": true,
+      "bounds": {
+        "x": 400,
+        "y": 85,
+        "width": 482,
+        "height": 583
+      }
+    },
+    {
+      "id": 1,
+      "url": "everyhint://app/index.html",
+      "top": false,
+      "visible": true,
+      "minimized": false,
+      "focusable": true,
+      "bounds": {
+        "x": 200,
+        "y": 0,
+        "width": 1044,
+        "height": 753
+      }
+    }
+  ],
+  "uiChecks": [
+    "Bundled Inter and Poppins load locally",
+    "New installations default to dark",
+    "EverySession red remains the rendered brand",
+    "Home has one Start action",
+    "Idle never shows Stop",
+    "Settings has one entry",
+    "Keyboard skip control focuses workspace without changing IPC URL",
+    "Composer shortcut never sends inference",
+    "Transmission review stays in a bounded sheet",
+    "Remote sharing approval starts unchecked",
+    "Knowledge navigation works",
+    "Calendar navigation works",
+    "People navigation works",
+    "Modes navigation works",
+    "Meetings navigation works",
+    "Home navigation works",
+    "Navigation retains the draft",
+    "Navigation retains frozen context",
+    "Settings has six focused sections",
+    "Light native controls remain supported",
+    "System follows the OS colour preference",
+    "Reduced motion disables transitions",
+    "Opacity changes only the floating assistant",
+    "Shortcut conflicts cannot replace Pause or Stop",
+    "Custom shortcut reaches the native registry",
+    "Minimum-width Settings has no horizontal overflow",
+    "Narrow dashboard supports 125% text zoom",
+    "Narrow icon navigation retains accessible labels",
+    "High-contrast media is supported",
+    "Appearance changes preserve reviewed context",
+    "Unavailable screen context is absent",
+    "Unavailable transcript context is absent",
+    "Remote Cancel remains visible in Settings",
+    "Privacy has a clear protection control",
+    "Automatic history saving remains opt-in",
+    "Meetings navigation retains remote Cancel",
+    "History preferences are absent from everyday Meetings",
+    "Floating assistant has no dashboard navigation",
+    "Floating assistant keeps message input available",
+    "Floating assistant has no provider configuration panels",
+    "Floating send action is fully visible at its default size",
+    "Renderer isolation is preserved",
+    "Navigation and themes never acquire capture or AI permission",
+    "UI operations make zero remote requests",
+    "No renderer errors: ",
+    "Theme and completed setup persist",
+    "Settings do not persist conversation content"
+  ],
+  "uiLocalReadySampleMs": 554.4664,
+  "measurementLimit": "One warm local launch/attachment/DOM+bridge-ready sample; not a clean-machine, physical-media, endurance, leak or universal speed claim.",
+  "screenshots": [
+    "artifacts/ui/dashboard-dark.png",
+    "artifacts/ui/dashboard-light.png",
+    "artifacts/ui/narrow-settings-125.png",
+    "artifacts/ui/floating-assistant-dark.png",
+    "artifacts/ux/ux1-dashboard.png"
+  ],
+  "resolvedFindings": [
+    "Dashboard inherited topmost/visibility behavior from shared overlay window.",
+    "Stop was displayed in Idle; READY now offers Start and Cancel setup.",
+    "Source readiness now gates local transcription controls.",
+    "Window title updates guard destroyed native objects during shutdown.",
+    "Reload revocation uses actual main-frame document navigation rather than the loading spinner; repeated contextual-workspace restarts and actual dashboard/overlay reload cancellation pass.",
+    "Test startup waits scope the visible account panel and completed workspace restoration rather than hidden controls/intermediate snapshots."
+  ],
+  "dataPreservation": {
+    "existingSettingsSkipOnboarding": true,
+    "historyCipherKeySchemaUnchanged": true,
+    "savingAutoSaveRemainOptIn": true,
+    "customModesKnowledgeAndWorkspaceRegression": true,
+    "allAutomationProfilesIsolated": true,
+    "personalProductionProfileModified": false
+  },
+  "genuineProviderRequests": 0,
+  "paidRequests": 0,
+  "physicalCapture": false,
+  "receiverTestingPerformed": false,
+  "manualPending": [
+    "Human taskbar/Alt+Tab/focus conflicts and complete keyboard/Narrator/OS high-contrast acceptance",
+    "Physical microphone/system audio/calls/device changes and retained P1–P10 quality checks",
+    "Real mixed-monitor and OS DPI/unplug/lock/sleep/resume/endurance tests",
+    "Fresh genuine OAuth/account revocation/ChatGPT/Live/Google authorisations",
+    "Discord/Teams/Zoom/recorder receiving devices with positive controls",
+    "Clean Windows 10/11 install/true upgrade/uninstall on a distinct approved candidate",
+    "Signing, provider/distribution eligibility, trusted update infrastructure and independent release/security acceptance"
+  ],
+  "release": {
+    "status": "NO-GO",
+    "versionBumped": false,
+    "installerRebuilt": false,
+    "published": false,
+    "updatePolicyChanged": false,
+    "existingPrivateReleaseArtifactsUnchanged": true
+  },
+  "changedFiles": [
+    "README.md",
+    "docs/ARCHITECTURE.md",
+    "docs/DELIVERY.md",
+    "docs/DESIGN_SYSTEM.md",
+    "docs/PRODUCT_SPEC.md",
+    "docs/RC_ACCEPTANCE.md",
+    "docs/RC_MANUAL_TESTS.md",
+    "docs/TESTING.md",
+    "docs/UX_ACCEPTANCE.md",
+    "docs/evidence/ux-verification.json",
+    "package.json",
+    "resources/design-tokens.json",
+    "scripts/desktop-harness.mjs",
+    "scripts/smoke-ai.mjs",
+    "scripts/smoke-context.mjs",
+    "scripts/smoke-intelligence.mjs",
+    "scripts/smoke-meetings.mjs",
+    "scripts/smoke-personal.mjs",
+    "scripts/smoke-transcription.mjs",
+    "scripts/smoke-ui.mjs",
+    "scripts/smoke-ux.mjs",
+    "scripts/smoke-windows.mjs",
+    "scripts/smoke.mjs",
+    "scripts/ux-window-native.ps1",
+    "src/main/index.ts",
+    "src/main/settings.ts",
+    "src/preload/index.ts",
+    "src/renderer/src/AccountPanel.tsx",
+    "src/renderer/src/AssistantPanel.tsx",
+    "src/renderer/src/Dashboard.tsx",
+    "src/renderer/src/DesktopPrivacy.tsx",
+    "src/renderer/src/HistoryDataControls.tsx",
+    "src/renderer/src/IntelligencePanel.tsx",
+    "src/renderer/src/MeetingHistory.tsx",
+    "src/renderer/src/PersonalPages.tsx",
+    "src/renderer/src/ProviderSettings.tsx",
+    "src/renderer/src/SessionControls.tsx",
+    "src/renderer/src/SettingsPage.tsx",
+    "src/renderer/src/SetupWizard.tsx",
+    "src/renderer/src/ShortcutSettings.tsx",
+    "src/renderer/src/SpeechControl.tsx",
+    "src/renderer/src/WorkspacePages.tsx",
+    "src/renderer/src/main.tsx",
+    "src/renderer/src/theme/tokens.css",
+    "src/renderer/src/ux.css",
+    "src/shared/connection.ts",
+    "src/shared/contracts.ts",
+    "src/shared/validation.ts",
+    "tests/presentation.test.ts",
+    "tests/settings.test.ts",
+    "tests/ux-connection.test.ts",
+    "tests/ux-session.test.ts"
+  ],
+  "commitSubject": "refactor: simplify EveryHint desktop experience"
+}

@@ -1,11 +1,10 @@
 import { StrictMode, useCallback, useEffect, useRef, useState } from "react";
-import {
-  IntelligencePanel,
-  IntelligenceSettingsPanel,
-} from "./IntelligencePanel";
+import { IntelligencePanel } from "./IntelligencePanel";
 import { useIntelligenceSnapshot } from "./useIntelligenceSnapshot";
 import { LiveStatus } from "./LiveConsent";
-import { ShortcutSettings } from "./ShortcutSettings";
+import { SettingsPage, type SettingsSection } from "./SettingsPage";
+import { SetupWizard } from "./SetupWizard";
+import { SpeechControl } from "./SpeechControl";
 import { createRoot } from "react-dom/client";
 import type {
   AppSnapshot,
@@ -19,34 +18,22 @@ import type {
 import "./theme/tokens.css";
 import "./theme/fonts.css";
 import "./styles.css";
+import "./ux.css";
 import { Icon } from "./components/Icon";
-import { Panel } from "./components/Panel";
 import { DashboardNav, DashboardHome, PlannedPage } from "./Dashboard";
 import { plannedDestination, type Destination } from "../../shared/navigation";
 import { useAssistantSnapshot } from "./useAssistantSnapshot";
-import { TranscriptionPanel } from "./TranscriptionPanel";
 import { AssistantPanel } from "./AssistantPanel";
 import { useMeetings } from "./useMeetings";
-import { DesktopPrivacy } from "./DesktopPrivacy";
-import {version as APP_VERSION} from "../../../package.json";
+import { SessionControls } from "./SessionControls";
+const IS_OVERLAY = new URLSearchParams(location.search).get("overlay") === "1";
 import {
   MeetingStatus,
   MeetingSessionControls,
-  MeetingPreferencesPanel,
 } from "./MeetingSessionControls";
 import { MeetingHistory } from "./MeetingHistory";
-import {
-  CalendarPage,
-  WorkspaceSettings,
-  PeoplePage,
-  useWorkspace,
-} from "./WorkspacePages";
-import {
-  ModesPage,
-  ModeSelector,
-  PersonalSettings,
-  KnowledgePage,
-} from "./PersonalPages";
+import { CalendarPage, PeoplePage, useWorkspace } from "./WorkspacePages";
+import { ModesPage, KnowledgePage } from "./PersonalPages";
 
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
@@ -85,6 +72,8 @@ function App() {
   const [busy, setBusy] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [preparing, setPreparing] = useState(false);
+  const [settingsSection, setSettingsSection] =
+    useState<SettingsSection>("General");
   const [screenConsent, setScreenConsent] = useState(false);
   const [microphoneConsent, setMicrophoneConsent] = useState(false);
   const [systemConsent, setSystemConsent] = useState(false);
@@ -178,13 +167,19 @@ function App() {
         ),
       );
   };
+  async function controlWindow(
+    action: Parameters<typeof window.everyhint.window>[0],
+  ): Promise<void> {
+    const result = await window.everyhint.window(action);
+    if (!result.ok) setError(result.error);
+  }
   function openAssistant(review = false): void {
     focusComposer.current = !review;
     focusReview.current = review;
     setDestination("assistant");
     setSettingsOpen(false);
     setPreparing(false);
-    save({ compact: false, layout: "assistant" });
+    if (IS_OVERLAY) return;
   }
   function navigate(id: Destination): void {
     setDestination(id);
@@ -193,30 +188,54 @@ function App() {
     if (id === "assistant") focusComposer.current = true;
   }
   function openMeetings(id?: string): void {
+    if (IS_OVERLAY) {
+      void window.everyhint.openMeetings(id);
+      return;
+    }
     setRequestedMeetingId(id ?? null);
     setDestination("meetings");
     setSettingsOpen(false);
     setPreparing(false);
-    save({ compact: false, layout: "dashboard" });
   }
   function meetingCapture(): void {
     setSettingsOpen(false);
     setPreparing(true);
+    setAcknowledged(false);
+    setScreenConsent(app?.settings.preferredSources?.screen ?? false);
+    setMicrophoneConsent(app?.settings.preferredSources?.microphone ?? false);
+    setSystemConsent(app?.settings.preferredSources?.systemAudio ?? false);
+    setSources([]);
+    setSourceId("");
   }
   function meetingConnection(): void {
     openAssistant();
   }
   useEffect(() => window.everyhint.onAssist(openAssistant));
+  useEffect(
+    () =>
+      window.everyhint.onAccountSettings(() => {
+        setSettingsSection("Account & AI");
+        navigate("settings");
+      }),
+    [],
+  );
+  useEffect(
+    () =>
+      window.everyhint.onMeetingNavigate((id) => {
+        setRequestedMeetingId(id ?? null);
+        navigate("meetings");
+      }),
+    [],
+  );
   useEffect(() => {
     const response = assistant?.responses.at(-1);
     if (response?.automatic && response.requestId !== lastAutomatic.current) {
       lastAutomatic.current = response.requestId;
       if (
         app &&
-        !app.settings.compact &&
         !settingsOpen &&
         !preparing &&
-        (app.settings.layout !== "dashboard" || destination === "assistant")
+        (IS_OVERLAY || destination === "assistant")
       )
         requestAnimationFrame(() =>
           document
@@ -229,7 +248,6 @@ function App() {
     if (
       focusReview.current &&
       app &&
-      !app.settings.compact &&
       !settingsOpen &&
       !preparing &&
       assistant?.review
@@ -248,7 +266,7 @@ function App() {
     }
   }, [app, settingsOpen, preparing, assistant?.review]);
   useEffect(() => {
-    document.documentElement.dataset.theme = app?.settings.theme ?? "light";
+    document.documentElement.dataset.theme = app?.settings.theme ?? "dark";
   }, [app?.settings.theme]);
   useEffect(() => {
     document.querySelector(".content")?.scrollTo({ top: 0 });
@@ -278,10 +296,9 @@ function App() {
     if (
       focusComposer.current &&
       app &&
-      !app.settings.compact &&
       !settingsOpen &&
       !preparing &&
-      (app.settings.layout !== "dashboard" || destination === "assistant")
+      (IS_OVERLAY || destination === "assistant")
     ) {
       focusComposer.current = false;
       requestAnimationFrame(() =>
@@ -326,7 +343,24 @@ function App() {
           consent: consent(),
         }),
       );
+      unwrap(
+        await window.everyhint.saveSettings({
+          ...app!.settings,
+          preferredSources: {
+            screen: screenConsent,
+            microphone: microphoneConsent,
+            systemAudio: systemConsent,
+          },
+        }),
+      );
+      unwrap(
+        await window.everyhint.setOperatingMode(
+          app!.settings.preferredHelp ?? "manual",
+        ),
+      );
+      unwrap(await window.everyhint.session("start"));
       setPreparing(false);
+      setDestination("assistant");
     });
   }
   function refreshMicrophones(): void {
@@ -351,8 +385,9 @@ function App() {
       </main>
     );
 
-  const { session, settings } = app;
-  const dashboard = settings.layout === "dashboard" && !settings.compact;
+  const { session } = app;
+  const settings = app.settings;
+  const dashboard = !IS_OVERLAY;
   const pageVisible =
     !dashboard || destination === "assistant" || settingsOpen || preparing;
   const response = assistant?.responses.at(-1);
@@ -381,9 +416,104 @@ function App() {
   const showFrame =
     active && !!session.frame && session.source?.kind === "window";
 
+  const diagnostics = (
+    <div>
+      {" "}
+      <details className="diagnostics">
+        <summary>
+          Capture diagnostics <span>{session.frameCount} local frames</span>
+        </summary>
+        <p className="muted">
+          {session.source?.kind === "screen"
+            ? "Whole-screen previews stay hidden to prevent recursive screenshots. Pause and Stop clear all screenshots. Use an application window for a live preview."
+            : "Selected application windows can be previewed while capturing. EveryHint windows are excluded."}
+        </p>
+        {showFrame && session.frame ? (
+          <figure>
+            <img
+              src={session.frame.dataUrl}
+              alt="Latest local screenshot of the selected source"
+            />
+            <figcaption>
+              {session.frame.width} × {session.frame.height} ·{" "}
+              {new Date(session.frame.capturedAt).toLocaleTimeString()}
+            </figcaption>
+          </figure>
+        ) : (
+          <div className="preview-placeholder">
+            {active && !session.frame
+              ? "Waiting for the first snapshot…"
+              : active
+                ? "Whole-screen preview hidden"
+                : "No screenshot to display"}
+          </div>
+        )}
+      </details>
+      <div className="audio-diagnostics" aria-label="Live audio diagnostics">
+        <div className="section-heading">
+          <h2>Live audio</h2>
+          <span className="eyebrow">LOCAL PREVIEW</span>
+        </div>
+        {(["microphone", "systemAudio"] as const).map((id) => {
+          const source = session.sources[id];
+          const level =
+            source.state === "CAPTURING" && !source.muted ? source.level : 0;
+          return (
+            <div className="audio-source" key={id}>
+              <div className="audio-heading">
+                <strong>
+                  {id === "microphone" ? "Microphone" : "System audio"}
+                </strong>
+                <span>
+                  {source.state.toLowerCase()}
+                  {source.muted
+                    ? " · muted"
+                    : source.state === "CAPTURING" && level < 0.001
+                      ? " · silent"
+                      : ""}
+                </span>
+              </div>
+              <p title={source.name}>
+                {source.name}
+                {source.deviceId && <small>Device: {source.deviceId}</small>}
+              </p>
+              <meter
+                aria-label={`${id === "microphone" ? "Microphone" : "System audio"} level`}
+                min={0}
+                max={1}
+                value={level}
+              />
+              {source.error && <p className="error">{source.error}</p>}
+              {id === "microphone" && source.state === "CAPTURING" && (
+                <button
+                  className="secondary"
+                  onClick={() => {
+                    void run(async () =>
+                      unwrap(
+                        await window.everyhint.setMicrophoneMuted(
+                          !source.muted,
+                        ),
+                      ),
+                    );
+                  }}
+                >
+                  {source.muted ? "Unmute microphone" : "Mute microphone"}
+                </button>
+              )}
+            </div>
+          );
+        })}
+        <p className="muted">
+          Silent means no signal is arriving. Another app's mute button may not
+          mute this input. No audio is saved or uploaded.
+        </p>
+      </div>
+    </div>
+  );
+
   return (
     <main
-      className={`app mode-${intelligence?.mode ?? "manual"} ${settings.compact ? "is-compact" : ""} ${dashboard ? "is-dashboard" : "is-assistant"}`}
+      className={`app mode-${intelligence?.mode ?? "manual"} ${dashboard ? "is-dashboard" : "is-assistant"}`}
     >
       <button
         className="skip-link"
@@ -397,120 +527,98 @@ function App() {
             e<span>h</span>
           </div>
           <span>EveryHint</span>
-          <ModeSelector />
-          <span className="phase">
-            {settings.compact
-              ? "OVERLAY"
-              : dashboard
-                ? "WORKSPACE"
-                : "ASSISTANT"}
-          </span>
         </div>
         <div className="window-actions">
-          <button
-            className={`icon-button ${dashboard ? "selected" : ""}`}
-            aria-label={
-              dashboard ? "Open expanded assistant" : "Open dashboard"
-            }
-            title={dashboard ? "Open expanded assistant" : "Open dashboard"}
-            onClick={() => {
-              if (dashboard) openAssistant();
-              else {
-                setDestination("home");
-                setSettingsOpen(false);
-                setPreparing(false);
-                save({ compact: false, layout: "dashboard" });
-              }
-            }}
-          >
-            <Icon name="dashboard" />
-          </button>
-          <button
-            className="icon-button"
-            title={settings.compact ? "Expand EveryHint" : "Compact mode"}
-            aria-label={settings.compact ? "Expand EveryHint" : "Compact mode"}
-            onClick={() => save({ compact: !settings.compact })}
-          >
-            <Icon name="compact" />
-          </button>
-          <button
-            className={`icon-button ${settingsOpen ? "selected" : ""}`}
-            aria-label="EveryHint settings"
-            title="Settings"
-            onClick={() => {
-              setSettingsOpen(!settingsOpen);
-              setDestination(settingsOpen ? "home" : "settings");
-              setPreparing(false);
-              if (settings.compact) save({ compact: false });
-            }}
-          >
-            <Icon name="settings" />
-          </button>
+          <details className="window-menu">
+            <summary aria-label="Window menu" title="Window menu">
+              •••
+            </summary>
+            <div className="menu-popover">
+              <button
+                onClick={() =>
+                  void controlWindow(IS_OVERLAY ? "dashboard" : "overlay")
+                }
+              >
+                {IS_OVERLAY ? "Open dashboard" : "Show / hide overlay"}
+              </button>
+              <button onClick={() => void controlWindow("hide")}>
+                Hide to Tray
+              </button>
+              {IS_OVERLAY && (
+                <label>
+                  <input
+                    type="checkbox"
+                    checked={settings.alwaysOnTop}
+                    onChange={(event) =>
+                      save({ alwaysOnTop: event.target.checked })
+                    }
+                  />
+                  Pin on Top
+                </label>
+              )}
+              <button onClick={() => void controlWindow("quit")}>
+                Quit EveryHint
+              </button>
+            </div>
+          </details>
           <button
             className="icon-button"
-            aria-label="Hide EveryHint to tray"
-            title="Hide to tray · capture continues while active"
-            onClick={() => {
-              void run(async () =>
-                unwrap(await window.everyhint.window("hide")),
-              );
-            }}
+            aria-label="Minimise EveryHint"
+            title="Minimise"
+            onClick={() => void controlWindow("minimize")}
+          >
+            −
+          </button>
+          {!IS_OVERLAY && (
+            <button
+              className="icon-button"
+              aria-label="Maximise or restore EveryHint"
+              title="Maximise / restore"
+              onClick={() => void controlWindow("maximize")}
+            >
+              □
+            </button>
+          )}
+          <button
+            className="icon-button"
+            aria-label={IS_OVERLAY ? "Dismiss overlay" : "Close EveryHint"}
+            title={IS_OVERLAY ? "Dismiss overlay" : "Close"}
+            onClick={() => void controlWindow("close")}
           >
             <Icon name="close" />
           </button>
         </div>
       </header>
 
-      <div
-        className={`capture-status state-${session.state.toLowerCase()}`}
-        role="status"
-      >
-        <span className="status-dot" />
-        <span className="privacy-indicator" title={app.privacy?.message} aria-label={`Window protection: ${app.privacy?.state??"off"}`}>
-          {settings.compact?`Privacy: ${app.privacy?.state==="configured"?"set":app.privacy?.state==="error"?"?":app.privacy?.state==="unsupported"?"N/A":"off"}`:`Window protection: ${app.privacy?.state==="configured"?"configured":app.privacy?.state==="error"?"not confirmed":app.privacy?.state==="unsupported"?"unavailable":"off"}`}
-        </span>
-        <span>
-          {settings.compact
-            ? active
-              ? "Capturing"
-              : resumable
-                ? "Paused"
-                : ready
-                  ? "Ready"
-                  : session.state === "ERROR"
-                    ? "Error"
-                    : "Capture off"
-            : status}
-        </span>
-        {settings.compact && (
-          <span className="compact-sources" aria-label="Capture source states">
-            {(["microphone", "systemAudio", "screen"] as const).map((id) => (
-              <span key={id}>
-                {id === "microphone"
-                  ? "Mic"
-                  : id === "systemAudio"
-                    ? "System"
-                    : "Screen"}{" "}
-                {session.sources[id].state === "CAPTURING"
-                  ? session.sources[id].muted
-                    ? "muted"
-                    : "on"
-                  : "off"}
-              </span>
-            ))}
+      {(IS_OVERLAY ||
+        active ||
+        resumable ||
+        ready ||
+        settings.protectWindow) && (
+        <div
+          className={`capture-status state-${session.state.toLowerCase()}`}
+          role="status"
+        >
+          <span className="status-dot" />
+          <span
+            className="privacy-indicator"
+            title={app.privacy?.message}
+            aria-label={`Window protection: ${app.privacy?.state ?? "off"}`}
+          >
+            {`Window protection: ${app.privacy?.state === "configured" ? "configured" : app.privacy?.state === "error" ? "not confirmed" : app.privacy?.state === "unsupported" ? "unavailable" : "off"}`}
           </span>
-        )}
-        <span className="status-detail">
-          {intelligence?.mode === "auto-hint"
-            ? "AUTO-HINT · LOCAL"
-            : intelligence?.mode === "live"
-              ? intelligence.live
-                ? "LIVE · REMOTE ENABLED"
-                : "LIVE · NOT AUTHORISED"
-              : "MANUAL"}
-        </span>
-      </div>
-
+          <span>{status}</span>
+          <span className="status-detail">
+            {intelligence?.mode === "auto-hint"
+              ? "AUTO-HINT · LOCAL"
+              : intelligence?.mode === "live"
+                ? intelligence.live
+                  ? "LIVE · REMOTE ENABLED"
+                  : "LIVE · NOT AUTHORISED"
+                : "MANUAL"}
+          </span>
+        </div>
+      )}
       <LiveStatus snapshot={intelligence} />
       <MeetingStatus
         state={meetings.state}
@@ -543,7 +651,7 @@ function App() {
         </div>
       )}
       <div className="workspace">
-        {contextualWorkspace?.suggestion && (
+        {dashboard && contextualWorkspace?.suggestion && (
           <aside className="card" role="status">
             <p>
               Upcoming calendar meeting: {contextualWorkspace.suggestion.title}.
@@ -616,12 +724,36 @@ function App() {
           {dashboard &&
             !settingsOpen &&
             !preparing &&
-            destination === "home" && (
+            destination === "home" &&
+            settings.setupComplete === false && (
+              <SetupWizard
+                settings={settings}
+                complete={async (patch) => {
+                  unwrap(
+                    await window.everyhint.saveSettings({
+                      ...app.settings,
+                      ...patch,
+                    }),
+                  );
+                }}
+              />
+            )}
+          {dashboard &&
+            !settingsOpen &&
+            !preparing &&
+            destination === "home" &&
+            settings.setupComplete !== false && (
               <DashboardHome
                 app={app}
                 assistant={assistant}
-                openAssistant={() => navigate("assistant")}
-                prepare={() => setPreparing(true)}
+                navigate={navigate}
+                meetings={meetings.state}
+                action={action}
+                openAccount={() => {
+                  setSettingsSection("Account & AI");
+                  navigate("settings");
+                }}
+                prepare={meetingCapture}
               />
             )}
           {dashboard &&
@@ -646,192 +778,31 @@ function App() {
               )}
             </div>
           )}
-          {settings.compact && app.warnings.length > 0 ? (
-            <button
-              className="compact-warning"
-              title={app.warnings.join("\n")}
-              onClick={() => {
-                setSettingsOpen(true);
-                setDestination("settings");
-                setPreparing(false);
-                save({ compact: false });
-              }}
-            >
-              {app.warnings.length} desktop notice
-              {app.warnings.length === 1 ? "" : "s"} · expand for details
-            </button>
-          ) : (
-            app.warnings.length > 0 && (
-              <details className="desktop-notices">
-                <summary>
-                  {app.warnings.length} desktop notice
-                  {app.warnings.length === 1 ? "" : "s"} · view details
-                </summary>
-                {app.warnings.map((warning) => (
-                  <p key={warning} className="warning" role="alert">
-                    {warning}
-                  </p>
-                ))}
-              </details>
-            )
+          {app.warnings.length > 0 && (
+            <details className="desktop-notices">
+              <summary>
+                {app.warnings.length} desktop notice
+                {app.warnings.length === 1 ? "" : "s"}
+              </summary>
+              {app.warnings.map((warning) => (
+                <p key={warning} className="warning" role="alert">
+                  {warning}
+                </p>
+              ))}
+            </details>
           )}
           <div hidden={!pageVisible}>
             {settingsOpen && (
-              <div className="settings panel-stack">
-                <div className="section-heading">
-                  <h1>EveryHint settings</h1>
-                  <span className="eyebrow">DESKTOP</span>
-                </div>
-                <h2>Appearance</h2>
-                <label className="setting-row">
-                  <span>
-                    Theme
-                    <small>EverySession light, or desktop Dark/System</small>
-                  </span>
-                  <select
-                    aria-label="Colour theme"
-                    value={settings.theme ?? "light"}
-                    onChange={(event) =>
-                      save({ theme: event.target.value as Settings["theme"] })
-                    }
-                    disabled={busy}
-                  >
-                    <option value="light">Light</option>
-                    <option value="dark">Dark</option>
-                    <option value="system">System</option>
-                  </select>
-                </label>
-                <label className="setting-row">
-                  <span>
-                    Window opacity
-                    <small>
-                      {Math.round((settings.opacity ?? 1) * 100)}% · lower
-                      opacity can reduce contrast
-                    </small>
-                  </span>
-                  <input
-                    aria-label="Window opacity"
-                    type="range"
-                    min="80"
-                    max="100"
-                    step="5"
-                    value={Math.round((settings.opacity ?? 1) * 100)}
-                    onChange={(event) =>
-                      save({ opacity: Number(event.target.value) / 100 })
-                    }
-                    disabled={busy}
-                  />
-                </label>
-                <label className="setting-row">
-                  <span>
-                    Always on top
-                    <small>Keep EveryHint above other windows</small>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={settings.alwaysOnTop}
-                    onChange={(event) =>
-                      save({ alwaysOnTop: event.target.checked })
-                    }
-                    disabled={busy}
-                  />
-                </label>
-                <label className="setting-row">
-                  <span>
-                    Compact mode
-                    <small>A smaller view with capture controls</small>
-                  </span>
-                  <input
-                    type="checkbox"
-                    checked={settings.compact}
-                    onChange={(event) => {
-                      save({ compact: event.target.checked });
-                      setSettingsOpen(false);
-                    }}
-                    disabled={busy}
-                  />
-                </label>
-                <label className="setting-row">
-                  <span>
-                    Snapshot interval
-                    <small>Applies on the next start or resume</small>
-                  </span>
-                  <select
-                    aria-label="Snapshot interval"
-                    value={settings.captureIntervalMs}
-                    onChange={(event) =>
-                      save({ captureIntervalMs: Number(event.target.value) })
-                    }
-                    disabled={busy}
-                  >
-                    {[1000, 3000, 5000, 10000, 30000].map((value) => (
-                      <option key={value} value={value}>
-                        {value / 1000}s
-                      </option>
-                    ))}
-                  </select>
-                </label>
-                <h2>Global shortcuts</h2>
-                <IntelligenceSettingsPanel
-                  snapshot={intelligence}
-                  capture={session}
-                />
-                {meetings.state && (
-                  <MeetingPreferencesPanel state={meetings.state} />
-                )}
-                <ShortcutSettings settings={settings} save={save} />
-                <PersonalSettings />
-                <WorkspaceSettings />
-                <DesktopPrivacy app={app} save={save}/>
-                <TranscriptionPanel settings canEnable={active} />
-                {app.hotkeys.map((hotkey) => (
-                  <div className="shortcut" key={hotkey.action}>
-                    <span>
-                      {hotkey.action === "toggle"
-                        ? "Show / hide"
-                        : hotkey.action === "pause"
-                          ? "Pause / resume"
-                          : hotkey.action === "stop"
-                            ? "Stop all capture"
-                            : hotkey.action === "assist"
-                              ? "Assist"
-                              : "Clear context"}
-                      {!hotkey.registered && (
-                        <small className="unavailable">Unavailable</small>
-                      )}
-                    </span>
-                    <kbd>
-                      {hotkey.accelerator
-                        .replace("Control", "Ctrl")
-                        .replaceAll("+", " + ")}
-                    </kbd>
-                  </div>
-                ))}
-                <p className="muted">
-                  Pause/resume only affects an authorised session.
-                </p>
-                <h2>Privacy by default</h2>
-                <p className="muted">
-                  Screenshots stay in memory on this device. Stop clears the
-                  preview and session consent. Closing the overlay hides it to
-                  the tray; capture continues while Active Mode is on.
-                </p>
-                <p className="muted">
-                  Microphone, Windows audio and speech transcription stay local.
-                  Assistant requests require reviewed context and an explicit
-                  Ask.
-                </p>
-                <button
-                  className="secondary full"
-                  onClick={() => {
-                    void run(async () =>
-                      unwrap(await window.everyhint.window("quit")),
-                    );
-                  }}
-                >
-                  Quit EveryHint
-                </button>
-              </div>
+              <SettingsPage
+                key={settingsSection}
+                initial={settingsSection}
+                app={app}
+                save={save}
+                meetings={meetings.state}
+                intelligence={intelligence}
+                diagnostics={diagnostics}
+                chooseSources={meetingCapture}
+              />
             )}
             {!settingsOpen && preparing && (
               <div className="panel-stack">
@@ -843,11 +814,11 @@ function App() {
                   >
                     <Icon name="back" />
                   </button>
-                  <h1>Prepare a session</h1>
+                  <h1>Start EveryHint</h1>
                 </div>
                 <p className="muted">
-                  Choose what EveryHint can see and hear. Nothing is captured
-                  until you press Start capture.
+                  Choose what EveryHint can see and hear. AI sharing is approved
+                  separately.
                 </p>
                 <label className="consent-row">
                   <input
@@ -862,7 +833,9 @@ function App() {
                   <Icon name="screen" />
                   <span>
                     Screen or application window
-                    <small>Local snapshots only</small>
+                    <small>
+                      Understand the screen or application you choose.
+                    </small>
                   </span>
                 </label>
                 <label className="consent-row">
@@ -876,7 +849,7 @@ function App() {
                     }}
                   />
                   <span>
-                    Microphone<small>Selected input · local audio levels</small>
+                    Microphone<small>Hear what you say.</small>
                   </span>
                 </label>
                 <label
@@ -892,7 +865,7 @@ function App() {
                     System audio
                     <small>
                       {app.systemAudioSupported
-                        ? "Windows playback · speakers stay on"
+                        ? "Hear conversations playing on your computer."
                         : "Available on Windows only"}
                     </small>
                   </span>
@@ -994,13 +967,34 @@ function App() {
                   }
                   onClick={prepare}
                 >
-                  Prepare selected sources
+                  Start EveryHint
                 </button>
               </div>
             )}
             <div hidden={settingsOpen || preparing}>
               <div className="session-workspace">
-                {!settings.compact && (
+                <AssistantPanel
+                  capture={session}
+                  limits={settings.contextLimits}
+                  connect={() => {
+                    if (IS_OVERLAY) void controlWindow("account");
+                    else {
+                      setSettingsSection("Account & AI");
+                      navigate("settings");
+                    }
+                  }}
+                  openMeetings={() => openMeetings()}
+                  hideImage={active && session.source?.kind === "screen"}
+                  sourceName={session.source?.name ?? "No screen selected"}
+                />
+                <details className="session-options">
+                  <summary>Session options</summary>
+                  <SpeechControl capture={session} />
+                  <IntelligencePanel
+                    snapshot={intelligence}
+                    compact={false}
+                    openReview={() => openAssistant(true)}
+                  />
                   <MeetingSessionControls
                     state={meetings.state}
                     ai={meetings.ai}
@@ -1008,221 +1002,24 @@ function App() {
                     open={() => openMeetings()}
                     saved={openMeetings}
                   />
-                )}
-                <IntelligencePanel
-                  snapshot={intelligence}
-                  compact={settings.compact}
-                  openReview={() => openAssistant(true)}
-                />
-                <Panel
-                  title="Live transcript"
-                  badge="LOCAL"
-                  compact={settings.compact}
-                >
-                  <TranscriptionPanel
-                    compact={settings.compact}
-                    canEnable={
-                      active &&
-                      Object.entries(session.sources).some(
-                        ([id, source]) =>
-                          id !== "screen" && source.state === "CAPTURING",
-                      )
-                    }
-                  />
-                </Panel>
-                <Panel
-                  title="Conversation & context"
-                  badge="MANUAL"
-                  compact={settings.compact}
-                >
-                  <AssistantPanel
-                    openMeetings={() => openMeetings()}
-                    operatingMode={intelligence?.mode ?? "manual"}
-                    compact={settings.compact}
-                    hideImage={active && session.source?.kind === "screen"}
-                    expand={openAssistant}
-                    sourceName={
-                      session.source
-                        ? `${session.source.name} · ${session.state}`
-                        : "No screen source selected"
-                    }
-                  />
-                </Panel>
+                </details>
               </div>
-              {session.source && (
-                <div className="source-summary">
-                  <Icon name="screen" />
-                  <span title={session.source.name}>{session.source.name}</span>
-                  <small>{session.state}</small>
-                </div>
-              )}
-              {!settings.compact && (
-                <>
-                  <details className="diagnostics">
-                    <summary>
-                      Capture diagnostics{" "}
-                      <span>{session.frameCount} local frames</span>
-                    </summary>
-                    <p className="muted">
-                      {session.source?.kind === "screen"
-                        ? "Whole-screen previews stay hidden to prevent recursive screenshots. Pause and Stop clear all screenshots. Use an application window for a live preview."
-                        : "Selected application windows can be previewed while capturing. EveryHint windows are excluded."}
-                    </p>
-                    {showFrame && session.frame ? (
-                      <figure>
-                        <img
-                          src={session.frame.dataUrl}
-                          alt="Latest local screenshot of the selected source"
-                        />
-                        <figcaption>
-                          {session.frame.width} × {session.frame.height} ·{" "}
-                          {new Date(
-                            session.frame.capturedAt,
-                          ).toLocaleTimeString()}
-                        </figcaption>
-                      </figure>
-                    ) : (
-                      <div className="preview-placeholder">
-                        {active && !session.frame
-                          ? "Waiting for the first snapshot…"
-                          : active
-                            ? "Whole-screen preview hidden"
-                            : "No screenshot to display"}
-                      </div>
-                    )}
-                  </details>
-                  <div
-                    className="audio-diagnostics"
-                    aria-label="Live audio diagnostics"
-                  >
-                    <div className="section-heading">
-                      <h2>Live audio</h2>
-                      <span className="eyebrow">LOCAL PREVIEW</span>
-                    </div>
-                    {(["microphone", "systemAudio"] as const).map((id) => {
-                      const source = session.sources[id];
-                      const level =
-                        source.state === "CAPTURING" && !source.muted
-                          ? source.level
-                          : 0;
-                      return (
-                        <div className="audio-source" key={id}>
-                          <div className="audio-heading">
-                            <strong>
-                              {id === "microphone"
-                                ? "Microphone"
-                                : "System audio"}
-                            </strong>
-                            <span>
-                              {source.state.toLowerCase()}
-                              {source.muted
-                                ? " · muted"
-                                : source.state === "CAPTURING" && level < 0.001
-                                  ? " · silent"
-                                  : ""}
-                            </span>
-                          </div>
-                          <p title={source.name}>
-                            {source.name}
-                            {source.deviceId && (
-                              <small>Device: {source.deviceId}</small>
-                            )}
-                          </p>
-                          <meter
-                            aria-label={`${id === "microphone" ? "Microphone" : "System audio"} level`}
-                            min={0}
-                            max={1}
-                            value={level}
-                          />
-                          {source.error && (
-                            <p className="error">{source.error}</p>
-                          )}
-                          {id === "microphone" &&
-                            source.state === "CAPTURING" && (
-                              <button
-                                className="secondary"
-                                onClick={() => {
-                                  void run(async () =>
-                                    unwrap(
-                                      await window.everyhint.setMicrophoneMuted(
-                                        !source.muted,
-                                      ),
-                                    ),
-                                  );
-                                }}
-                              >
-                                {source.muted
-                                  ? "Unmute microphone"
-                                  : "Mute microphone"}
-                              </button>
-                            )}
-                        </div>
-                      );
-                    })}
-                    <p className="muted">
-                      Silent means no signal is arriving. Another app's mute
-                      button may not mute this input. No audio is saved or
-                      uploaded.
-                    </p>
-                  </div>
-                </>
-              )}
             </div>
           </div>
         </section>
       </div>
 
-      <footer>
-        <div className="capture-controls">
-          {active ? (
-            <button className="secondary grow" onClick={() => action("pause")}>
-              Ⅱ &nbsp; Pause
-            </button>
-          ) : resumable ? (
-            <button
-              className="primary grow"
-              disabled={busy}
-              onClick={() => action("resume")}
-            >
-              Resume capture
-            </button>
-          ) : ready ? (
-            <button
-              className="primary grow"
-              disabled={busy}
-              onClick={() => action("start")}
-            >
-              Start capture
-            </button>
-          ) : (
-            <button
-              className="primary grow"
-              disabled={busy || preparing}
-              onClick={() => {
-                setPreparing(true);
-                setSettingsOpen(false);
-                if (settings.compact) save({ compact: false });
-              }}
-            >
-              Prepare session
-            </button>
-          )}
-          <button
-            className="stop-button"
-            onClick={() => action("stop")}
-            title="Stop all capture and revoke consent"
-          >
-            ■ &nbsp; Stop
-          </button>
-        </div>
-        {!settings.compact && (
-          <div className="footer-note">
-            <span className="tiny-dot" />
-            {active
-              ? "Hiding keeps capture on · Stop works globally"
-              : "Capture starts only with your authorisation"}
-            <span className="version">v{APP_VERSION}</span>
-          </div>
+      <footer
+        className={
+          active || resumable || ready ? "session-footer" : "idle-footer"
+        }
+      >
+        <SessionControls state={session.state} action={action} busy={busy} />
+        {(active || resumable) && (
+          <span className="muted">
+            {active ? "Session active" : "Session paused"} ·{" "}
+            {intelligence?.live ? "Automatic AI authorised" : "Manual AI"}
+          </span>
         )}
       </footer>
     </main>

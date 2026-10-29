@@ -1,5 +1,13 @@
 # EveryHint architecture
 
+## Current UX window and navigation boundary
+
+The dashboard and floating assistant are separate sandboxed BrowserWindows, sharing the existing main-owned capture, transcription, inference, history, personal and workspace controllers. Trusted IPC checks the exact sender, main frame and corresponding document URL independently for each; the overlay query is not accepted from any other renderer. State events broadcast to both, but capture/results never call Show. Navigation from floating account/meeting controls deliberately restores the dashboard via narrow validated routes. The dashboard always uses ordinary taskbar/focus behaviour and is never topmost; pin/opacity apply only to the assistant. Initial dashboard display uses showInactive. Display add/remove/metrics handlers clamp both windows using DIP work areas.
+
+Minimise, restore/show, Hide to Tray, explicit Quit, configurable global overlay/Assist/Pause/Stop/Clear and active-close background/stop/Cancel use supported Electron APIs. Idle close quits. Background capture keeps tray status/Stop; reload/crash/OS lock/suspend preserve fail-closed revocation. Existing quit flush/dispose barriers remain. Overlay dismissal is independent of controller state and is not reversed by publications.
+
+The version-1 settings file gains optional validated preference fields. Existing files without setupComplete migrate as already configured; no tokens, transcript, capture consent or Live grant is persisted. New defaults are dark/dashboard/unpinned. Existing database/profile/key/crypto/schema code is unchanged. Startup/account-profile restoration only attempts an existing selected-profile history file with the same native key infrastructure; failures preserve ciphertext and surface Unlock History. Saving remains independently opt-in. Authorised interactive connection/model-list operations can choose a default only from validated returned capabilities; startup does not request models or inference. [UX acceptance and exact regression evidence](UX_ACCEPTANCE.md) supersede earlier single-window presentation descriptions below.
+
 ## P11 Windows privacy and release boundary
 
 `Settings.protectWindow` migrates false. `configureWindowPrivacy` applies Electron content protection before display, checks `isContentProtected()` and returns requested/configured/off/error/unsupported without leaking raw native errors. `AppSnapshot.privacy` drives persistent accessible status/Settings; it reports configuration only. [Receiver matrix and limits](P11_ACCEPTANCE.md) remain pending. Appearance changes do not grant capture/sharing.

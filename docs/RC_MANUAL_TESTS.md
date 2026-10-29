@@ -1,5 +1,11 @@
 # Windows RC manual procedures
 
+## Current UX source procedures
+
+For the redesigned source, use the separate **dashboard** and **floating assistant**, with a single sidebar Settings entry. Test Minimise/taskbar Restore, Hide to Tray/tray Restore, explicit Quit, the displayed custom global overlay shortcut, unpinned default/optional overlay-only pin, dismissed-overlay persistence and focus among unrelated applications. While actively capturing, Close must offer background/Stop and quit/Cancel; verify tray status and Stop after background choice. Idle Close must quit. A full restart restores no capture or Live authorisation.
+
+Use Settings → Privacy & Data for Window Content Protection, saving/retention/lock/deletion, Account & AI for ChatGPT and Advanced for diagnostics/templates/Google configuration. Existing history may unlock automatically through the existing Windows-protected key; saving and auto-save must remain opt-in. An existing installation must not repeat setup. Verify the two-column mode editor preserves custom modes/document associations. [Current automated evidence and remaining manual checks](UX_ACCEPTANCE.md). The old private installer below is unchanged and does not contain this source milestone; retest a distinct approved candidate before claiming package acceptance. No physical receiver or human UI result is implied.
+
 These are **prepared procedures, not completed results**. Use [RC acceptance](RC_ACCEPTANCE.md) and the [observation CSV](evidence/rc-manual-observations.csv). The tested baseline is 0.5.0 / `ead3ec9`; do not label it 0.5.1. Stop if an approval/environment prerequisite is missing. Never weaken OS/app security, alter a sharing application's capture pipeline, or treat content protection as undetectability.
 
 ## Common test setup and evidence
@@ -12,7 +18,7 @@ For every external case:
 
 1. Protection **off**: show the canary and move the overlay. The receiver/player must confirm the positive control for scopes that include EveryHint. If it is already absent, the test cannot prove protection changed anything; record the control and reason as inconclusive.
 2. Protection **on**: confirm EveryHint's UI says configured (otherwise record failure/unavailable and stop using sensitive content). Stop/restart sharing, then inspect the receiver after composition settles. Record visible/omitted/black/partial/not-selectable/inconclusive, not “invisible”.
-3. Keep observation running while toggling off/on, moving/resizing the overlay, switching compact/expanded/dashboard, minimizing/restoring and stopping/restarting sharing. Record any initial/transient/partial disclosure and timing. Recheck both monitors where present. Do not assume a transition is safe because steady state looked omitted.
+3. Keep observation running while toggling off/on, moving/resizing the overlay, switching between dashboard and floating assistant, minimizing/restoring and stopping/restarting sharing. Record any initial/transient/partial disclosure and timing. Recheck both monitors where present. Do not assume a transition is safe because steady state looked omitted.
 4. Restart EveryHint with protection enabled; confirm the preference/configuration returns while capture and Live remain off. Repeat the receiver check. A local preview is not sufficient.
 5. Stop the test session. Record receiver observations and canary result per scope/OS. Preserve only harmless evidence; restore deliberate test preferences. Any personal content unexpectedly included ends the test and must not be transmitted as test evidence.
 

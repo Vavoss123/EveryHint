@@ -4,6 +4,12 @@ import { tmpdir } from "node:os";
 import { join, resolve, sep } from "node:path";
 import electron from "electron";
 import { _electron } from "playwright-core";
+import {
+  dashboardPage,
+  finishSetup,
+  navigate,
+  settingsSection,
+} from "./desktop-harness.mjs";
 
 const project = resolve(import.meta.dirname, "..");
 const profile = await mkdtemp(join(tmpdir(), "everyhint-ui-"));
@@ -23,64 +29,59 @@ for (const key of [
 let desktop,
   assertions = 0;
 const errors = [],
-  images = [];
+  images = [],
+  evidence = [];
 function check(value, label) {
   assert.ok(value, label);
   assertions++;
+  evidence.push(label);
 }
 try {
+  const started = performance.now();
   desktop = await _electron.launch({
     executablePath: electron,
     args: [project],
     cwd: project,
     env,
-    timeout: 30000,
   });
-  const page = await desktop.firstWindow();
+  const page = await dashboardPage(desktop);
+  page.setDefaultTimeout(10000);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.waitForFunction(
-    () => window.everyhint && document.querySelector(".capture-controls"),
+    () => window.everyhint && document.querySelector(".app"),
   );
+  const readyMs = performance.now() - started;
+  await finishSetup(page);
+  const app = async () =>
+    (await page.evaluate(() => window.everyhint.getSnapshot())).value;
+  const ai = async () =>
+    (await page.evaluate(() => window.everyhint.getAssistant())).value;
   await desktop.evaluate(() => {
-    globalThis.__uiRemoteCalls = [];
+    globalThis.__uiNetwork = [];
     globalThis.fetch = async (url) => {
-      globalThis.__uiRemoteCalls.push(String(url));
-      throw new Error("Network forbidden during UI-only smoke.");
+      globalThis.__uiNetwork.push(String(url));
+      throw Error("No external requests authorised in UI smoke.");
     };
   });
-  const app = async () => {
-    const result = await page.evaluate(() => window.everyhint.getSnapshot());
-    assert.ok(result.ok);
-    return result.value;
-  };
-  const ai = async () => {
-    const result = await page.evaluate(() => window.everyhint.getAssistant());
-    assert.ok(result.ok);
-    return result.value;
-  };
-  const settled = (predicate) => page.waitForFunction(predicate);
-  const shot = async (name) => {
-    await page.screenshot({ path: `artifacts/ui/${name}.png` });
+  await mkdir("artifacts/ui", { recursive: true });
+  const shot = async (name, target = page) => {
+    await target.screenshot({ path: `artifacts/ui/${name}.png` });
     images.push(name);
   };
-  await mkdir("artifacts/ui", { recursive: true });
   await page.evaluate(() => document.fonts.ready);
   check(
-    await page.evaluate(
-      () =>
-        document.fonts.check("400 14px Inter") &&
-        document.fonts.check("600 20px Poppins") &&
-        ["Inter", "Poppins"].every((family) =>
-          Array.from(document.fonts).some(
-            (face) => face.family === family && face.status === "loaded",
-          ),
+    await page.evaluate(() =>
+      ["Inter", "Poppins"].every((f) =>
+        Array.from(document.fonts).some(
+          (face) => face.family === f && face.status === "loaded",
         ),
+      ),
     ),
-    "authentic local font faces loaded",
+    "Bundled Inter and Poppins load locally",
   );
   check(
-    (await app()).settings.theme === "light",
-    "verified light palette is the default",
+    (await app()).settings.theme === "dark",
+    "New installations default to dark",
   );
   check(
     await page.evaluate(
@@ -90,133 +91,110 @@ try {
           .trim()
           .toUpperCase() === "#E01A34",
     ),
-    "EverySession red is the actual rendered brand token",
+    "EverySession red remains the rendered brand",
   );
-  await page.keyboard.press("Tab");
+  check(
+    (await page
+      .getByRole("button", { name: "Start EveryHint", exact: true })
+      .count()) === 1,
+    "Home has one Start action",
+  );
+  check(
+    (await page.getByRole("button", { name: "Stop", exact: true }).count()) ===
+      0,
+    "Idle never shows Stop",
+  );
+  check(
+    (await page
+      .getByRole("button", { name: "Settings", exact: true })
+      .count()) === 1,
+    "Settings has one entry",
+  );
+  await shot("dashboard-dark");
+  await page.evaluate(() => document.querySelector(".skip-link").focus());
   await page.keyboard.press("Enter");
   check(
     await page.evaluate(
-      () => document.activeElement?.id === "workspace-content",
+      () => document.activeElement.id === "workspace-content",
     ),
-    "skip control focuses workspace without changing the trusted IPC URL",
-  );
-  check(
-    (await app()).session.state === "IDLE",
-    "skip control preserves trusted IPC",
+    "Keyboard skip control focuses workspace without changing IPC URL",
   );
   await page.keyboard.press("Control+Enter");
-  await settled(
+  await page.waitForFunction(
     () =>
       document.activeElement?.getAttribute("aria-label") === "Your question",
   );
   check(
     (await ai()).responses.length === 0,
-    "Assist composer shortcut never submits inference",
+    "Composer shortcut never sends inference",
   );
   await page
     .getByLabel("Your question", { exact: true })
     .fill("UI foundation synthetic draft");
   await page
-    .getByRole("button", { name: "Get Answer · review context", exact: true })
+    .getByRole("button", { name: "Review & send", exact: true })
     .click();
   await page.getByLabel("Context review", { exact: true }).waitFor();
+  check(await page.getByLabel("Context review",{exact:true}).evaluate(el=>el.getBoundingClientRect().height<=innerHeight*0.65+2), "Transmission review stays in a bounded sheet");
   const reviewId = (await ai()).review.requestId;
-  await page
-    .getByRole("button", { name: "Open dashboard", exact: true })
-    .click();
-  await page.getByLabel("Home overview", { exact: true }).waitFor();
   check(
-    (await app()).settings.layout === "dashboard",
-    "dashboard layout uses validated existing settings IPC",
+    !(await page
+      .getByLabel("Acknowledge remote transfer", { exact: true })
+      .isChecked()),
+    "Remote sharing approval starts unchecked",
   );
-  const size = await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].getBounds(),
-  );
-  check(
-    size.width >= 800 && size.height >= 600,
-    "dashboard expands the native window",
-  );
-  await shot("dashboard-light");
   for (const [name, label] of [
     ["Knowledge", "Knowledge library"],
     ["Calendar", "Calendar dashboard"],
     ["People", "People dashboard"],
     ["Modes", "AI Modes"],
+    ["Meetings", "Meeting history workspace"],
+    ["Home", "Home overview"],
   ]) {
-    await page
-      .getByRole("navigation", { name: "Main navigation" })
-      .getByRole("button", { name, exact: true })
-      .click();
+    await navigate(page, name);
     check(
       await page.getByLabel(label, { exact: true }).isVisible(),
-      `${name} exposes a real profile-scoped P9 page`,
+      `${name} navigation works`,
     );
   }
-  await page
-    .getByRole("navigation", { name: "Main navigation" })
-    .getByRole("button", { name: "Meetings", exact: true })
-    .click();
-  check(
-    await page
-      .getByLabel("Locked meeting history", { exact: true })
-      .isVisible(),
-    "Meetings opens real opt-in locked history without capture or fabricated records",
-  );
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Assistant", exact: true })
-    .click();
+  await navigate(page, "Assistant");
   check(
     (await page.getByLabel("Your question", { exact: true }).inputValue()) ===
       "UI foundation synthetic draft",
-    "navigation preserves the working composer",
+    "Navigation retains the draft",
   );
   check(
     (await ai()).review.requestId === reviewId,
-    "navigation preserves the exact frozen review",
+    "Navigation retains frozen context",
   );
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Settings", exact: true })
-    .click();
-  await page.getByLabel("Colour theme", { exact: true }).selectOption("dark");
-  await settled(() => document.documentElement.dataset.theme === "dark");
+  await settingsSection(page, "General");
+  check(
+    (await page
+      .getByRole("navigation", { name: "Settings sections" })
+      .getByRole("button")
+      .count()) === 6,
+    "Settings has six focused sections",
+  );
+  await page.getByLabel("Colour theme", { exact: true }).selectOption("light");
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "light",
+  );
   check(
     await page.evaluate(
-      () => getComputedStyle(document.documentElement).colorScheme === "dark",
+      () => getComputedStyle(document.documentElement).colorScheme === "light",
     ),
-    "dark mode changes actual native control theme",
+    "Light native controls remain supported",
   );
-  await page.getByLabel("Window opacity", { exact: true }).fill("85");
-  await page.waitForFunction(() =>
-    window.everyhint
-      .getSnapshot()
-      .then((result) => result.ok && result.value.settings.opacity === 0.85),
-  );
-  check(
-    await desktop.evaluate(
-      ({ BrowserWindow }) =>
-        Math.abs(BrowserWindow.getAllWindows()[0].getOpacity() - 0.85) < 0.02,
-    ),
-    "opacity changes the actual Windows window",
-  );
-  await page.getByLabel("Window opacity", { exact: true }).fill("100");
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Home", exact: true })
-    .click();
-  await shot("dashboard-dark");
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Settings", exact: true })
-    .click();
+  await navigate(page, "Home");
+  await shot("dashboard-light");
+  await settingsSection(page, "General");
   await page.getByLabel("Colour theme", { exact: true }).selectOption("system");
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
   check(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).colorScheme === "dark",
     ),
-    "system theme responds to OS colour preference",
+    "System follows the OS colour preference",
   );
   check(
     await page.evaluate(
@@ -224,107 +202,33 @@ try {
         getComputedStyle(document.querySelector("button"))
           .transitionDuration === "0s",
     ),
-    "reduced motion disables transitions",
+    "Reduced motion disables transitions",
   );
-  await page.emulateMedia({
-    colorScheme: "light",
-    reducedMotion: "no-preference",
-  });
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Assistant", exact: true })
-    .click();
-  check(
-    (await page.getByLabel("Your question", { exact: true }).inputValue()) ===
-      "UI foundation synthetic draft",
-    "settings preserve the composer and its review",
+  await settingsSection(page, "Advanced");
+  await page.getByLabel("Window opacity", { exact: true }).fill("85");
+  await page.waitForFunction(
+    async () =>
+      (await window.everyhint.getSnapshot()).value.settings.opacity === 0.85,
   );
   check(
-    (await ai()).review.requestId === reviewId,
-    "appearance changes do not replace selected context",
-  );
-  const transcript = page
-    .locator(".workspace-panel")
-    .filter({ has: page.locator("summary", { hasText: "Live transcript" }) });
-  await transcript.locator(":scope > summary").click();
-  check(
-    (await transcript.getAttribute("open")) === null,
-    "individual panels collapse without controlling capture",
-  );
-  await page
-    .getByRole("button", { name: "Open expanded assistant", exact: true })
-    .click();
-  await settled(() => !document.querySelector(".is-dashboard"));
-  await shot("assistant-light");
-  await page.getByRole("button", { name: "Compact mode", exact: true }).click();
-  await page.locator(".is-compact").waitFor();
-  check(
-    await page
-      .getByRole("button", { name: "Get Answer", exact: false })
-      .isVisible(),
-    "compact overlay keeps Get Answer accessible",
-  );
-  check(
-    await page.getByLabel("Capture source states").isVisible(),
-    "compact overlay exposes screen, mic and system state",
-  );
-  check(
-    await page.locator(".capture-controls").isVisible(),
-    "compact overlay preserves emergency controls",
-  );
-  check(
-    await page.evaluate(() => {
-      const ask = document.querySelector(".quick-ask").getBoundingClientRect(),
-        content = document.querySelector(".content").getBoundingClientRect();
-      return ask.top >= content.top && ask.bottom <= content.bottom;
+    await desktop.evaluate(({ BrowserWindow }) => {
+      const all = BrowserWindow.getAllWindows();
+      return (
+        all
+          .find((w) => w.webContents.getURL().endsWith("index.html"))
+          .getOpacity() === 1 &&
+        Math.abs(
+          all
+            .find((w) => w.webContents.getURL().includes("overlay=1"))
+            .getOpacity() - 0.85,
+        ) < 0.02
+      );
     }),
-    "compact Get Answer is fully inside the visible viewport",
+    "Opacity changes only the floating assistant",
   );
-  check(
-    await desktop.evaluate(
-      ({ BrowserWindow }) =>
-        BrowserWindow.getAllWindows()[0].getBounds().height <= 200,
-    ),
-    "compact layout preserves the small native overlay",
-  );
-  await shot("compact-light");
-  await page.getByRole("button", { name: "Get Answer", exact: false }).click();
-  await settled(
-    () =>
-      document.activeElement?.getAttribute("aria-label") === "Your question",
-  );
-  check(
-    !(await app()).settings.compact && (await ai()).responses.length === 0,
-    "Get Answer expands and focuses without transmitting anything",
-  );
-  await page.getByRole("button", { name: "Compact mode", exact: true }).click();
-  await page.locator(".is-compact").waitFor();
-  const beforeGlobalAssist = (await ai()).review.requestId;
-  await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.send("everyhint:assist"),
-  );
-  await settled(
-    () =>
-      !document.querySelector(".is-compact") &&
-      document.activeElement?.getAttribute("aria-label") === "Your question",
-  );
-  check(
-    (await ai()).responses.length === 0 &&
-      (await ai()).review.requestId !== beforeGlobalAssist &&
-      (await ai()).review.question === "UI foundation synthetic draft",
-    "global Assist event expands and prepares a fresh selected-context review without inference",
-  );
-  await page
-    .getByRole("button", { name: "Open dashboard", exact: true })
-    .click();
-  await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].setBounds({ width: 360, height: 600 }),
-  );
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Settings", exact: true })
-    .click();
-  const originalShortcut = (await app()).settings.assistShortcut;
+  await page.getByLabel("Window opacity", { exact: true }).fill("100");
+  await settingsSection(page, "Shortcuts");
+  const original = (await app()).settings.assistShortcut;
   await page
     .getByLabel("Assist shortcut", { exact: true })
     .fill("Control+Alt+P");
@@ -336,8 +240,8 @@ try {
     .filter({ hasText: "Each shortcut must be different" })
     .waitFor();
   check(
-    (await app()).settings.assistShortcut === originalShortcut,
-    "conflicting Assist shortcut cannot replace Pause or Stop",
+    (await app()).settings.assistShortcut === original,
+    "Shortcut conflicts cannot replace Pause or Stop",
   );
   await page
     .getByLabel("Assist shortcut", { exact: true })
@@ -351,138 +255,223 @@ try {
       "Control+Alt+K",
   );
   check(
-    (await app()).hotkeys.find((key) => key.action === "assist").accelerator ===
+    (await app()).hotkeys.find((h) => h.action === "assist").accelerator ===
       "Control+Alt+K",
-    "saved custom shortcut is passed to the native registry and exposes its registration result",
+    "Custom shortcut reaches the native registry",
   );
-  await shot("narrow-settings-light");
-  check(
-    await page.evaluate(
-      () =>
-        document.documentElement.scrollWidth <= innerWidth &&
-        document.querySelector(".content").scrollWidth <=
-          document.querySelector(".content").clientWidth + 1,
-    ),
-    "minimum-width layout has no horizontal overflow",
-  );
-  check(
-    await page.getByRole("button", { name: "Stop", exact: false }).isVisible(),
-    "Stop remains reachable at minimum size",
-  );
-  await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1.25),
-  );
-  check(
-    (await page.getByLabel("Colour theme").isVisible()) &&
-      (await page.locator(".capture-controls").isVisible()),
-    "appearance and emergency controls remain available with text zoom",
-  );
+  await desktop.evaluate(({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows().find((w) =>
+      w.webContents.getURL().endsWith("index.html"),
+    );
+    w.setBounds({ width: 360, height: 500 });
+  });
   check(
     await page.evaluate(
       () =>
         document.querySelector(".content").scrollWidth <=
         document.querySelector(".content").clientWidth + 1,
     ),
-    "zoomed minimum-width content does not overflow horizontally",
+    "Minimum-width Settings has no horizontal overflow",
   );
   await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].setBounds({ width: 360, height: 380 }),
+    BrowserWindow.getAllWindows()
+      .find((w) => w.webContents.getURL().endsWith("index.html"))
+      .webContents.setZoomFactor(1.25),
   );
   check(
-    await page.evaluate(() => {
-      const footer = document.querySelector("footer").getBoundingClientRect();
-      return footer.top >= 0 && footer.bottom <= innerHeight;
-    }),
-    "emergency controls stay inside the smallest native window at 125 percent zoom",
+    await page.evaluate(
+      () => document.documentElement.scrollWidth <= innerWidth + 1,
+    ),
+    "Narrow dashboard supports 125% text zoom",
   );
-  await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.setZoomFactor(1),
+  check(
+    (await page
+      .getByRole("navigation", { name: "Main navigation" })
+      .getByRole("button", { name: "Settings", exact: true })
+      .count()) === 1,
+    "Narrow icon navigation retains accessible labels",
   );
-  const realAssistant = await ai();
-  const streamingFixture = {
-    ...realAssistant,
-    revision: realAssistant.revision + 100,
-    responses: [
-      {
-        requestId: "ui-fixture",
-        sessionId: realAssistant.sessionId,
-        provider: "codex",
-        question: "Renderer fixture only",
-        text: "Synthetic streaming fixture",
-        status: "generating",
-        startedAt: Date.now(),
-        firstTextAt: Date.now(),
-        endedAt: null,
-        error: null,
-        usage: null,
-        model: "Fixture only",
-      },
-    ],
-  };
+  await shot("narrow-settings-125");
+  await page.emulateMedia({ forcedColors: "active" });
+  check(
+    await page.evaluate(() => matchMedia("(forced-colors: active)").matches),
+    "High-contrast media is supported",
+  );
+  await page.emulateMedia({ forcedColors: "none" });
+  await desktop.evaluate(({ BrowserWindow }) => {
+    const w = BrowserWindow.getAllWindows().find((w) =>
+      w.webContents.getURL().endsWith("index.html"),
+    );
+    w.webContents.setZoomFactor(1);
+    w.setBounds({ width: 1040, height: 760 });
+  });
+  await navigate(page, "Assistant");
+  check(
+    (await ai()).review.requestId === reviewId,
+    "Appearance changes preserve reviewed context",
+  );
+  await page.getByText("Attach Context", { exact: true }).click();
+  check(
+    (await page
+      .getByRole("checkbox", {
+        name: "Fresh authorised screenshot",
+        exact: true,
+      })
+      .count()) === 0,
+    "Unavailable screen context is absent",
+  );
+  check(
+    (await page
+      .getByRole("checkbox", {
+        name: "Recent microphone transcript",
+        exact: true,
+      })
+      .count()) === 0,
+    "Unavailable transcript context is absent",
+  );
+  await page.getByText("Attach Context", { exact: true }).click();
+  await page.evaluate(()=>window.everyhint.assistant("discard-review"));
+  const actual = await ai(),
+    fixture = {
+      ...actual,
+      revision: actual.revision + 100,
+      responses: [
+        {
+          requestId: "ui-renderer-fixture",
+          sessionId: actual.sessionId,
+          provider: "codex",
+          question: "Labelled renderer fixture",
+          text: "A short synthetic answer for layout verification.",
+          status: "generating",
+          startedAt: Date.now(),
+          firstTextAt: Date.now(),
+          endedAt: null,
+          error: null,
+          usage: null,
+          model: "fixture",
+        },
+      ],
+    };
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:assistant",
-        value,
-      ),
-    streamingFixture,
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL().endsWith("index.html"))
+        .webContents.send("everyhint:assistant", value),
+    fixture,
   );
   await page
     .getByRole("button", { name: "Cancel remote request", exact: true })
     .waitFor();
+  await settingsSection(page, "Privacy & Data");
   check(
     await page
       .getByRole("button", { name: "Cancel remote request", exact: true })
       .isVisible(),
-    "remote sharing and cancel stay visible outside settings/collapsed panels",
+    "Remote Cancel remains visible in Settings",
   );
-  await page
-    .getByRole("navigation")
-    .getByRole("button", { name: "Meetings", exact: true })
-    .click();
+  check(
+    await page
+      .getByRole("checkbox", {
+        name: "Window Content Protection (Windows)",
+        exact: true,
+      })
+      .isVisible(),
+    "Privacy has a clear protection control",
+  );
+  check(
+    !(await page
+      .getByLabel("Automatically save authorised meeting sessions", {
+        exact: true,
+      })
+      .isChecked()),
+    "Automatic history saving remains opt-in",
+  );
+  await navigate(page, "Meetings");
   check(
     await page
       .getByRole("button", { name: "Cancel remote request", exact: true })
       .isVisible(),
-    "meeting navigation cannot hide an active request cancellation control",
+    "Meetings navigation retains remote Cancel",
+  );
+  check(
+    (await page.getByLabel("Save meeting history", { exact: true }).count()) ===
+      0,
+    "History preferences are absent from everyday Meetings",
   );
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:assistant",
-        value,
-      ),
-    { ...realAssistant, revision: streamingFixture.revision + 1 },
+      BrowserWindow.getAllWindows()
+        .find((w) => w.webContents.getURL().endsWith("index.html"))
+        .webContents.send("everyhint:assistant", value),
+    { ...actual, revision: fixture.revision + 1 },
   );
+  await page.evaluate(async () => {
+    const s = (await window.everyhint.getSnapshot()).value.settings;
+    await window.everyhint.saveSettings({ ...s, theme: "dark" });
+  });
+  await page.evaluate(() => window.everyhint.window("overlay"));
+  const overlay = desktop.windows().find((p) => p.url().includes("overlay=1"));
+  await overlay.getByLabel("EveryHint assistant", { exact: true }).waitFor();
+  check(
+    (await overlay
+      .getByRole("navigation", { name: "Main navigation" })
+      .count()) === 0,
+    "Floating assistant has no dashboard navigation",
+  );
+  check(
+    await overlay.getByLabel("Your question", { exact: true }).isVisible(),
+    "Floating assistant keeps message input available",
+  );
+  check(
+    (await overlay.locator(".assistant-connection").count()) === 0,
+    "Floating assistant has no provider configuration panels",
+  );
+  check(
+    await overlay.evaluate(() => {
+      const b = Array.from(document.querySelectorAll("button"))
+        .find((b) => b.textContent.trim() === "Review & send")
+        .getBoundingClientRect();
+      return b.top >= 0 && b.bottom <= innerHeight;
+    }),
+    "Floating send action is fully visible at its default size",
+  );
+  await shot("floating-assistant-dark", overlay);
+  await overlay
+    .getByRole("button", { name: "Dismiss overlay", exact: true })
+    .click();
+  await settingsSection(page, "General");
+  await page.getByLabel("Colour theme", { exact: true }).selectOption("dark");
   const prefs = await desktop.evaluate(({ BrowserWindow }) =>
-    BrowserWindow.getAllWindows()[0].webContents.getLastWebPreferences(),
+    BrowserWindow.getAllWindows()
+      .find((w) => w.webContents.getURL().endsWith("index.html"))
+      .webContents.getLastWebPreferences(),
   );
   check(
     prefs.sandbox && prefs.contextIsolation && !prefs.nodeIntegration,
-    "UI foundation preserves renderer isolation",
+    "Renderer isolation is preserved",
   );
   check(
     (await ai()).responses.length === 0 &&
       (await app()).session.state === "IDLE",
-    "view/theme changes never start capture or AI",
+    "Navigation and themes never acquire capture or AI permission",
   );
   check(
-    await desktop.evaluate(() => globalThis.__uiRemoteCalls.length === 0),
-    "navigation/theme/opacity/font operations make no remote requests",
+    await desktop.evaluate(() => globalThis.__uiNetwork.length === 0),
+    "UI operations make zero remote requests",
   );
-  check(errors.length === 0, `no renderer errors: ${errors.join(", ")}`);
+  check(errors.length === 0, `No renderer errors: ${errors.join(", ")}`);
   await desktop.close();
   desktop = undefined;
   const saved = JSON.parse(
     await readFile(join(profile, "settings.json"), "utf8"),
   );
   check(
-    saved.settings.theme === "system" && saved.settings.layout === "dashboard",
-    "appearance preferences persist locally",
+    saved.settings.theme === "dark" && saved.settings.setupComplete,
+    "Theme and completed setup persist",
   );
   check(
     !JSON.stringify(saved).includes("UI foundation synthetic draft"),
-    "draft/review content is not persisted in appearance settings",
+    "Settings do not persist conversation content",
   );
   await writeFile(
     "artifacts/ui-smoke.json",
@@ -490,9 +479,10 @@ try {
       {
         assertions,
         images,
+        evidence,
+        readyMs,
         remoteRequests: 0,
-        paidRequests: 0,
-        realCapture: false,
+        physicalCapture: false,
         errors,
       },
       null,
@@ -500,19 +490,18 @@ try {
     ),
   );
   console.log(
-    `UI foundation smoke passed: ${assertions} assertions, ${images.length} app-only screenshots. No remote requests or real capture.`,
+    `UI smoke passed: ${assertions} assertions, ${images.length} screenshots, zero remote requests.`,
   );
 } finally {
   if (desktop) await desktop.close();
-  if (resolve(profile).startsWith(resolve(tmpdir()) + sep)) {
+  if (
+    resolve(profile).startsWith(resolve(tmpdir()) + sep) &&
+    profile.includes("everyhint-ui-")
+  )
     await rm(profile, {
       recursive: true,
       force: true,
       maxRetries: 5,
       retryDelay: 100,
     });
-  } else {
-    process.exitCode = 1;
-    console.error("Unsafe UI test cleanup path; cleanup skipped.");
-  }
 }

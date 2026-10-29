@@ -1,5 +1,10 @@
 export type SessionState =
-  "IDLE" | "READY" | "ACTIVE" | "PAUSED" | "STOPPED" | "ERROR";
+  | "IDLE"
+  | "READY"
+  | "ACTIVE"
+  | "PAUSED"
+  | "STOPPED"
+  | "ERROR";
 export type SourceKind = "screen" | "window";
 export interface CaptureSource {
   id: string;
@@ -79,6 +84,21 @@ export interface Settings {
   protectWindow?: boolean;
   assistShortcut?: string;
   clearShortcut?: string;
+  toggleShortcut?: string;
+  pauseShortcut?: string;
+  stopShortcut?: string;
+  setupComplete?: boolean;
+  preferredSources?: {
+    microphone: boolean;
+    systemAudio: boolean;
+    screen: boolean;
+  };
+  preferredHelp?: import("./intelligence").OperatingMode;
+  startHidden?: boolean;
+  contextLimits?: Pick<
+    import("./ai").ContextOptions,
+    "recentSeconds" | "transcriptChars" | "totalChars" | "imageBytes"
+  >;
   intelligence?: import("./intelligence").IntelligenceSettings;
 }
 export interface WindowBounds {
@@ -107,8 +127,12 @@ export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
   desktopStatus(): Promise<Result<import("./desktop").DesktopStatus>>;
-  update(action: import("./updates").UpdateAction): Promise<Result<import("./updates").UpdateSnapshot>>;
-  onUpdates(callback: (value: import("./updates").UpdateSnapshot) => void): () => void;
+  update(
+    action: import("./updates").UpdateAction,
+  ): Promise<Result<import("./updates").UpdateSnapshot>>;
+  onUpdates(
+    callback: (value: import("./updates").UpdateSnapshot) => void,
+  ): () => void;
   workspace: import("./workspace").WorkspaceBridge;
   personal: import("./personal").PersonalBridge;
   meetings: import("./meeting-bridge").MeetingBridge;
@@ -156,6 +180,9 @@ export interface EveryHintBridge {
     index: number;
   }): Promise<Result<void>>;
   onAssist(listener: () => void): () => void;
+  onAccountSettings(listener: () => void): () => void;
+  openMeetings(id?: string): Promise<Result<void>>;
+  onMeetingNavigate(listener: (id?: string) => void): () => void;
   ask(input: {
     reviewId: string;
     acknowledged: boolean;
@@ -191,7 +218,21 @@ export interface EveryHintBridge {
   setMicrophoneMuted(muted: boolean): Promise<Result<void>>;
   session(action: SessionAction): Promise<Result<void>>;
   saveSettings(settings: Settings): Promise<Result<void>>;
-  window(action: "hide" | "quit"): Promise<Result<void>>;
+  window(
+    action:
+      | "hide"
+      | "quit"
+      | "minimize"
+      | "maximize"
+      | "close"
+      | "overlay"
+      | "dashboard"
+      | "account"
+      | "move-left"
+      | "move-right"
+      | "move-up"
+      | "move-down",
+  ): Promise<Result<void>>;
   onSnapshot(listener: (snapshot: AppSnapshot) => void): () => void;
   onAudioMeters(listener: (event: AudioMeterEvent) => void): () => void;
 }

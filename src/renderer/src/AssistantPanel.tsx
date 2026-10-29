@@ -1,14 +1,12 @@
 import { useEffect, useRef, useState } from "react";
-import type {
-  AssistantSnapshot,
-  ContextOptions,
-  ProviderId,
-} from "../../shared/ai";
+import type { AssistantSnapshot, ContextOptions } from "../../shared/ai";
 import { ASSIST_PRESETS, DEFAULT_CONTEXT } from "../../shared/ai";
 import type { Result } from "../../shared/contracts";
-import { AccountPanel } from "./AccountPanel";
+import { ModeSelector } from "./PersonalPages";
+import type { SessionSnapshot } from "../../shared/contracts";
+import type { TranscriptEvent } from "../../shared/transcription";
 import { ResponseText } from "./ResponseText";
-import { ACTION_LABELS, type OperatingMode } from "../../shared/intelligence";
+import { ACTION_LABELS } from "../../shared/intelligence";
 import { usePersonal } from "./PersonalPages";
 import { useWorkspace, workspaceCommand } from "./WorkspacePages";
 import {
@@ -22,18 +20,18 @@ function unwrap<T>(result: Result<T>): T {
   return result.value;
 }
 export function AssistantPanel({
-  compact,
   hideImage,
-  expand,
   sourceName,
-  operatingMode = "manual",
   openMeetings,
+  capture,
+  limits,
+  connect,
 }: {
-  compact: boolean;
+  capture: SessionSnapshot;
+  limits?: import("../../shared/contracts").Settings["contextLimits"];
+  connect: () => void;
   hideImage: boolean;
-  expand: () => void;
   sourceName: string;
-  operatingMode?: OperatingMode;
   openMeetings?: () => void;
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
@@ -47,11 +45,31 @@ export function AssistantPanel({
   const [options, setOptions] = useState<ContextOptions>({
     ...DEFAULT_CONTEXT,
   });
+  useEffect(() => {
+    setOptions((previous) => ({ ...previous, ...limits }));
+  }, [
+    limits?.recentSeconds,
+    limits?.transcriptChars,
+    limits?.totalChars,
+    limits?.imageBytes,
+  ]);
   const [acknowledged, setAcknowledged] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const operation = useRef(false);
+  const reviewPanel = useRef<HTMLDivElement>(null);
+  const [attachOpen, setAttachOpen] = useState(false);
+  const [events, setEvents] = useState<TranscriptEvent[]>([]);
+  useEffect(() => {
+    const off = window.everyhint.onTranscription((value) =>
+      setEvents(value.events),
+    );
+    void window.everyhint.getTranscription().then((result) => {
+      if (result.ok) setEvents(result.value.events);
+    });
+    return off;
+  }, []);
   useEffect(() => {
     const accept = (value: AssistantSnapshot): void =>
       setSnapshot((previous) =>
@@ -68,8 +86,15 @@ export function AssistantPanel({
     setAcknowledged(false);
   }, [snapshot?.review?.requestId, snapshot?.sessionId]);
   useEffect(() => {
+    if (snapshot?.review)
+      requestAnimationFrame(() => {
+        reviewPanel.current?.scrollIntoView({ block: "nearest" });
+        reviewPanel.current?.focus();
+      });
+  }, [snapshot?.review?.requestId]);
+  useEffect(() => {
     setQuestion("");
-    setOptions({ ...DEFAULT_CONTEXT });
+    setOptions({ ...DEFAULT_CONTEXT, ...limits });
     setKnowledgeIds([]);
     setWorkspaceSelection(emptyWorkspaceSelection());
   }, [snapshot?.sessionId]);
@@ -139,7 +164,14 @@ export function AssistantPanel({
   }
   useEffect(() =>
     window.everyhint.onAssist(() => {
-      void prepareReview();
+      if (
+        question.trim() ||
+        options.screenshot ||
+        options.microphone ||
+        options.systemAudio ||
+        snapshot?.responses.length
+      )
+        void prepareReview();
     }),
   );
   if (!snapshot)
@@ -159,543 +191,49 @@ export function AssistantPanel({
     error: "Error",
     "rate-limited": "Rate limited",
   };
-  if (compact)
-    return (
-      <div className="assistant-compact">
-        <button
-          className="text-button"
-          onClick={expand}
-          title="Expand assistant"
-        >
-          {operatingMode === "manual" ? "Manual · " : ""}
-          {latest
-            ? `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${labels[latest.status]} · ${latest.text.slice(-90) || latest.error?.message || ""}`
-            : `${snapshot.selected === "codex" ? "ChatGPT" : "Claude"} · ${selected.ready ? "Ready" : "Not connected"} · Expand to ask`}
-        </button>
-        <button
-          className="secondary quick-ask"
-          onClick={() => {
-            expand();
-            void prepareReview();
-          }}
-          title="Expand and review selected context. Acknowledgement and Ask are required before transmission."
-        >
-          Get Answer
-        </button>
-        {active && (
-          <button
-            onClick={() =>
-              void run(async () =>
-                unwrap(await window.everyhint.assistant("cancel")),
-              )
-            }
-          >
-            Cancel
-          </button>
-        )}
-      </div>
-    );
   return (
     <section
       className="assistant-panel panel-stack"
       aria-label="EveryHint assistant"
     >
-      <details className="assistant-connection" open={!selected.ready}>
-        <summary>
-          {snapshot.selected === "codex" ? "ChatGPT plan" : "Claude API"} ·{" "}
-          {selected.ready ? "Ready" : "Connection settings"}
-        </summary>
-        <div className="provider-row">
-          <label htmlFor="ai-provider">AI provider</label>
-          <select
-            id="ai-provider"
-            aria-label="AI provider"
-            value={snapshot.selected}
-            disabled={busy}
-            onChange={(event) => {
-              setAcknowledged(false);
-              setQuestion("");
-              setOptions({ ...DEFAULT_CONTEXT });
-              void run(async () =>
-                unwrap(
-                  await window.everyhint.selectProvider(
-                    event.target.value as ProviderId,
-                  ),
-                ),
-              );
-            }}
-          >
-            <option value="codex">ChatGPT · plan usage</option>
-            <option value="claude">Claude · API billing</option>
-          </select>
-        </div>
-        <p className="provider-status" role="status">
-          <strong>{selected.ready ? "Ready" : "Not connected"}</strong> ·{" "}
-          {selected.message}
-        </p>
-        <AccountPanel provider={snapshot.selected} />
-        {snapshot.selected === "codex" && (
-          <div className="context-review">
+      <div className="chat-toolbar">
+        <ModeSelector />
+        <details>
+          <summary aria-label="Conversation menu">•••</summary>
+          <div className="menu-popover">
             <button
               className="secondary"
-              disabled={busy || active || selected.auth !== "chatgpt"}
-              onClick={() =>
-                void run(async () =>
-                  unwrap(await window.everyhint.discoverModels()),
-                )
-              }
-            >
-              Refresh ChatGPT models
-            </button>
-            <small>
-              Refresh sends an authorised model-list request to OpenAI. It does
-              not submit a question. Model access can still be denied when
-              asking.
-            </small>
-            <label>
-              ChatGPT model
-              <select
-                aria-label="ChatGPT model"
-                value={selected.selectedModel ?? ""}
-                disabled={busy || active || !selected.modelDetails?.length}
-                onChange={(event) => {
-                  const id = event.target.value;
-                  void run(async () =>
-                    unwrap(await window.everyhint.selectModel(id)),
-                  );
-                }}
-              >
-                <option value="" disabled>
-                  Choose a model
-                </option>
-                {selected.modelDetails?.map((model) => (
-                  <option key={model.id} value={model.id}>
-                    {model.name}
-                    {model.images
-                      ? " · images supported"
-                      : " · image support unconfirmed"}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </div>
-        )}
-        <button
-          className="secondary"
-          disabled={busy || active}
-          onClick={() =>
-            void run(async () =>
-              unwrap(await window.everyhint.inspectProviders()),
-            )
-          }
-        >
-          Check connection
-        </button>
-        {snapshot.selected === "claude" && (
-          <label className="ai-choice billing-choice">
-            <input
-              type="checkbox"
-              checked={snapshot.claudeApiBilling}
-              disabled={busy}
-              onChange={(event) => {
-                const enabled = event.target.checked;
-                void run(async () =>
-                  unwrap(await window.everyhint.setClaudeApiBilling(enabled)),
-                );
-              }}
-            />
-            <span>
-              Enable separately billed Claude API requests for this app session.
-              My Claude subscription is not used.
-            </span>
-          </label>
-        )}
-      </details>
-      <p className="muted">
-        AI mode:{" "}
-        {personal?.config.modes.find(
-          (m) => m.id === personal.config.activeModeId,
-        )?.name ?? "General"}
-        . Choose a mode in the title bar; switching never starts capture or
-        inference.
-      </p>
-      <label className="ai-question">
-        {latest
-          ? "Question or follow-up (optional)"
-          : "Your question (optional)"}
-        <textarea
-          aria-label="Your question"
-          value={question}
-          rows={3}
-          maxLength={6000}
-          disabled={active || busy}
-          placeholder="Ask a question, or leave blank for help with selected context…"
-          onChange={(event) => {
-            invalidate();
-            setQuestion(event.target.value);
-          }}
-        />
-      </label>
-      <fieldset className="ai-context" disabled={active || busy}>
-        <legend>Include in this request</legend>
-        <div className="ai-choices">
-          <span>{sourceName}</span>
-          {(
-            [
-              ["microphone", "Recent microphone transcript"],
-              ["systemAudio", "Recent system-audio transcript"],
-              ["screenshot", "Fresh authorised screenshot"],
-              ["history", "Previous question and answer text"],
-            ] as const
-          ).map(([key, label]) => (
-            <label className="ai-choice" key={key}>
-              <input
-                type="checkbox"
-                checked={options[key]}
-                disabled={key === "screenshot" && !selected.capabilities.images}
-                onChange={(event) => changeOption(key, event.target.checked)}
-              />
-              {label}
-            </label>
-          ))}
-        </div>
-        <label>
-          Transcript time window
-          <select
-            aria-label="Transcript time window"
-            value={options.recentSeconds}
-            onChange={(event) =>
-              changeOption("recentSeconds", Number(event.target.value))
-            }
-          >
-            <option value={30}>30 seconds</option>
-            <option value={60}>1 minute</option>
-            <option value={180}>3 minutes</option>
-            <option value={300}>5 minutes</option>
-          </select>
-        </label>
-        {!selected.capabilities.images && (
-          <small>
-            Screenshots require explicit image-input support in the selected
-            model’s current metadata.
-          </small>
-        )}
-        <details className="ai-limits">
-          <summary>Context limits</summary>
-          {(
-            [
-              ["transcriptChars", "Transcript characters", 100, 12000],
-              ["totalChars", "Total text characters", 1000, 40000],
-              ["imageBytes", "Maximum image bytes", 50000, 4000000],
-            ] as const
-          ).map(([key, label, min, max]) => (
-            <label key={key}>
-              {label}
-              <input
-                aria-label={label}
-                type="number"
-                min={min}
-                max={max}
-                step={1}
-                value={options[key]}
-                onChange={(event) =>
-                  changeOption(key, Number(event.target.value))
-                }
-              />
-            </label>
-          ))}
-        </details>
-      </fieldset>
-      {personal?.unlocked && (
-        <fieldset disabled={busy || active}>
-          <legend>Knowledge for this request</legend>
-          <p>
-            Only relevant excerpts from checked, enabled documents associated
-            with the active AI mode are retrieved. Review the exact text before
-            Ask.
-          </p>
-          {personal.documents
-            .filter(
-              (d) =>
-                d.enabled &&
-                personal.config.modes
-                  .find((m) => m.id === personal.config.activeModeId)
-                  ?.knowledgeIds.includes(d.id),
-            )
-            .map((doc) => (
-              <label className="ai-choice" key={doc.id}>
-                <input
-                  type="checkbox"
-                  checked={knowledgeIds.includes(doc.id)}
-                  onChange={(e) => {
-                    invalidate();
-                    setKnowledgeIds((old) =>
-                      e.target.checked
-                        ? [...old, doc.id]
-                        : old.filter((id) => id !== doc.id),
-                    );
-                  }}
-                />
-                {doc.name}
-              </label>
-            ))}
-        </fieldset>
-      )}
-      <p className="muted">
-        Whisper stays local. Ask sends your reviewed text and optional image to
-        the selected provider. Raw audio is never included. Nothing is sent
-        automatically.
-      </p>
-      <div className="ai-actions">
-        <button
-          className="secondary"
-          disabled={busy || active}
-          onClick={() => void prepareReview()}
-        >
-          Get Answer · review context
-        </button>
-        <button
-          className="secondary"
-          disabled={busy}
-          onClick={() => {
-            setQuestion("");
-            setOptions({ ...DEFAULT_CONTEXT });
-            setAcknowledged(false);
-            void run(async () =>
-              unwrap(await window.everyhint.assistant("clear")),
-            );
-          }}
-        >
-          Clear conversation
-        </button>
-        {active && (
-          <button
-            className="danger"
-            onClick={() =>
-              void run(async () =>
-                unwrap(await window.everyhint.assistant("cancel")),
-              )
-            }
-          >
-            Cancel request
-          </button>
-        )}
-      </div>
-      {workspace?.unlocked && (
-        <details>
-          <summary>Optional Calendar, People and memory context</summary>
-          <WorkspaceChoices
-            key={workspace.scopeId}
-            state={workspace}
-            value={workspaceSelection}
-            change={(v) => {
-              invalidate();
-              setWorkspaceSelection(v);
-            }}
-          />
-          <button
-            onClick={() =>
-              void run(async () => {
-                await workspaceCommand(workspace, "stage-live-context", {
-                  ...workspaceSelection,
-                  purpose: "live",
-                });
-                invalidate();
-              })
-            }
-          >
-            Review chosen sources for optional Live sharing
-          </button>
-          <button
-            onClick={() =>
-              void run(() => workspaceCommand(workspace, "clear-live-context"))
-            }
-          >
-            Clear staged Live context
-          </button>
-          <p>
-            Live needs its own session permission after staging these exact
-            sources.
-          </p>
-        </details>
-      )}
-      {review && (
-        <div className="context-review" aria-label="Context review">
-          <strong>
-            Frozen request to{" "}
-            {review.provider === "codex" ? "ChatGPT" : "Claude"}
-            {review.model ? ` · ${review.model}` : ""}
-          </strong>
-          <small>
-            {review.modeContext?.mode.name ??
-              ASSIST_PRESETS[review.preset ?? "general"].name}
-            {review.action ? ` · ${ACTION_LABELS[review.action]}` : ""}
-            {review.sourceName ? ` · ${review.sourceName}` : ""}
-          </small>
-          <small>
-            {review.textChars.toLocaleString()} text characters ·{" "}
-            {review.imageBytes.toLocaleString()} image bytes · Expires{" "}
-            {new Date(review.expiresAt).toLocaleTimeString()}
-          </small>
-          {review.notices.map((notice) => (
-            <p className="muted" key={notice}>
-              {notice}
-            </p>
-          ))}
-          {review.knowledge && <KnowledgeSources sources={review.knowledge} />}
-          {review.workspaceContext && (
-            <WorkspaceSources
-              context={review.workspaceContext}
-              remove={(index) =>
-                removeContext(review.requestId, "workspace", index)
-              }
-            />
-          )}
-          {review.meetingContext && (
-            <div className="panel-stack">
-              <strong>
-                Selected meeting text · {review.meetingContext.purpose}
-              </strong>
-              {review.meetingContext.excerpts.map((excerpt) => (
-                <div className="review-item" key={excerpt.ref}>
-                  <small>
-                    {excerpt.kind === "notes" ? "User notes" : excerpt.source} ·{" "}
-                    {excerpt.ref}
-                  </small>
-                  <p>{excerpt.text}</p>
-                </div>
-              ))}
-              <button className="secondary" onClick={openMeetings}>
-                Review meeting notes and drafts
-              </button>
-            </div>
-          )}
-          {review.transcripts.map((excerpt, index) => (
-            <div
-              className="review-item"
-              key={`${review.requestId}-transcript-${index}`}
-            >
-              <small>
-                {excerpt.source === "microphone"
-                  ? "Microphone"
-                  : "System audio · participant unknown"}{" "}
-                · {new Date(excerpt.startMs).toLocaleTimeString()}–
-                {new Date(excerpt.endMs).toLocaleTimeString()}
-              </small>
-              <p>{excerpt.text}</p>
-              <button
-                className="text-button"
-                disabled={busy}
-                onClick={() =>
-                  removeContext(review.requestId, "transcripts", index)
-                }
-              >
-                Remove excerpt {index + 1}
-              </button>
-            </div>
-          ))}
-          {review.history.map((turn, index) => (
-            <div
-              className="review-item"
-              key={`${review.requestId}-history-${index}`}
-            >
-              <small>Previous exchange {index + 1}</small>
-              <p>{turn.question || "Contextual assistance"}</p>
-              <button
-                className="text-button"
-                disabled={busy}
-                onClick={() =>
-                  removeContext(review.requestId, "history", index)
-                }
-              >
-                Remove exchange {index + 1}
-              </button>
-            </div>
-          ))}
-          {review.screenshot && (
-            <button
-              className="text-button"
-              disabled={busy}
               onClick={() => {
-                setOptions((previous) => ({ ...previous, screenshot: false }));
-                removeContext(review.requestId, "screenshot", 0);
+                setQuestion("");
+                invalidate();
+                void run(async () =>
+                  unwrap(await window.everyhint.assistant("clear")),
+                );
               }}
             >
-              Remove screenshot
+              Clear conversation
             </button>
-          )}
-          <details open>
-            <summary>Exact question, transcripts and conversation text</summary>
-            <pre className="review-text">{review.prompt}</pre>
-          </details>
-          {review.screenshot &&
-            (hideImage ? (
-              <p className="muted">
-                Screenshot frozen at{" "}
-                {new Date(review.screenshot.capturedAt).toLocaleTimeString()}.
-                Pause screen capture to inspect this image without creating
-                recursive screenshots.
+            <details>
+              <summary>Conversation privacy</summary>
+              <p>
+                Follow-ups use selected previous text. Select screen and
+                transcript context again for a new request.
               </p>
-            ) : (
-              <figure>
-                <img
-                  src={review.screenshot.dataUrl}
-                  alt="Frozen screenshot selected for this request"
-                />
-                <figcaption>
-                  {review.screenshot.width} × {review.screenshot.height} ·{" "}
-                  {new Date(review.screenshot.capturedAt).toLocaleTimeString()}
-                </figcaption>
-              </figure>
-            ))}
-          <label className="ai-choice">
-            <input
-              type="checkbox"
-              aria-label="Acknowledge remote transfer"
-              checked={acknowledged}
-              onChange={(event) => setAcknowledged(event.target.checked)}
-            />
-            I reviewed this payload and authorise sending it to{" "}
-            {review.provider === "codex" ? "ChatGPT" : "Claude"}.{" "}
-            {review.provider === "claude"
-              ? "Anthropic API charges may apply."
-              : "Subscription usage limits may apply."}
-          </label>
-          <button
-            className="primary"
-            disabled={busy || active || !acknowledged || !selected.ready}
-            onClick={() =>
-              void run(async () => {
-                setAcknowledged(false);
-                unwrap(
-                  await window.everyhint.ask({
-                    reviewId: review.requestId,
-                    acknowledged: true,
-                  }),
-                );
-                setQuestion("");
-                setOptions((previous) => ({
-                  ...previous,
-                  screenshot: false,
-                  microphone: false,
-                  systemAudio: false,
-                }));
-                requestAnimationFrame(() =>
-                  document
-                    .querySelector(".ai-responses")
-                    ?.scrollIntoView({ block: "start" }),
-                );
-              })
-            }
-          >
-            Ask {review.provider === "codex" ? "ChatGPT" : "Claude"}
-          </button>
-        </div>
-      )}
-      {error && (
-        <p className="error-message" role="alert">
-          {error}
-        </p>
+              <p>
+                Conversation memory expires after 15 minutes. Clear cancels the
+                request and removes local conversation memory; it cannot delete
+                provider records or recall shared text.
+              </p>
+            </details>
+          </div>
+        </details>
+      </div>
+      {selected.id === "codex" && !selected.ready && (
+        <button className="text-button chat-connect" onClick={connect}>
+          {selected.auth === "chatgpt"
+            ? "Finish model setup"
+            : "Connect ChatGPT"}
+        </button>
       )}
       <div
         className="ai-responses"
@@ -703,9 +241,7 @@ export function AssistantPanel({
         aria-live="polite"
       >
         {!snapshot.responses.length && (
-          <p className="muted">
-            Answers appear here after an authorised request.
-          </p>
+          <p className="muted">Your next answer will appear here.</p>
         )}
         {snapshot.responses.map((response) => (
           <article className="ai-response" key={response.requestId}>
@@ -836,16 +372,351 @@ export function AssistantPanel({
         ))}
       </div>
       {copied && <p role="status">Response copied.</p>}
-      <small>
-        Follow-ups include only selected previous question/answer text; images
-        and audio excerpts must be selected again. Regenerate reviews the
-        question and earlier exchanges without reattaching an image or
-        transcripts. Removed excerpts stay excluded until Clear conversation.
-        History expires after 15 minutes and keeps at most four completed pairs
-        / 12,000 characters. Clear cancels execution and clears local
-        conversation memory. It does not delete provider records or recall sent
-        data.
-      </small>
+      <label className="ai-question">
+        {latest
+          ? "Question or follow-up (optional)"
+          : "Your question (optional)"}
+        <textarea
+          aria-label="Your question"
+          value={question}
+          rows={2}
+          maxLength={6000}
+          disabled={active || busy}
+          placeholder="Ask EveryHint…"
+          onChange={(event) => {
+            invalidate();
+            setQuestion(event.target.value);
+          }}
+        />
+      </label>
+      <details
+        className="attach-context"
+        open={attachOpen}
+        onToggle={(event) => setAttachOpen(event.currentTarget.open)}
+      >
+        <summary>Attach Context</summary>
+        <fieldset className="ai-context" disabled={active || busy}>
+          <legend>Available sources</legend>
+          <div className="ai-choices">
+            {capture.source && <small>{sourceName}</small>}
+            {(
+              [
+                ["microphone", "Recent microphone transcript"],
+                ["systemAudio", "Recent system-audio transcript"],
+                ["screenshot", "Fresh authorised screenshot"],
+                ["history", "Previous question and answer text"],
+              ] as const
+            )
+              .filter(([key]) =>
+                key === "screenshot"
+                  ? capture.state === "ACTIVE" &&
+                    capture.consent?.screen &&
+                    selected.capabilities.images
+                  : key === "history"
+                    ? snapshot.responses.some((r) => r.status === "completed")
+                    : events.some(
+                        (event) =>
+                          event.state === "final" &&
+                          event.sessionId === capture.sessionId &&
+                          event.source === key,
+                      ),
+              )
+              .map(([key, label]) => (
+                <label className="ai-choice" key={key}>
+                  <input
+                    type="checkbox"
+                    checked={options[key]}
+                    disabled={
+                      key === "screenshot" && !selected.capabilities.images
+                    }
+                    onChange={(event) =>
+                      changeOption(key, event.target.checked)
+                    }
+                  />
+                  {label}
+                </label>
+              ))}
+          </div>
+        </fieldset>
+        {personal?.unlocked && (
+          <fieldset disabled={busy || active}>
+            <legend>Knowledge for this request</legend>
+            <p>
+              Only relevant excerpts from checked, enabled documents associated
+              with the active AI mode are retrieved. Review the exact text
+              before Ask.
+            </p>
+            {personal.documents
+              .filter(
+                (d) =>
+                  d.enabled &&
+                  personal.config.modes
+                    .find((m) => m.id === personal.config.activeModeId)
+                    ?.knowledgeIds.includes(d.id),
+              )
+              .map((doc) => (
+                <label className="ai-choice" key={doc.id}>
+                  <input
+                    type="checkbox"
+                    checked={knowledgeIds.includes(doc.id)}
+                    onChange={(e) => {
+                      invalidate();
+                      setKnowledgeIds((old) =>
+                        e.target.checked
+                          ? [...old, doc.id]
+                          : old.filter((id) => id !== doc.id),
+                      );
+                    }}
+                  />
+                  {doc.name}
+                </label>
+              ))}
+          </fieldset>
+        )}
+      </details>
+      <div className="ai-actions">
+        <button
+          className="secondary"
+          disabled={busy || active}
+          onClick={() => void prepareReview()}
+        >
+          Review & send
+        </button>
+        {active && (
+          <button
+            className="danger"
+            onClick={() =>
+              void run(async () =>
+                unwrap(await window.everyhint.assistant("cancel")),
+              )
+            }
+          >
+            Cancel request
+          </button>
+        )}
+      </div>
+      {attachOpen && workspace?.unlocked && (
+        <details>
+          <summary>Optional Calendar, People and memory context</summary>
+          <WorkspaceChoices
+            key={workspace.scopeId}
+            state={workspace}
+            value={workspaceSelection}
+            change={(v) => {
+              invalidate();
+              setWorkspaceSelection(v);
+            }}
+          />
+          <button
+            onClick={() =>
+              void run(async () => {
+                await workspaceCommand(workspace, "stage-live-context", {
+                  ...workspaceSelection,
+                  purpose: "live",
+                });
+                invalidate();
+              })
+            }
+          >
+            Review chosen sources for optional Live sharing
+          </button>
+          <button
+            onClick={() =>
+              void run(() => workspaceCommand(workspace, "clear-live-context"))
+            }
+          >
+            Clear staged Live context
+          </button>
+          <p>
+            Live needs its own session permission after staging these exact
+            sources.
+          </p>
+        </details>
+      )}
+      {review && (
+        <div
+          className="context-review review-sheet"
+          aria-label="Context review"
+          role="region"
+          tabIndex={-1}
+          ref={reviewPanel}
+        >
+          <strong>
+            Send to {review.provider === "codex" ? "ChatGPT" : "Claude"}
+            {review.model ? ` · ${review.model}` : ""}
+          </strong>
+          <small>
+            {review.modeContext?.mode.name ??
+              ASSIST_PRESETS[review.preset ?? "general"].name}
+            {review.action ? ` · ${ACTION_LABELS[review.action]}` : ""}
+            {review.sourceName ? ` · ${review.sourceName}` : ""}
+          </small>
+          <p className="review-question">
+            {review.question || "Help with selected context"}
+          </p>
+          <small>
+            Review expires {new Date(review.expiresAt).toLocaleTimeString()}
+          </small>
+          {review.notices.map((notice) => (
+            <p className="muted" key={notice}>
+              {notice}
+            </p>
+          ))}
+          {review.knowledge && <KnowledgeSources sources={review.knowledge} />}
+          {review.workspaceContext && (
+            <WorkspaceSources
+              context={review.workspaceContext}
+              remove={(index) =>
+                removeContext(review.requestId, "workspace", index)
+              }
+            />
+          )}
+          {review.meetingContext && (
+            <div className="panel-stack">
+              <strong>
+                Selected meeting text · {review.meetingContext.purpose}
+              </strong>
+              {review.meetingContext.excerpts.map((excerpt) => (
+                <div className="review-item" key={excerpt.ref}>
+                  <small>
+                    {excerpt.kind === "notes" ? "User notes" : excerpt.source} ·{" "}
+                    {excerpt.ref}
+                  </small>
+                  <p>{excerpt.text}</p>
+                </div>
+              ))}
+              <button className="secondary" onClick={openMeetings}>
+                Review meeting notes and drafts
+              </button>
+            </div>
+          )}
+          {review.transcripts.map((excerpt, index) => (
+            <div
+              className="review-item"
+              key={`${review.requestId}-transcript-${index}`}
+            >
+              <small>
+                {excerpt.source === "microphone"
+                  ? "Microphone"
+                  : "System audio · participant unknown"}{" "}
+                · {new Date(excerpt.startMs).toLocaleTimeString()}–
+                {new Date(excerpt.endMs).toLocaleTimeString()}
+              </small>
+              <p>{excerpt.text}</p>
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() =>
+                  removeContext(review.requestId, "transcripts", index)
+                }
+              >
+                Remove excerpt {index + 1}
+              </button>
+            </div>
+          ))}
+          {review.history.map((turn, index) => (
+            <div
+              className="review-item"
+              key={`${review.requestId}-history-${index}`}
+            >
+              <small>Previous exchange {index + 1}</small>
+              <p>{turn.question || "Contextual assistance"}</p>
+              <button
+                className="text-button"
+                disabled={busy}
+                onClick={() =>
+                  removeContext(review.requestId, "history", index)
+                }
+              >
+                Remove exchange {index + 1}
+              </button>
+            </div>
+          ))}
+          {review.screenshot && (
+            <button
+              className="text-button"
+              disabled={busy}
+              onClick={() => {
+                setOptions((previous) => ({ ...previous, screenshot: false }));
+                removeContext(review.requestId, "screenshot", 0);
+              }}
+            >
+              Remove screenshot
+            </button>
+          )}
+          <details>
+            <summary>Review message and selected context</summary>
+            <pre className="review-text">{review.prompt}</pre>
+          </details>
+          {review.screenshot &&
+            (hideImage ? (
+              <p className="muted">
+                Screenshot frozen at{" "}
+                {new Date(review.screenshot.capturedAt).toLocaleTimeString()}.
+                Pause screen capture to inspect this image without creating
+                recursive screenshots.
+              </p>
+            ) : (
+              <figure>
+                <img
+                  src={review.screenshot.dataUrl}
+                  alt="Frozen screenshot selected for this request"
+                />
+                <figcaption>
+                  {review.screenshot.width} × {review.screenshot.height} ·{" "}
+                  {new Date(review.screenshot.capturedAt).toLocaleTimeString()}
+                </figcaption>
+              </figure>
+            ))}
+          <label className="ai-choice">
+            <input
+              type="checkbox"
+              aria-label="Acknowledge remote transfer"
+              checked={acknowledged}
+              onChange={(event) => setAcknowledged(event.target.checked)}
+            />
+            I reviewed this payload and authorise sending it to{" "}
+            {review.provider === "codex" ? "ChatGPT" : "Claude"}.{" "}
+            {review.provider === "claude"
+              ? "Anthropic API charges may apply."
+              : "Subscription usage limits may apply."}
+          </label>
+          <button
+            className="primary"
+            disabled={busy || active || !acknowledged || !selected.ready}
+            onClick={() =>
+              void run(async () => {
+                setAcknowledged(false);
+                unwrap(
+                  await window.everyhint.ask({
+                    reviewId: review.requestId,
+                    acknowledged: true,
+                  }),
+                );
+                setQuestion("");
+                setOptions((previous) => ({
+                  ...previous,
+                  screenshot: false,
+                  microphone: false,
+                  systemAudio: false,
+                }));
+                requestAnimationFrame(() =>
+                  document
+                    .querySelector(".ai-responses")
+                    ?.scrollIntoView({ block: "start" }),
+                );
+              })
+            }
+          >
+            Ask {review.provider === "codex" ? "ChatGPT" : "Claude"}
+          </button>
+        </div>
+      )}
+      {error && (
+        <p className="error-message" role="alert">
+          {error}
+        </p>
+      )}
     </section>
   );
 }

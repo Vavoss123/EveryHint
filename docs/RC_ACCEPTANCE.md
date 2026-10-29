@@ -1,5 +1,9 @@
 # Windows release-candidate verification — 2026-10-29
 
+## Source UX milestone notice — 2026-10-29
+
+The source now includes the desktop UX restructuring after `e00813a`. [UX acceptance](UX_ACCEPTANCE.md) and [its receipt](evidence/ux-verification.json) describe the new source; the packaged 0.5.0 binary and all results below remain the historical RC artifact. No installer was rebuilt or promoted. **NO-GO remains** for distribution: physical receivers/devices/DPI/accessibility, genuine authorisations, clean package/upgrade tests and signing/update trust are not replaced by source automation.
+
 **NO-GO for 0.5.1 candidate promotion or distribution.** Automated checks pass within the scope below, but physical media, receiving-device privacy, clean installation, genuine packaged account/provider workflows and distribution trust remain unaccepted. This is verification of **0.5.0 at runtime baseline `ead3ec9`**, not evidence that a 0.5.1 release exists. No reproducible product defect was established, so no product code/version change or replacement installer is justified by this run. Verification scripts and evidence are the only changes.
 
 This assessment supersedes the earlier P11 release-status summary for current verification. It retains all P1–P10 limitations. Enterprise is permanently removed; mobile remains unstarted. Nothing was published. Update policy remains disabled with no feed, publisher or key, as previously requested. Existing genuine AI grants are consumed; this run made **zero genuine AI requests**.

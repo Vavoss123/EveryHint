@@ -2,7 +2,7 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 implements explicit, reviewed ChatGPT plan requests through official Sign in with ChatGPT and the Responses API. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service. The current UI foundation uses the verified EverySession design system, with compact, expanded and dashboard layouts.
+EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 implements explicit, reviewed ChatGPT plan requests through official Sign in with ChatGPT and the Responses API. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service. The current UI foundation uses the verified EverySession design system, with an ordinary dashboard and a separate floating assistant.
 
 ## Install and run
 
@@ -25,14 +25,15 @@ Dependency installation and Electron's first native binary download need interne
 
 ## Interface and product roadmap
 
-The header switches between the **dashboard**, **expanded assistant** and **compact overlay**. All views share the existing capture, transcription and account controllers. Home reports actual current state; Assistant and Settings expose working controls. Meetings now provides explicitly saved local history, notes, search and reviewed meeting AI. Modes and Knowledge now provide functional P9 controls; Calendar and People now expose functional P10 workflows.
+The **dashboard** is an ordinary Windows window. **Start EveryHint** opens fresh source/participant consent; idle shows no Stop. The separate floating assistant puts answers and input first. New installations have a brief setup wizard; upgrades preserve existing configuration and never restore recording permission.
 
-- Use **Get Answer** or **Ctrl+Enter while EveryHint is focused** to open/focus the question composer. Neither submits a request. Existing global show/hide, Pause and Stop shortcuts remain unchanged.
-- Global **Ctrl+Alt+A** opens Assist and prepares a review; **Ctrl+Alt+Shift+C** clears context and cancels generation. Configure these two chords in Settings. Get Answer prepares a preview; a fresh acknowledgement and Ask are required to send selected information to OpenAI.
-- Collapse Live transcript or Conversation & context independently. Navigation and appearance changes retain the draft and frozen review. Active remote requests keep a visible cancellation control even on another page. Capture Pause/Stop stay outside scrolling panels.
-- In **EveryHint settings**, choose **Light**, **Dark** or **System**, and set native window opacity between 80% and 100%. Light follows the actual EverySession palette; dark mode is a documented desktop extension. Lower opacity can reduce contrast against background apps.
-- Typography is bundled locally: Poppins headings and Inter body, with SIL OFL notices included in production assets. There are no remote font requests. Existing preference files migrate without changing capture consent or account credentials.
-- After rebuilding, quit an already-running EveryHint instance before starting the new build. Account sign-in is remembered in OS storage; capture/sharing authorisation is not restored automatically.
+- Minimise keeps the taskbar entry. **Window menu → Hide to Tray** hides the dashboard; tray **Show dashboard** restores it. **Quit EveryHint** stops work and exits. Active Close offers background, Stop and quit, or Cancel.
+- **Ctrl+Alt+Space** shows/hides the floating assistant by default; **Ctrl+Alt+A** opens Ask, **Ctrl+Alt+P** pauses/resumes and **Ctrl+Alt+Shift+X** stops. Configure and see actual registration in **Settings → Shortcuts**. Hiding never grants or stops capture by itself.
+- **Assistant** provides answers, a message input, mode selection, Attach Context and a secondary conversation menu. Review selected context and freshly approve Ask before remote transmission. Session options retain local transcription, Auto-Hint, time-limited Live authorisation and meeting controls.
+- Main navigation is Home, Assistant, Meetings, Knowledge, Calendar, People, Modes and one Settings entry. Settings has General, Audio & Screen, Shortcuts, Privacy & Data, Account & AI and Advanced sections.
+- New installs default to dark. Light/System and existing preferences remain. Pin/opacity apply only to the assistant. Poppins/Inter are bundled locally; no remote fonts are loaded.
+- History/search comes first. Existing encrypted history can reopen using its existing Windows-protected key; saving/automatic saving remain opt-in under Privacy & Data.
+- After rebuilding, quit an existing EveryHint instance before starting the new build. [UX report, exact test counts, screenshots and outstanding manual/release checks](docs/UX_ACCEPTANCE.md). Version remains 0.5.0; no UX installer was built or published.
 
 Read the [product specification](docs/PRODUCT_SPEC.md), [103-feature coverage matrix](docs/FEATURE_MATRIX.md), [verified design sources](docs/DESIGN_SYSTEM.md) and [P1-P13 roadmap](docs/BACKLOG.md). P6 adds manual screen-aware Assist; P7 adds local Auto-Hint and separately authorised Live Assist. P8 provides encrypted meeting history; P9 provides modes, knowledge, languages and templates. P10 adds Calendar, People, memory and preparation; enterprise/mobile remain deferred. Human Windows visual/hardware acceptance remains open.
 

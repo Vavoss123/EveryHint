@@ -15,12 +15,57 @@ export function ShortcutSettings({
   const [clear, setClear] = useState(
     settings.clearShortcut ?? DEFAULT_HOTKEYS.clear,
   );
+  const [toggle, setToggle] = useState(
+    settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
+  );
+  const [pause, setPause] = useState(
+    settings.pauseShortcut ?? DEFAULT_HOTKEYS.pause,
+  );
+  const [stop, setStop] = useState(
+    settings.stopShortcut ?? DEFAULT_HOTKEYS.stop,
+  );
   useEffect(() => {
     setAssist(settings.assistShortcut ?? DEFAULT_HOTKEYS.assist);
     setClear(settings.clearShortcut ?? DEFAULT_HOTKEYS.clear);
-  }, [settings.assistShortcut, settings.clearShortcut]);
+    setToggle(settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle);
+    setPause(settings.pauseShortcut ?? DEFAULT_HOTKEYS.pause);
+    setStop(settings.stopShortcut ?? DEFAULT_HOTKEYS.stop);
+  }, [
+    settings.assistShortcut,
+    settings.clearShortcut,
+    settings.toggleShortcut,
+    settings.pauseShortcut,
+    settings.stopShortcut,
+  ]);
   return (
     <div className="panel-stack">
+      <label>
+        Show / hide overlay
+        <input
+          aria-label="Show / hide overlay shortcut"
+          value={toggle}
+          maxLength={80}
+          onChange={(e) => setToggle(e.target.value)}
+        />
+      </label>
+      <label>
+        Pause / resume
+        <input
+          aria-label="Pause / resume shortcut"
+          value={pause}
+          maxLength={80}
+          onChange={(e) => setPause(e.target.value)}
+        />
+      </label>
+      <label>
+        Stop session
+        <input
+          aria-label="Stop session shortcut"
+          value={stop}
+          maxLength={80}
+          onChange={(e) => setStop(e.target.value)}
+        />
+      </label>
       <label>
         Assist shortcut
         <input
@@ -41,7 +86,15 @@ export function ShortcutSettings({
       </label>
       <button
         className="secondary"
-        onClick={() => save({ assistShortcut: assist, clearShortcut: clear })}
+        onClick={() =>
+          save({
+            assistShortcut: assist,
+            clearShortcut: clear,
+            toggleShortcut: toggle,
+            pauseShortcut: pause,
+            stopShortcut: stop,
+          })
+        }
       >
         Apply shortcuts
       </button>

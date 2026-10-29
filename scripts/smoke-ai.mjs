@@ -1,3 +1,9 @@
+import {
+  dashboardPage,
+  finishSetup,
+  navigate as uxNavigate,
+  settingsSection,
+} from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
 import {
   mkdtemp,
@@ -35,6 +41,12 @@ const check = (value, message) => {
   assert.ok(value, message);
   assertions++;
 };
+async function providerControls(page) {
+  await settingsSection(page, "Advanced");
+  await page
+    .locator(".assistant-connection")
+    .evaluate((el) => (el.open = true));
+}
 try {
   desktop = await _electron.launch({
     executablePath: electronPath,
@@ -43,7 +55,8 @@ try {
     env,
     timeout: 30000,
   });
-  const page = await desktop.firstWindow();
+  const page = await dashboardPage(desktop);
+  await finishSetup(page);
   page.on("pageerror", (error) => errors.push(error.message));
   await page.waitForFunction(() => Boolean(window.everyhint));
   const get = async () => {
@@ -65,6 +78,12 @@ try {
   );
   const startupMs = performance.now() - startedAt;
   const idleRssBytes = await desktop.evaluate(() => process.memoryUsage().rss);
+  await settingsSection(page, "Account & AI");
+  await page.waitForFunction(() =>
+    Array.from(document.querySelectorAll(".account-panel button")).some(
+      (b) => b.textContent === "Connect ChatGPT" && !b.disabled,
+    ),
+  );
   const account = await page.evaluate(() =>
     window.everyhint.getAccountConnection(),
   );
@@ -77,14 +96,14 @@ try {
   );
   check(
     await page
-      .getByRole("button", { name: "Continue with ChatGPT", exact: true })
+      .getByRole("button", { name: "Connect ChatGPT", exact: true })
       .isEnabled(),
     "official ChatGPT sign-in can be started from the app",
   );
   check(
-    await page
-      .getByRole("button", { name: "Sign out of ChatGPT", exact: true })
-      .isDisabled(),
+    (await page
+      .getByRole("button", { name: "Sign out", exact: true })
+      .count()) === 0,
     "sign-out is unavailable without an app-owned connection",
   );
   check(
@@ -98,6 +117,7 @@ try {
       false,
     "ChatGPT inference requires an app-owned plan grant and selected model",
   );
+  await uxNavigate(page, "Assistant");
   check(
     (
       await page
@@ -108,16 +128,11 @@ try {
     "five P9 modes and legacy Conversation share one selector",
   );
   check(
-    (
-      await page
-        .getByLabel("Transcript time window")
-        .locator("option")
-        .evaluateAll((options) => options.map((option) => option.value))
-    ).join(",") === "30,60,180,300",
-    "transcript windows expose 30 seconds, one, three and five minutes",
+    await page.getByText("Attach Context", { exact: true }).isVisible(),
+    "everyday context choices use a compact sheet",
   );
   await page
-    .getByRole("button", { name: "Get Answer · review context", exact: true })
+    .getByRole("button", { name: "Review & send", exact: true })
     .click();
   await page
     .getByRole("alert")
@@ -127,19 +142,22 @@ try {
     (await get()).review === null && (await get()).responses.length === 0,
     "blank Assist never invents context or triggers inference",
   );
+  await settingsSection(page, "Account & AI");
+  await page.getByText("Choose account or model", { exact: true }).click();
   check(
     await page.getByLabel("ChatGPT model", { exact: true }).isDisabled(),
-    "model selection waits for an explicit authorised catalog request",
+    "model selection waits for an authorised catalog",
   );
   check(
     await page
-      .getByRole("button", { name: "Refresh ChatGPT models", exact: true })
+      .getByRole("button", { name: "Refresh available models", exact: true })
       .isDisabled(),
-    "model discovery cannot start without account sign-in",
+    "model discovery requires plan permission",
   );
+  await providerControls(page);
   check(
     await page.getByLabel("AI provider").isEnabled(),
-    "provider selection works",
+    "manual provider selection stays in Advanced",
   );
   const rejected = await page.evaluate(async () => ({
     select: await window.everyhint.selectProvider("automatic"),
@@ -192,21 +210,24 @@ try {
     "real IPC rejects a second renderer outside the authorised window",
   );
   await page.getByLabel("AI provider").selectOption("claude");
+  await page
+    .getByText("Enable separately billed Claude API requests", { exact: false })
+    .waitFor();
   check(
     await page
-      .getByRole("button", {
-        name: "Sign in with Claude — unavailable",
-        exact: true,
+      .getByText("Enable separately billed Claude API requests", {
+        exact: false,
       })
-      .isDisabled(),
-    "unsupported Claude subscription login is labelled and disabled",
+      .isVisible(),
+    "Claude remains explicitly gated by separate API billing",
   );
+  await uxNavigate(page, "Assistant");
   await page
     .getByLabel("Your question")
     .fill("Explain this synthetic question.");
   const reviewStart = performance.now();
   await page
-    .getByRole("button", { name: "Get Answer · review context", exact: true })
+    .getByRole("button", { name: "Review & send", exact: true })
     .click();
   await page.getByLabel("Context review").waitFor();
   const reviewMs = performance.now() - reviewStart;
@@ -244,18 +265,20 @@ try {
     (await get()).review === null,
     "editing the question invalidates the review",
   );
+  await providerControls(page);
   await page
     .getByText("Enable separately billed Claude API requests", { exact: false })
     .click();
   await wait((value) => value.claudeApiBilling);
   const enabled = await get();
+  await uxNavigate(page, "Assistant");
   check(
     enabled.providers.find((provider) => provider.id === "claude").auth ===
       "missing",
     "opt-in does not invent an API credential",
   );
   await page
-    .getByRole("button", { name: "Get Answer · review context", exact: true })
+    .getByRole("button", { name: "Review & send", exact: true })
     .click();
   const id = (await get()).review.requestId;
   const denied = await page.evaluate(
@@ -282,7 +305,9 @@ try {
     "regenerate prepares a new review and requires fresh approval",
   );
   const previousSession = (await get()).sessionId;
+  await providerControls(page);
   await page.getByLabel("AI provider").selectOption("codex");
+  await uxNavigate(page, "Assistant");
   const switched = await get();
   check(
     switched.sessionId !== previousSession &&
@@ -311,10 +336,13 @@ try {
   ];
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:assistant",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:assistant", value),
     fixture,
   );
   await page.getByText("const answer = 42;", { exact: true }).waitFor();
@@ -368,19 +396,21 @@ try {
       .isEnabled(),
     "cancel is available while generating",
   );
-  await page.getByRole("button", { name: "Compact mode", exact: true }).click();
-  await page.locator(".assistant-compact").waitFor({ state: "visible" });
+  await page.evaluate(() => window.everyhint.window("overlay"));
+  const floating = desktop.windows().find((p) => p.url().includes("overlay=1"));
   check(
-    !(await page.locator(".capture-status").innerText()).includes("LOCAL ONLY"),
-    "capture status does not claim the entire app is local-only during an AI request",
+    await floating
+      .getByLabel("EveryHint assistant", { exact: true })
+      .isVisible(),
+    "separate floating assistant stays available during generation",
   );
   check(
-    await page.locator(".assistant-compact").isVisible(),
-    "assistant status and cancel remain available in compact mode",
+    await page
+      .getByRole("button", { name: "Cancel request", exact: true })
+      .isVisible(),
+    "request cancellation remains accessible",
   );
-  await page
-    .getByRole("button", { name: "Expand EveryHint", exact: true })
-    .click();
+  await page.getByLabel("Conversation menu", { exact: true }).click();
   await page
     .getByRole("button", { name: "Clear conversation", exact: true })
     .click();
@@ -390,6 +420,7 @@ try {
     "clear resets actual local history",
   );
   // Account UI states are fixtures only: no browser/OAuth operation is launched.
+  await settingsSection(page, "Account & AI");
   const actualAccount = (
     await page.evaluate(() => window.everyhint.getAccountConnection())
   ).value;
@@ -401,10 +432,13 @@ try {
   };
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:account",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:account", value),
     accountFixture,
   );
   check(
@@ -415,7 +449,7 @@ try {
   );
   check(
     await page
-      .getByRole("button", { name: "Continue with ChatGPT", exact: true })
+      .getByRole("button", { name: "Connect ChatGPT", exact: true })
       .isDisabled(),
     "pending sign-in prevents repeated clicks",
   );
@@ -424,10 +458,13 @@ try {
     .click();
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:account",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:account", value),
     {
       ...accountFixture,
       revision: accountFixture.revision + 1,
@@ -446,45 +483,47 @@ try {
   );
   await page.waitForFunction(() =>
     Array.from(document.querySelectorAll("button")).some(
-      (button) =>
-        button.textContent.trim() === "Sign out of ChatGPT" && !button.disabled,
+      (button) => button.textContent.trim() === "Sign out" && !button.disabled,
     ),
   );
   check(
     (await page
-      .getByRole("button", { name: "Continue with ChatGPT", exact: true })
+      .getByRole("button", { name: "Connect ChatGPT", exact: true })
       .isEnabled()) &&
       (await page
-        .getByRole("button", { name: "Sign out of ChatGPT", exact: true })
+        .getByRole("button", { name: "Sign out", exact: true })
         .isEnabled()),
     "signed-in controls expose account switching and sign-out",
   );
   check(
     await page
-      .getByRole("button", {
-        name: "Grant ChatGPT plan permission",
-        exact: true,
-      })
+      .getByRole("button", { name: "Connect ChatGPT", exact: true })
       .isEnabled(),
-    "identity-only sign-in exposes explicit plan consent",
+    "identity-only connection still requires explicit plan permission",
   );
+  await page.getByText("Choose account or model", { exact: true }).click();
   check(
     await page.getByLabel("ChatGPT registration", { exact: true }).isEnabled(),
-    "saved registration picker is available",
+    "saved account picker remains available",
   );
   await desktop.evaluate(
     ({ BrowserWindow }, value) =>
-      BrowserWindow.getAllWindows()[0].webContents.send(
-        "everyhint:account",
-        value,
-      ),
+      BrowserWindow.getAllWindows()
+        .find(
+          (w) =>
+            w.webContents.getURL().includes("index.html") &&
+            !w.webContents.getURL().includes("overlay=1"),
+        )
+        .webContents.send("everyhint:account", value),
     { ...actualAccount, revision: accountFixture.revision + 2 },
   );
+  await uxNavigate(page, "Assistant");
   check(
     (await page.getByLabel("Your question").inputValue()) === "",
     "clear also removes the question draft",
   );
   await mkdir("artifacts", { recursive: true });
+  await settingsSection(page, "Account & AI");
   await page
     .getByLabel("ChatGPT account connection", { exact: true })
     .scrollIntoViewIfNeeded();

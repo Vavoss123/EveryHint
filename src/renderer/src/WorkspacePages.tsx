@@ -148,11 +148,7 @@ export function WorkspaceGate({
       aria-label="Locked contextual workspace"
     >
       <h2>Unlock local context</h2>
-      <p>
-        Calendar cache, People, memory and chosen saved briefs use encrypted
-        storage for this profile. Unlocking never starts capture, joins a
-        meeting or sends anything to AI.
-      </p>
+      <p>Open your encrypted local calendar, contacts and saved context.</p>
       <button
         className="primary"
         disabled={state.busy}
@@ -533,22 +529,22 @@ export function CalendarPage({
       aria-label="Calendar dashboard"
     >
       <h1>Calendar</h1>
-      <p>
-        Read-only calendar events, local reminders and reviewed meeting
-        preparation. Nothing joins, records or sends AI context automatically.
-      </p>
+      <p>Your upcoming meetings and preparation.</p>
       <WorkspaceGate state={state}>
         {state && (
           <>
-            <p role="status">{state.status}</p>
-            <p>
-              Google: {state.google.calendar.email ?? "Not connected"} · Last
-              complete refresh:{" "}
-              {state.lastSyncAt
-                ? new Date(state.lastSyncAt).toLocaleString()
-                : "Never"}{" "}
-              · {state.lastSyncRequests} API request(s) in the last refresh.
-            </p>
+            <details>
+              <summary>Connection details</summary>
+              <p role="status">{state.status}</p>
+              <p>
+                Google: {state.google.calendar.email ?? "Not connected"} · Last
+                complete refresh:{" "}
+                {state.lastSyncAt
+                  ? new Date(state.lastSyncAt).toLocaleString()
+                  : "Never"}{" "}
+                · {state.lastSyncRequests} API request(s) in the last refresh.
+              </p>
+            </details>
             <div className="button-row">
               <button
                 disabled={
@@ -851,12 +847,7 @@ export function PeoplePage({
       aria-label="People dashboard"
     >
       <h1>People</h1>
-      <p>
-        Local contacts, your notes and explicitly associated saved meetings.
-        Google snapshots and user-authored facts have separate provenance. No
-        identity is inferred from voice; external professional research is
-        deferred.
-      </p>
+      <p>People, conversation notes and shared context.</p>
       <WorkspaceGate state={state}>
         {state && (
           <>

@@ -1,5 +1,11 @@
 # EveryHint product specification
 
+## Current desktop UX contract — 2026-10-29
+
+The UX milestone on baseline `e00813a` restructures P1–P10 without replacing their engines or security boundaries. A normal dashboard and a separate, initially hidden assistant replace the shared window. Dashboard pinning is disabled; minimise/restore/tray/quit and explicit active-close choices are available. Session controls derive from capture state; visibility never grants or revokes capture/Live permission by itself.
+
+Home has one Start action, real connection/source status, recent meetings and direct library/calendar/mode access. Chat uses answers, a composer, a small mode selector and optional context review; remote acknowledgement remains mandatory. Setup is only for new installations and saves preferences, never consent. Existing history can reopen with its existing Windows-protected key without enabling saving. Six Settings sections and two-column modes preserve advanced controls, custom records and associations. New installs default to dark; existing light/system preferences remain. [UX acceptance, changed files, exact tests and outstanding manual checks](UX_ACCEPTANCE.md) govern this source milestone. Version remains **0.5.0**; no replacement installer or publication. Historical contracts below retain their functional/security requirements; superseded single-window/layout descriptions are historical.
+
 Version: **0.5.0 / P11 Windows optimisation, privacy and private desktop release preparation, 2026-10-29**. Baseline: `d9d1ca8`. [P11 acceptance, measurements and release checklist](P11_ACCEPTANCE.md) controls current status. Enterprise is permanently removed; mobile is unstarted. Historical P1–P10 evidence/manual gaps below remain applicable. Genuine Google and receiving-device/physical-hardware testing remain pending at the user's request.
 
 ## P11 desktop contract

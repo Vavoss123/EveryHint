@@ -1,3 +1,4 @@
+import { dashboardPage, finishSetup } from "./desktop-harness.mjs";
 // Real Electron/preload/worker/Windows key vault; Google HTTP, browser and
 // notifications are explicit fixtures. No Google account or remote AI is used.
 import assert from "node:assert/strict";
@@ -74,7 +75,8 @@ async function start() {
     env,
     timeout: 30000,
   });
-  page = await app.firstWindow();
+  page = await dashboardPage(app);
+  await finishSetup(page);
   page.on("pageerror", (e) => errors.push(e.message));
   await page.waitForFunction(() => window.everyhint?.workspace);
   await app.evaluate(async ({ shell, dialog, Notification }) => {
@@ -578,6 +580,7 @@ try {
     return (
       r.ok &&
       r.value.unlocked &&
+      !r.value.busy &&
       r.value.peopleCount === 1 &&
       r.value.memoryCount > 0 &&
       r.value.eventCount === 1
@@ -589,7 +592,7 @@ try {
       s.peopleCount === 1 &&
       s.memoryCount > 0 &&
       s.eventCount === 1,
-    "chosen encrypted cache and OS-protected Google state restore after restart",
+    `chosen encrypted cache and OS-protected Google state restore after restart: ${JSON.stringify({ unlocked: s.unlocked, people: s.peopleCount, memory: s.memoryCount, events: s.eventCount, error: s.error, status: s.status })}`,
   );
   check(s.scopeId !== beforeRestart, "restart issues a new workspace scope");
   check(

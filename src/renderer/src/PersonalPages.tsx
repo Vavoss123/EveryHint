@@ -90,10 +90,7 @@ export function PersonalGate({
   return (
     <section className="card panel-stack">
       <h2>Unlock personal library</h2>
-      <p>
-        Modes, templates and extracted documents use local encrypted storage for
-        this profile. Nothing is uploaded by unlocking.
-      </p>
+      <p>Open your encrypted modes, templates and reference documents.</p>
       <button
         className="primary"
         onClick={() => {
@@ -113,316 +110,402 @@ export function ModesPage({ openAssistant }: { openAssistant: () => void }) {
     [editing, setEditing] = useState<AIMode | null>(null),
     [error, setError] = useState("");
   useEffect(() => {
-    setEditing(null);
+    setEditing(
+      state?.unlocked
+        ? structuredClone(
+            state.config.modes.find(
+              (mode) => mode.id === state.config.activeModeId,
+            ) ?? state.config.modes[0]!,
+          )
+        : null,
+    );
     setError("");
-  }, [state?.scopeId]);
+  }, [state?.scopeId, state?.unlocked]);
   async function change(value: ModeChange) {
     if (!state) return;
     try {
       await personalCommand(state, value);
       setError("");
-      setEditing(null);
+      if (value.type === "delete") setEditing(null);
     } catch (e) {
       setError((e as Error).message);
     }
   }
+  function create(template = "general") {
+    const source =
+      builtInModes().find((m) => m.id === template) ?? builtInModes()[0]!;
+    setEditing({
+      ...structuredClone(source),
+      id: crypto.randomUUID(),
+      name:
+        template === "new"
+          ? "New mode"
+          : template === "lecture"
+            ? "Lecture"
+            : source.name + " copy",
+      instructions:
+        template === "lecture"
+          ? "Explain concepts from the selected lecture. Organise key ideas, definitions and study questions. Identify uncertainty and never invent missing material."
+          : source.instructions,
+      category: "Custom",
+      builtIn: false,
+      createdAt: Date.now(),
+      updatedAt: Date.now(),
+    });
+  }
   return (
     <section className="personal-page panel-stack" aria-label="AI Modes">
-      <h1>AI modes</h1>
-      <p>
-        Modes guide responses within existing capture, sharing and provider
-        permissions. Editing stays local. Test a saved mode through the normal
-        review and Ask controls.
-      </p>
+      <h1>Modes</h1>
       <PersonalGate state={state}>
-        <button
-          className="primary"
-          onClick={() =>
-            setEditing({
-              ...builtInModes()[0]!,
-              id: crypto.randomUUID(),
-              name: "",
-              category: "Custom",
-              builtIn: false,
-              createdAt: Date.now(),
-              updatedAt: Date.now(),
-            })
-          }
-        >
-          Create mode
-        </button>
-        {state?.config.modes.map((mode) => (
-          <article className="card panel-stack" key={mode.id}>
-            <h2>
-              <Icon name={mode.icon} /> {mode.name}{" "}
-              {mode.builtIn ? "· Built-in" : ""}
-            </h2>
-            <p>{mode.description}</p>
-            <div className="button-row">
+        <div className="modes-layout">
+          <aside className="mode-list" aria-label="Your modes">
+            <button className="primary" onClick={() => create("new")}>
+              New Mode
+            </button>
+            {state?.config.modes.map((mode) => (
               <button
-                onClick={() => void change({ type: "select", id: mode.id })}
+                className="mode-list-item"
+                aria-current={editing?.id === mode.id ? "true" : undefined}
+                key={mode.id}
+                onClick={() => setEditing(structuredClone(mode))}
               >
-                Select
+                <Icon name={mode.icon} />
+                <span>{mode.name}</span>
+                {state.config.activeModeId === mode.id && <small>Active</small>}
               </button>
-              <button onClick={() => setEditing(structuredClone(mode))}>
-                Edit / rename
-              </button>
-              <button
-                onClick={() => void change({ type: "duplicate", id: mode.id })}
-              >
-                Duplicate
-              </button>
-              <button
-                onClick={() =>
-                  void change({
-                    type: mode.builtIn ? "reset" : "delete",
-                    id: mode.id,
-                  })
-                }
-              >
-                {mode.builtIn ? "Reset built-in" : "Delete mode"}
-              </button>
-            </div>
-          </article>
-        ))}
-        {editing && (
-          <form
-            className="card panel-stack"
-            onSubmit={(e) => {
-              e.preventDefault();
-              void change({ type: "save", mode: editing });
-            }}
-            aria-label="Mode editor"
-          >
-            <h2>{editing.builtIn ? "Edit built-in mode" : "Custom mode"}</h2>
-            <label>
-              Name
-              <input
-                required
-                maxLength={80}
-                value={editing.name}
-                onChange={(e) =>
-                  setEditing({ ...editing, name: e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Icon
-              <select
-                value={editing.icon}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    icon: e.target.value as AIMode["icon"],
-                  })
-                }
-              >
-                {MODE_ICONS.map((icon) => (
-                  <option key={icon}>{icon}</option>
+            ))}
+            <details>
+              <summary>Templates</summary>
+              <div className="panel-stack">
+                {[
+                  "general",
+                  "coding",
+                  "interview",
+                  "sales",
+                  "meeting",
+                  "lecture",
+                ].map((id) => (
+                  <button key={id} onClick={() => create(id)}>
+                    {id[0]!.toUpperCase() + id.slice(1)}
+                  </button>
                 ))}
-              </select>
-            </label>
-            <label>
-              Description
-              <input
-                maxLength={500}
-                value={editing.description}
-                onChange={(e) =>
-                  setEditing({ ...editing, description: e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Category
-              <input
-                required
-                maxLength={60}
-                value={editing.category}
-                onChange={(e) =>
-                  setEditing({ ...editing, category: e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Custom instructions
-              <textarea
-                aria-label="Custom instructions"
-                required
-                maxLength={4000}
-                rows={6}
-                value={editing.instructions}
-                onChange={(e) =>
-                  setEditing({ ...editing, instructions: e.target.value })
-                }
-              />
-            </label>
-            <label>
-              Response length
-              <select
-                value={editing.output.length}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    output: {
-                      ...editing.output,
-                      length: e.target.value as AIMode["output"]["length"],
-                    },
-                  })
-                }
+              </div>
+            </details>
+          </aside>
+          <div className="mode-detail">
+            {!editing && (
+              <div className="empty-state">
+                <h2>Make EveryHint your own</h2>
+                <p className="muted">Choose a mode or start with a template.</p>
+              </div>
+            )}
+            {editing && (
+              <form
+                className="card panel-stack"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  void change({ type: "save", mode: editing });
+                }}
+                aria-label="Mode editor"
               >
-                {["short", "balanced", "detailed"].map((v) => (
-                  <option key={v}>{v}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Output format
-              <select
-                value={editing.output.format}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    output: {
-                      ...editing.output,
-                      format: e.target.value as AIMode["output"]["format"],
-                    },
-                  })
-                }
-              >
-                {["auto", "bullets", "prose"].map((v) => (
-                  <option key={v}>{v}</option>
-                ))}
-              </select>
-            </label>
-            <label>
-              Output language
-              <input
-                maxLength={60}
-                value={editing.output.language}
-                onChange={(e) =>
-                  setEditing({
-                    ...editing,
-                    output: { ...editing.output, language: e.target.value },
-                  })
-                }
-              />
-              <small>
-                default uses your global preference. Language requests are best
-                effort for the selected provider/model.
-              </small>
-            </label>
-            <fieldset>
-              <legend>
-                Permitted context (never enables capture or sharing)
-              </legend>
-              {(
-                ["screenshot", "microphone", "systemAudio", "history"] as const
-              ).map((key) => (
-                <label className="check" key={key}>
+                <h2>
+                  {editing.builtIn ? "Edit built-in mode" : "Custom mode"}
+                </h2>
+                <label>
+                  Name
                   <input
-                    type="checkbox"
-                    checked={editing.context[key]}
+                    required
+                    maxLength={80}
+                    value={editing.name}
+                    onChange={(e) =>
+                      setEditing({ ...editing, name: e.target.value })
+                    }
+                  />
+                </label>
+                <label>
+                  Custom instructions
+                  <textarea
+                    aria-label="Custom instructions"
+                    required
+                    maxLength={4000}
+                    rows={6}
+                    value={editing.instructions}
+                    onChange={(e) =>
+                      setEditing({ ...editing, instructions: e.target.value })
+                    }
+                  />
+                </label>
+                <fieldset>
+                  <legend>Reference documents</legend>
+                  {!state?.documents.length && (
+                    <p>
+                      No documents imported. Use Knowledge to add local
+                      references.
+                    </p>
+                  )}
+                  {state?.documents.map((doc) => (
+                    <label className="check" key={doc.id}>
+                      <input
+                        type="checkbox"
+                        checked={editing.knowledgeIds.includes(doc.id)}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            knowledgeIds: e.target.checked
+                              ? [...editing.knowledgeIds, doc.id]
+                              : editing.knowledgeIds.filter(
+                                  (id) => id !== doc.id,
+                                ),
+                          })
+                        }
+                      />
+                      {doc.name}
+                      {!doc.enabled ? " · Disabled" : ""}
+                    </label>
+                  ))}
+                </fieldset>
+                <label>
+                  Notes template
+                  <select
+                    value={editing.templateId ?? ""}
                     onChange={(e) =>
                       setEditing({
                         ...editing,
-                        context: {
-                          ...editing.context,
-                          [key]: e.target.checked,
-                        },
+                        templateId: e.target.value || null,
                       })
                     }
-                  />
-                  {key}
+                  >
+                    <option value="">Use default template</option>
+                    {state?.config.templates.map((t) => (
+                      <option value={t.id} key={t.id}>
+                        {t.name}
+                      </option>
+                    ))}
+                  </select>
                 </label>
-              ))}
-            </fieldset>
-            <fieldset>
-              <legend>Allowed contextual actions</legend>
-              {(Object.keys(ACTION_LABELS) as ContextualAction[]).map(
-                (action) => (
-                  <label className="check" key={action}>
-                    <input
-                      type="checkbox"
-                      checked={editing.actions.includes(action)}
-                      onChange={(e) =>
-                        setEditing({
-                          ...editing,
-                          actions: e.target.checked
-                            ? [...editing.actions, action]
-                            : editing.actions.filter((a) => a !== action),
+                <details>
+                  <summary>Advanced mode options</summary>
+                  <div className="panel-stack">
+                    {" "}
+                    <label>
+                      Icon
+                      <select
+                        value={editing.icon}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            icon: e.target.value as AIMode["icon"],
+                          })
+                        }
+                      >
+                        {MODE_ICONS.map((icon) => (
+                          <option key={icon}>{icon}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Description
+                      <input
+                        maxLength={500}
+                        value={editing.description}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            description: e.target.value,
+                          })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Category
+                      <input
+                        required
+                        maxLength={60}
+                        value={editing.category}
+                        onChange={(e) =>
+                          setEditing({ ...editing, category: e.target.value })
+                        }
+                      />
+                    </label>
+                    <label>
+                      Response length
+                      <select
+                        value={editing.output.length}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            output: {
+                              ...editing.output,
+                              length: e.target
+                                .value as AIMode["output"]["length"],
+                            },
+                          })
+                        }
+                      >
+                        {["short", "balanced", "detailed"].map((v) => (
+                          <option key={v}>{v}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Output format
+                      <select
+                        value={editing.output.format}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            output: {
+                              ...editing.output,
+                              format: e.target
+                                .value as AIMode["output"]["format"],
+                            },
+                          })
+                        }
+                      >
+                        {["auto", "bullets", "prose"].map((v) => (
+                          <option key={v}>{v}</option>
+                        ))}
+                      </select>
+                    </label>
+                    <label>
+                      Output language
+                      <input
+                        maxLength={60}
+                        value={editing.output.language}
+                        onChange={(e) =>
+                          setEditing({
+                            ...editing,
+                            output: {
+                              ...editing.output,
+                              language: e.target.value,
+                            },
+                          })
+                        }
+                      />
+                      <small>
+                        default uses your global preference. Language requests
+                        are best effort for the selected provider/model.
+                      </small>
+                    </label>
+                    <fieldset>
+                      <legend>
+                        Permitted context (never enables capture or sharing)
+                      </legend>
+                      {(
+                        [
+                          "screenshot",
+                          "microphone",
+                          "systemAudio",
+                          "history",
+                        ] as const
+                      ).map((key) => (
+                        <label className="check" key={key}>
+                          <input
+                            type="checkbox"
+                            checked={editing.context[key]}
+                            onChange={(e) =>
+                              setEditing({
+                                ...editing,
+                                context: {
+                                  ...editing.context,
+                                  [key]: e.target.checked,
+                                },
+                              })
+                            }
+                          />
+                          {key}
+                        </label>
+                      ))}
+                    </fieldset>
+                    <fieldset>
+                      <legend>Allowed contextual actions</legend>
+                      {(Object.keys(ACTION_LABELS) as ContextualAction[]).map(
+                        (action) => (
+                          <label className="check" key={action}>
+                            <input
+                              type="checkbox"
+                              checked={editing.actions.includes(action)}
+                              onChange={(e) =>
+                                setEditing({
+                                  ...editing,
+                                  actions: e.target.checked
+                                    ? [...editing.actions, action]
+                                    : editing.actions.filter(
+                                        (a) => a !== action,
+                                      ),
+                                })
+                              }
+                            />
+                            {ACTION_LABELS[action]}
+                          </label>
+                        ),
+                      )}
+                    </fieldset>
+                  </div>
+                </details>{" "}
+                <button className="primary" type="submit">
+                  Save mode
+                </button>
+                <button type="button" onClick={() => setEditing(null)}>
+                  Cancel edit
+                </button>
+              </form>
+            )}
+
+            {editing && (
+              <div className="button-row">
+                <button
+                  className="primary"
+                  disabled={
+                    !state?.config.modes.some((m) => m.id === editing.id)
+                  }
+                  onClick={() =>
+                    void change({ type: "select", id: editing.id })
+                  }
+                >
+                  {state?.config.activeModeId === editing.id
+                    ? "Active mode"
+                    : "Set Active"}
+                </button>
+                <details>
+                  <summary>More mode actions</summary>
+                  <div className="panel-stack">
+                    <button
+                      onClick={() =>
+                        void change({ type: "duplicate", id: editing.id })
+                      }
+                    >
+                      Duplicate
+                    </button>
+                    <button
+                      onClick={() =>
+                        void change({
+                          type: editing.builtIn ? "reset" : "delete",
+                          id: editing.id,
                         })
                       }
-                    />
-                    {ACTION_LABELS[action]}
-                  </label>
-                ),
-              )}
-            </fieldset>
-            <fieldset>
-              <legend>Knowledge documents (maximum 10)</legend>
-              {!state?.documents.length && (
-                <p>
-                  No documents imported. Use Knowledge to add local references.
-                </p>
-              )}
-              {state?.documents.map((doc) => (
-                <label className="check" key={doc.id}>
-                  <input
-                    type="checkbox"
-                    checked={editing.knowledgeIds.includes(doc.id)}
-                    onChange={(e) =>
-                      setEditing({
-                        ...editing,
-                        knowledgeIds: e.target.checked
-                          ? [...editing.knowledgeIds, doc.id]
-                          : editing.knowledgeIds.filter((id) => id !== doc.id),
-                      })
-                    }
-                  />
-                  {doc.name}
-                  {!doc.enabled ? " · Disabled" : ""}
-                </label>
-              ))}
-            </fieldset>
-            <label>
-              Meeting note template
-              <select
-                value={editing.templateId ?? ""}
-                onChange={(e) =>
-                  setEditing({ ...editing, templateId: e.target.value || null })
-                }
-              >
-                <option value="">Use default template</option>
-                {state?.config.templates.map((t) => (
-                  <option value={t.id} key={t.id}>
-                    {t.name}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <button className="primary" type="submit">
-              Save mode
-            </button>
-            <button type="button" onClick={() => setEditing(null)}>
-              Cancel edit
-            </button>
-          </form>
-        )}
-        <button
-          className="secondary"
-          onClick={async () => {
-            if (!state) return;
-            const result = await window.everyhint.reviewContext({
-              question:
-                "Explain how you will respond using the active mode. Give a short example.",
-              options: { ...DEFAULT_CONTEXT, history: false },
-            });
-            if (!result.ok) setError(result.error);
-            else openAssistant();
-          }}
-        >
-          Preview / test active saved mode
-        </button>
+                    >
+                      {editing.builtIn ? "Reset built-in" : "Delete mode"}
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const r = await window.everyhint.reviewContext({
+                          question:
+                            "Explain how you will respond using the active mode. Give a short example.",
+                          options: { ...DEFAULT_CONTEXT, history: false },
+                        });
+                        if (r.ok) openAssistant();
+                        else setError(r.error);
+                      }}
+                    >
+                      Preview / test active saved mode
+                    </button>
+                  </div>
+                </details>
+              </div>
+            )}
+          </div>
+        </div>
       </PersonalGate>
       {error && <p role="alert">{error}</p>}
     </section>
@@ -469,13 +552,16 @@ export function KnowledgePage() {
       className="personal-page panel-stack"
       aria-label="Knowledge library"
     >
-      <h1>Personal knowledge</h1>
-      <p>
-        PDF, DOCX, UTF-8 TXT and Markdown · maximum 8 MiB / 400,000 extracted
-        characters / 200 PDF pages. Extraction stays local; no OCR. Only
-        extracted text and metadata are copied into encrypted application
-        storage. Your original source file is never changed or deleted.
-      </p>
+      <h1>Knowledge</h1>
+      <p className="muted">Reference documents for more useful answers.</p>
+      <details>
+        <summary>Supported files and privacy</summary>
+        <p>
+          PDF, DOCX, TXT and Markdown, up to 8 MiB or 200 PDF pages. Text is
+          extracted locally into encrypted storage; no OCR. Your original files
+          stay unchanged. Only selected excerpts can be shared after review.
+        </p>
+      </details>
       <PersonalGate state={state}>
         {state && (
           <>
@@ -769,17 +855,10 @@ export function PersonalSettings() {
                 ))}
               </datalist>
             </label>
-            <p>
-              default follows the question/system language. Other languages are
-              response preferences, subject to the selected model's abilities;
-              no provider language catalog is advertised. Existing transcripts
-              stay unchanged.
-            </p>
-            <p>
-              Local transcription: tiny.en and base.en are English-only. English
-              is the only supported speech language. Multilingual models and OCR
-              are deferred; no model downloads are automatic.
-            </p>
+            <small>
+              Output language applies to AI answers. Local speech recognition
+              supports English.
+            </small>
             <button
               onClick={() => {
                 void personalCommand(state, { type: "lock" }).catch((e) =>
@@ -792,7 +871,6 @@ export function PersonalSettings() {
           </>
         )}
       </PersonalGate>
-      <TemplateEditor />
       {error && <p role="alert">{error}</p>}
     </section>
   );
