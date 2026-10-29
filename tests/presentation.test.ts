@@ -34,6 +34,7 @@ describe("appearance and window presentation", () => {
       opacity: 1,
       protectWindow: false,
       assistShortcut: "Control+Alt+A",
+      answerShortcut: "Control+Alt+Enter",
       clearShortcut: "Control+Alt+Shift+C",
       toggleShortcut: "Control+Alt+Space",
       pauseShortcut: "Control+Alt+P",

@@ -22,6 +22,22 @@ describe("settings validation and storage", () => {
       new SettingsStore(join(directory, "settings.json"), vi.fn()).settings,
     ).toEqual(DEFAULT_SETTINGS);
   });
+  it("preserves an older custom Enter binding and migrates Answer to a free binding", () => {
+    const path = join(directory, "settings.json"),
+      warning = vi.fn();
+    const prior = {
+      ...DEFAULT_SETTINGS,
+      assistShortcut: "Ctrl+Alt+Enter",
+      answerShortcut: undefined,
+      theme: "light",
+    };
+    writeFileSync(path, JSON.stringify({ version: 1, settings: prior }));
+    const store = new SettingsStore(path, warning);
+    expect(store.settings.assistShortcut).toBe("Control+Alt+Enter");
+    expect(store.settings.answerShortcut).toBe("Control+Alt+Shift+Enter");
+    expect(store.settings.theme).toBe("light");
+    expect(warning).not.toHaveBeenCalled();
+  });
   it("reuses an existing installation without forcing onboarding or changing saved appearance", () => {
     const path = join(directory, "settings.json");
     writeFileSync(

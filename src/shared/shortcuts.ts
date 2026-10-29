@@ -6,6 +6,7 @@ export const DEFAULT_HOTKEYS: HotkeyBindings = {
   stop: "Control+Alt+Shift+X",
   assist: "Control+Alt+A",
   clear: "Control+Alt+Shift+C",
+  answer: "Control+Alt+Enter",
 };
 export function parseShortcut(value: unknown): string {
   if (typeof value !== "string" || value.length > 80)

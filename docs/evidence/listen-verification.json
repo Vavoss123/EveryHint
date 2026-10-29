@@ -1,0 +1,303 @@
+{
+  "milestone": "Listen & Ask / context-aware push-to-answer",
+  "baseline": "fab74cca415b5d6f5648f6bd51b05c3eff00dd54",
+  "version": "0.5.0",
+  "verifiedAt": "2026-10-29T13:01:55.270989+00:00",
+  "platform": {
+    "os": "Windows 11 Home",
+    "build": "10.0.26200",
+    "architecture": "x64"
+  },
+  "sourceGate": {
+    "command": "npm run check",
+    "passed": true,
+    "cases": 765,
+    "files": 60,
+    "preservedBaselineCases": 722,
+    "newListenCases": 39,
+    "otherNewCases": 4,
+    "checks": [
+      "theme",
+      "generated feature matrix",
+      "TypeScript",
+      "ESLint",
+      "Vitest",
+      "production build"
+    ]
+  },
+  "providerFixtures": [
+    {
+      "command": "npm run test:plan",
+      "cases": 5,
+      "passed": true
+    },
+    {
+      "command": "npm run test:ai-sdk",
+      "cases": 6,
+      "passed": true
+    }
+  ],
+  "nativeStorage": {
+    "command": "npm run test:meetings",
+    "assertions": 12,
+    "passed": true,
+    "physicalCapture": false
+  },
+  "electronSuites": [
+    {
+      "command": "node scripts/smoke.mjs",
+      "assertions": 47,
+      "passed": true,
+      "seconds": 6.5,
+      "summary": [
+        "Electron smoke passed: 47 assertions. Hotkeys: toggle=unavailable, pause=unavailable, stop=unavailable, assist=unavailable, clear=unavailable, answer=registered. Audio used synthetic media; no microphone, desktop or Windows playback was captured."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-ai.mjs",
+      "assertions": 44,
+      "passed": true,
+      "seconds": 3.5,
+      "summary": [
+        "AI Electron smoke passed: 44 assertions. ChatGPT auth=missing. No remote inference or paid requests. Renderer streaming used labelled fixtures."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-transcription.mjs",
+      "assertions": 12,
+      "passed": true,
+      "seconds": 19.1,
+      "summary": [
+        "Speech Electron smoke passed: 12 assertions; real tiny.en inference through both synthetic P2 audio sources."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-ui.mjs",
+      "assertions": 47,
+      "passed": true,
+      "seconds": 3.1,
+      "summary": [
+        "UI smoke passed: 47 assertions, 4 screenshots, zero remote requests."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-intelligence.mjs",
+      "assertions": 28,
+      "passed": true,
+      "seconds": 3.2,
+      "summary": [
+        "Intelligence Electron smoke passed: 28 assertions; no remote requests or real capture. Suggestions used labelled renderer fixtures."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-meetings.mjs",
+      "assertions": 42,
+      "passed": true,
+      "seconds": 5.3,
+      "summary": [
+        "Meeting Electron smoke passed: 42 assertions; actual encrypted database/native key/worker; no remote requests or real capture."
+      ]
+    },
+    {
+      "command": "node scripts/smoke-personal.mjs",
+      "assertions": 34,
+      "passed": true,
+      "seconds": 3.8,
+      "summary": [
+        "P9 local Electron smoke passed: 34 assertions. {\"mode_switch_ms\":11.929699999999912,\"import_release.pdf_ms\":197.91169999999988,\"parser_release.pdf\":{\"extractionMs\":136.82500000000005,\"parserHeapBytes\":10989776},\"import_release.docx_ms\":64.23910000000001,\"parser_release.docx\":{\"extractionMs\":2.1582999999998265,\"parserHeapBytes\":5959788},\"import_release.txt_ms\":43.331500000000005,\"parser_release.txt\":{\"extractionMs\":0.25490000000013424,\"parserHeapBytes\":5272184},\"import_release.md_ms\":41.905899999999974,\"parser_release.md\":{\"extractionMs\":0.3976999999999862,\"parserHeapBytes\":5650088},\"search_4_documents_ms\":4.597099999999955,\"main_memory\":{\"rss\":194752512,\"heapTotal\":27066368,\"heapUsed\":16863056,\"external\":15731210,\"arrayBuffers\":0}}"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-context.mjs",
+      "assertions": 36,
+      "passed": true,
+      "seconds": 8.5,
+      "summary": [
+        "P10 local Electron smoke passed: 36 assertions. {\"calendar_refresh_ms\":16.765300000000025,\"document_memory_extraction_ms\":11.528600000000552}"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-windows.mjs",
+      "assertions": 20,
+      "passed": true,
+      "seconds": 3.4,
+      "summary": [
+        "20 Windows desktop assertions passed"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-ux.mjs",
+      "assertions": 45,
+      "passed": true,
+      "seconds": 8.1,
+      "summary": [
+        "{\"checkpoint\":\"UX.1 + UX.2\",\"assertions\":45,\"platform\":\"win32\"}"
+      ]
+    },
+    {
+      "command": "node scripts/smoke-listen.mjs",
+      "assertions": 36,
+      "passed": true,
+      "seconds": 29.1,
+      "summary": [
+        "Listen Windows smoke passed: 36 assertions. Actual native hotkeys, separate foreground application, native Whisper with synthetic audio, owned-window capture, deterministic provider."
+      ]
+    }
+  ],
+  "electronAssertions": 391,
+  "defaultShortcuts": {
+    "answer": "Control+Alt+Enter",
+    "toggle": "Control+Alt+Space",
+    "pause": "Control+Alt+P",
+    "stop": "Control+Alt+Shift+X",
+    "assist": "Control+Alt+A",
+    "clear": "Control+Alt+Shift+C"
+  },
+  "nativeVerification": {
+    "date": "2026-10-29T13:00:40.100Z",
+    "assertions": 36,
+    "evidence": [
+      "Startup makes no inference request",
+      "Explicit Connect selects a model from the fixture account catalog",
+      "Local capture acknowledgement cannot replace the separate ChatGPT sharing acknowledgement",
+      "Start activates native local Whisper automatically",
+      "Synthetic microphone speech produces final segments through native Whisper",
+      "Synthetic system-audio speech produces separately labelled final segments",
+      "Continuous local transcription and native screen sampling make no inference requests",
+      "All six configured shortcuts registered with the actual Electron globalShortcut service",
+      "A separate native Windows Forms application owns foreground focus before Answer",
+      "Native Ctrl+Alt+Enter opens and focuses the floating assistant from another application",
+      "The actual hotkey request contains recent source-labelled final transcript",
+      "The actual hotkey includes a fresh native image of only the selected owned test window",
+      "Existing response-only, no-store streaming transport is preserved",
+      "Answer sends within session scope without a context review dialog",
+      "Input, Ask, Hide, Pause and Stop fit in the floating viewport without scrolling",
+      "The real shortcut request enforces two-minute, transcript and serialized-text bounds",
+      "The requested screen frame follows the recent transcript in timestamp order",
+      "The streamed fixture answer is visible in the floating assistant",
+      "Typing help then Enter sends recent approved conversation and screen without review",
+      "Shift+Enter inserts a newline without sending",
+      "Ordinary typed questions use the same authorised conversation request path",
+      "Optional View Context exposes the exact last bounded request",
+      "Hiding the floating assistant keeps local listening active",
+      "The registered pause shortcut stops capture and transcription while hidden",
+      "Answer while paused sends no inference request",
+      "The registered resume shortcut restarts local transcription under the same capture consent",
+      "The registered Stop shortcut aborts an in-flight streamed answer",
+      "Stop removes the session sharing grant",
+      "Stop clears the retained conversation-request context",
+      "Settings displays the actual configured Answer binding",
+      "Every configured shortcut remains available alongside the new Answer action",
+      "Rebinding Answer replaces the actual Electron global registration",
+      "Settings follows the rebound Answer binding",
+      "Rebound Answer is received while the native test application has focus",
+      "A rebound Answer cannot infer after Stop removed permission",
+      "No renderer errors occurred during the full Listen & Ask flow"
+    ],
+    "configured": [
+      {
+        "action": "toggle",
+        "accelerator": "Control+Alt+Shift+Space",
+        "registered": true
+      },
+      {
+        "action": "pause",
+        "accelerator": "Control+Alt+Shift+P",
+        "registered": true
+      },
+      {
+        "action": "stop",
+        "accelerator": "Control+Alt+Shift+Z",
+        "registered": true
+      },
+      {
+        "action": "assist",
+        "accelerator": "Control+Alt+Shift+A",
+        "registered": true
+      },
+      {
+        "action": "clear",
+        "accelerator": "Control+Alt+Shift+V",
+        "registered": true
+      },
+      {
+        "action": "answer",
+        "accelerator": "Control+Alt+Enter",
+        "registered": true
+      }
+    ],
+    "foregroundApplication": {
+      "handle": 721646,
+      "application": "Windows Forms in a separate PowerShell process",
+      "process": 34952
+    },
+    "physicalMicrophone": false,
+    "physicalLoopback": false,
+    "nativeOwnedWindowCapture": true,
+    "genuineProviderRequests": 0,
+    "provider": "deterministic OAuth/catalog/Responses fixture",
+    "speechDiagnostics": {
+      "loadMs": 90.4325,
+      "averageLatencyMs": 260.03291666666667,
+      "queueLength": 0,
+      "droppedJobs": 0,
+      "gaps": 0,
+      "completedJobs": 12,
+      "workerCpuPercent": 370.031,
+      "workerMemoryBytes": 173604864
+    }
+  },
+  "controlledRunNotes": [
+    "A personal EveryHint instance retained the five older default registrations. Isolated native tests rebound those controls; the personal instance was preserved.",
+    "The proposed default Answer and rebound Answer were actually received with the owned native Windows Forms window focused.",
+    "One repeated native-focus test initially failed the foreground precondition. The test helper retries activation after an Alt key event and asserts the exact foreground HWND/process before sending the shortcut. No failed foreground attempt is counted as passed.",
+    "A retained System theme smoke assertion raced asynchronous preference publication; it now waits for the System preference and computed OS colour scheme. The assertion and coverage remain.",
+    "Native Whisper used synthetic microphone and system-audio PCM; source labels and final segments were verified. Actual selected test-window JPEG capture was performed.",
+    "Signed OAuth, catalog and Responses were deterministic Playwright fixtures in an isolated profile. No production test bypass was added.",
+    "P2-only smoke uses original capture IPC without a speech model; separate speech and Listen smoke verify automatic transcription on normal Start."
+  ],
+  "limits": {
+    "recentSeconds": 120,
+    "candidateTranscriptEvents": 100,
+    "transcriptCharacters": 6000,
+    "serializedTextCharacters": 20000,
+    "imageBytes": 1500000,
+    "imageMaxDimensions": [
+      1600,
+      900
+    ],
+    "freshImageMaxAgeMs": 10000,
+    "sharingMaxMinutes": 60,
+    "previewSnapshots": 1,
+    "previewMaxAccessAgeSeconds": 120,
+    "newDefaultTranscriptRetentionMinutes": 2
+  },
+  "privacy": {
+    "localCaptureAndSharingSeparate": true,
+    "individualDeliberateTriggerRequired": true,
+    "sessionScopePersisted": false,
+    "liveGrantSeparate": true,
+    "continuousUpload": false,
+    "rawAudioSent": false,
+    "defaultExtraHistoryKnowledgeWorkspaceContext": false,
+    "paidFallback": false,
+    "genuineProviderRequests": 0,
+    "releasePublished": false
+  },
+  "pending": [
+    "Physical microphone and physical Windows playback/loopback acceptance",
+    "Human physical key presses and VS Code/Chrome/Discord-specific foreground acceptance",
+    "Screen-sharing receiver/protection certification",
+    "Fresh authorised genuine ChatGPT/OAuth/Google and semantic answer-quality checks",
+    "Clean-machine install/upgrade/uninstall/signing/distribution",
+    "Retained hardware/mixed-DPI/accessibility/other RC manual gates"
+  ],
+  "releaseStatus": "NO-GO; source milestone only; retained installer unchanged",
+  "localArtifacts": [
+    "artifacts/listen/floating-answer.png",
+    "artifacts/listen/windows-smoke.json",
+    "artifacts/listen/regressions/",
+    "artifacts/speech-smoke.json",
+    "artifacts/ux/window-checkpoint.json"
+  ]
+}

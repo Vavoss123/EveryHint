@@ -1,4 +1,4 @@
-param([ValidateSet('Inspect','Shortcut','Dialog')][string]$Action, [long]$Handle = 0, [string]$Accelerator, [int]$OwnedProcess = 0, [string]$Button)
+param([ValidateSet('Inspect','Shortcut','Dialog','Focus','Foreground')][string]$Action, [long]$Handle = 0, [string]$Accelerator, [int]$OwnedProcess = 0, [string]$Button)
 $ErrorActionPreference = 'Stop'
 [Console]::OutputEncoding = New-Object System.Text.UTF8Encoding($false)
 Add-Type -TypeDefinition @'
@@ -10,9 +10,25 @@ public static class EveryHintUxNative {
   [DllImport("user32.dll")] public static extern bool GetWindowDisplayAffinity(IntPtr hwnd, out uint affinity);
   [DllImport("user32.dll")] public static extern void keybd_event(byte key, byte scan, uint flags, UIntPtr extra);
   [DllImport("user32.dll")] public static extern bool PostMessage(IntPtr hwnd, uint message, IntPtr wparam, IntPtr lparam);
+  [DllImport("user32.dll")] public static extern bool SetForegroundWindow(IntPtr hwnd);
+  [DllImport("user32.dll")] public static extern IntPtr GetForegroundWindow();
+  [DllImport("user32.dll")] public static extern uint GetWindowThreadProcessId(IntPtr hwnd, out uint process);
 }
 '@
-if ($Action -eq 'Inspect') {
+if ($Action -eq 'Focus' -or $Action -eq 'Foreground') {
+  if ($Action -eq 'Focus') {
+    $null = [EveryHintUxNative]::SetForegroundWindow([IntPtr]$Handle)
+    if ([EveryHintUxNative]::GetForegroundWindow().ToInt64() -ne $Handle) {
+      [EveryHintUxNative]::keybd_event(18, 0, 0, [UIntPtr]::Zero)
+      [EveryHintUxNative]::keybd_event(18, 0, 2, [UIntPtr]::Zero)
+      $null = [EveryHintUxNative]::SetForegroundWindow([IntPtr]$Handle)
+    }
+  }
+  $foreground = [EveryHintUxNative]::GetForegroundWindow()
+  [uint32]$ownerProcess = 0
+  $null = [EveryHintUxNative]::GetWindowThreadProcessId($foreground, [ref]$ownerProcess)
+  @{ handle = $foreground.ToInt64(); process = $ownerProcess } | ConvertTo-Json -Compress
+} elseif ($Action -eq 'Inspect') {
   $windowHandle = [IntPtr]$Handle
   $style = [EveryHintUxNative]::GetWindowLongPtr($windowHandle, -20).ToInt64()
   [uint32]$affinity = 0
@@ -25,6 +41,7 @@ if ($Action -eq 'Inspect') {
     elseif ($part -eq 'Alt') { $keys += [byte]18 }
     elseif ($part -eq 'Shift') { $keys += [byte]16 }
     elseif ($part -eq 'Space') { $keys += [byte]32 }
+    elseif ($part -eq 'Enter') { $keys += [byte]13 }
     elseif ($part -match '^[A-Z0-9]$') { $keys += [byte][char]$part }
     else { throw 'Unsupported test shortcut.' }
   }

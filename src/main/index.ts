@@ -43,6 +43,7 @@ import { ElectronAudioCapture } from "./audio-host";
 import { SpeechInstallation } from "./transcription/models";
 import { TranscriptionController } from "./transcription/controller";
 import { AssistantController } from "./ai/controller";
+import { ListenController } from "./listen/controller";
 import { IntelligenceController } from "./intelligence/controller";
 import { sampleScreen } from "./intelligence/native-screen";
 import { DEFAULT_INTELLIGENCE } from "../shared/intelligence";
@@ -104,6 +105,7 @@ let speech: TranscriptionController | undefined;
 let transcriptionListening = false;
 let currentAccountLabel = "Selected ChatGPT account";
 let assistant: AssistantController | undefined;
+let listen: ListenController | undefined;
 let intelligence: IntelligenceController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
@@ -182,6 +184,7 @@ function clearAssistantContext(): void {
   assistant?.clear();
 }
 function stopCapture(): void {
+  listen?.stop();
   cancelMeetingWork();
   intelligence?.revoke("Session stopped. Renew remote sharing explicitly.");
   assistant?.cancel();
@@ -353,7 +356,8 @@ function updateTray(): void {
   const remote = sharing?.enabled
     ? `LIVE REMOTE ENABLED · ${sharing.requests}/${sharing.limit} attempts`
     : `${mode} · live sharing off`;
-  const key = `${state}:${summary}:${remote}:${sharing?.expiresAt ?? 0}:${recording}:${postEnabled}`;
+  const listening = listen?.value;
+  const key = `${state}:${summary}:${remote}:${sharing?.expiresAt ?? 0}:${recording}:${postEnabled}:${listening?.phase}:${listening?.sharing?.expiresAt ?? 0}`;
   if (key === lastTrayState) return;
   lastTrayState = key;
   tray.setImage(icon(state));
@@ -367,6 +371,37 @@ function updateTray(): void {
     Menu.buildFromTemplate([
       { label: `EveryHint · ${state}`, enabled: false },
       { label: remote, enabled: false },
+      {
+        label: listening?.managed
+          ? listening.phase === "listening"
+            ? "Listening locally"
+            : `Local session: ${listening.phase}`
+          : "Local listening off",
+        enabled: false,
+      },
+      {
+        label: listening?.sharing
+          ? "ChatGPT context allowed for your requests"
+          : "Conversation sharing off",
+        enabled: false,
+      },
+      {
+        label: "Answer from conversation",
+        accelerator: store.settings.answerShortcut ?? DEFAULT_HOTKEYS.answer,
+        click: () => {
+          showOverlay();
+          void listen?.ask({ question: "" }).catch(() => {});
+        },
+      },
+      {
+        label: "Revoke ChatGPT sharing",
+        enabled: !!listening?.sharing || !!sharing?.enabled || postEnabled,
+        click: () => {
+          listen?.revoke();
+          intelligence?.revoke("Sharing revoked from tray.");
+          postNotes?.revoke("Sharing revoked from tray.");
+        },
+      },
       {
         label: recording
           ? "Saved meeting · final text is persisted locally"
@@ -433,6 +468,7 @@ function updateTray(): void {
 function publish(): void {
   if (speech && controller) speech.captureChanged(controller.value);
   if (assistant && controller) assistant.captureChanged(controller.value);
+  listen?.observe();
   if (intelligence && controller)
     intelligence.update(controller.value, speech?.value.events ?? []);
   if (meetings && controller)
@@ -600,6 +636,7 @@ async function initialise(): Promise<void> {
       if (controller) intelligence?.update(controller.value, value.events);
       if (controller) meetings?.observe(controller.metadata, value.events);
       publishMeetingAI();
+      listen?.observe();
     },
     (token) => audio.setTranscriptionToken(token),
   );
@@ -644,6 +681,7 @@ async function initialise(): Promise<void> {
         broadcast("everyhint:assistant", value);
       intelligence?.assistantChanged(value);
       meetingAI?.assistantChanged(value);
+      listen?.observe();
       publishMeetingAI();
     },
     90000,
@@ -656,6 +694,68 @@ async function initialise(): Promise<void> {
       },
     (query, ids) => personal!.knowledgeContext(query, ids),
     (query, selection) => workspace!.buildContext(query, selection),
+  );
+  listen = new ListenController(
+    {
+      capture: () => controller.metadata,
+      speech: () => speech!.value,
+      prepare: async (input) => {
+        controller.prepare(input);
+      },
+      start: () => controller.action("start"),
+      stop: stopCapture,
+      enableSpeech: () => speech!.enable(),
+      speechReady: async () => {
+        await speech!.installation.ensureReady(speech!.value.settings.model);
+      },
+      binding: (includeModel = true) =>
+        JSON.stringify({
+          account: accounts!.identity,
+          plan: accounts!.value.planUsage,
+          provider: assistant!.routing.selected,
+          session: assistant!.routing.sessionId,
+          mode: personal?.modeContext,
+          ...(includeModel ? { model: chatgpt!.selectedModel } : {}),
+        }),
+      ready: async () => {
+        if (assistant!.routing.selected !== "codex")
+          throw new Error(
+            "Choose ChatGPT in Account & AI to ask from the conversation.",
+          );
+        if (!accounts!.identity || !accounts!.value.planUsage)
+          throw new Error(
+            "Connect ChatGPT and allow plan usage before sharing this session.",
+          );
+        try {
+          await chatgpt!.readyForRequest();
+        } finally {
+          await assistant!.inspect();
+        }
+        if (!assistant!.routing.ready)
+          throw new Error(
+            "ChatGPT is not ready. Open Account & AI to connect it.",
+          );
+      },
+      owner: () =>
+        JSON.stringify([
+          accounts!.identity,
+          accounts!.value.planUsage,
+          assistant!.routing.selected,
+          personal?.modeContext,
+          chatgpt!.selectedModel,
+        ]),
+      interruptAutomatic: () => {
+        intelligence?.revoke(
+          "A deliberate conversation request replaced automatic assistance.",
+        );
+        cancelMeetingWork();
+      },
+    },
+    assistant,
+    (value) => {
+      broadcast("everyhint:listen", value);
+      updateTray();
+    },
   );
   intelligence = new IntelligenceController(
     assistant,
@@ -1029,6 +1129,10 @@ async function initialise(): Promise<void> {
           overlay?.webContents.send("everyhint:assist");
         },
         clear: clearAssistantContext,
+        answer: () => {
+          showOverlay();
+          void listen!.ask({ question: "" }).catch(() => {});
+        },
       },
       {
         ...DEFAULT_HOTKEYS,
@@ -1037,6 +1141,7 @@ async function initialise(): Promise<void> {
         toggle: store.settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
         pause: store.settings.pauseShortcut ?? DEFAULT_HOTKEYS.pause,
         stop: store.settings.stopShortcut ?? DEFAULT_HOTKEYS.stop,
+        answer: store.settings.answerShortcut ?? DEFAULT_HOTKEYS.answer,
       },
     );
   };
@@ -1048,6 +1153,16 @@ async function initialise(): Promise<void> {
       );
 
   handle("everyhint:get", () => snapshot());
+  handle("everyhint:listen-get", () => listen!.value);
+  handle("everyhint:listen-start", (input) => listen!.start(input));
+  handle("everyhint:listen-authorise", (input) => listen!.authorise(input));
+  handle("everyhint:listen-ask", (input) => listen!.ask(input));
+  handle("everyhint:listen-context", () => listen!.context());
+  handle("everyhint:listen-revoke", () => {
+    listen!.revoke();
+    intelligence!.revoke("ChatGPT sharing was revoked.");
+    postNotes?.revoke("ChatGPT sharing was revoked.");
+  });
   updates = new UpdateController(
     app.isPackaged && process.platform === "win32"
       ? updatePolicy(updateConfiguration)
@@ -1306,6 +1421,9 @@ async function initialise(): Promise<void> {
     }
     if (input === "clear") {
       cancelMeetingWork();
+      listen!.revoke(
+        "Transcript cleared. Allow sharing again to use new conversation context.",
+      );
       intelligence!.clear();
       assistant!.discardReview();
       return speech!.clear();
@@ -1344,6 +1462,7 @@ async function initialise(): Promise<void> {
       store.settings.intelligence ?? DEFAULT_INTELLIGENCE,
     );
     const oldShortcuts = [
+      store.settings.answerShortcut,
       store.settings.assistShortcut,
       store.settings.clearShortcut,
       store.settings.toggleShortcut,
@@ -1363,6 +1482,7 @@ async function initialise(): Promise<void> {
     if (
       oldShortcuts !==
       [
+        store.settings.answerShortcut,
         store.settings.assistShortcut,
         store.settings.clearShortcut,
         store.settings.toggleShortcut,

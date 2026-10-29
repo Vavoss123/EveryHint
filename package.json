@@ -3,7 +3,7 @@
   "productName": "EveryHint",
   "version": "0.5.0",
   "private": true,
-  "description": "EveryHint — Intelligence when you need it.",
+  "description": "EveryHint \u2014 Intelligence when you need it.",
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {
@@ -44,7 +44,8 @@
     "dist:win": "node scripts/build-windows.mjs",
     "windows:profile": "node scripts/profile-windows.mjs",
     "windows:endurance": "node scripts/endurance-windows.mjs",
-    "windows:live-endurance": "node scripts/endurance-live.mjs"
+    "windows:live-endurance": "node scripts/endurance-live.mjs",
+    "smoke:listen": "node scripts/smoke-listen.mjs"
   },
   "dependencies": {
     "@anthropic-ai/claude-agent-sdk": "0.3.311",

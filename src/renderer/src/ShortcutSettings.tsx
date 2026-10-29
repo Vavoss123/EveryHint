@@ -9,6 +9,9 @@ export function ShortcutSettings({
   settings: Settings;
   save: (patch: Partial<Settings>) => void;
 }) {
+  const [answer, setAnswer] = useState(
+    settings.answerShortcut ?? DEFAULT_HOTKEYS.answer,
+  );
   const [assist, setAssist] = useState(
     settings.assistShortcut ?? DEFAULT_HOTKEYS.assist,
   );
@@ -25,12 +28,14 @@ export function ShortcutSettings({
     settings.stopShortcut ?? DEFAULT_HOTKEYS.stop,
   );
   useEffect(() => {
+    setAnswer(settings.answerShortcut ?? DEFAULT_HOTKEYS.answer);
     setAssist(settings.assistShortcut ?? DEFAULT_HOTKEYS.assist);
     setClear(settings.clearShortcut ?? DEFAULT_HOTKEYS.clear);
     setToggle(settings.toggleShortcut ?? DEFAULT_HOTKEYS.toggle);
     setPause(settings.pauseShortcut ?? DEFAULT_HOTKEYS.pause);
     setStop(settings.stopShortcut ?? DEFAULT_HOTKEYS.stop);
   }, [
+    settings.answerShortcut,
     settings.assistShortcut,
     settings.clearShortcut,
     settings.toggleShortcut,
@@ -39,6 +44,15 @@ export function ShortcutSettings({
   ]);
   return (
     <div className="panel-stack">
+      <label>
+        Answer from conversation
+        <input
+          aria-label="Answer from conversation shortcut"
+          value={answer}
+          maxLength={80}
+          onChange={(e) => setAnswer(e.target.value)}
+        />
+      </label>
       <label>
         Show / hide overlay
         <input
@@ -88,6 +102,7 @@ export function ShortcutSettings({
         className="secondary"
         onClick={() =>
           save({
+            answerShortcut: answer,
             assistShortcut: assist,
             clearShortcut: clear,
             toggleShortcut: toggle,
@@ -100,7 +115,8 @@ export function ShortcutSettings({
       </button>
       <small>
         Use Control plus Alt or Shift and a key. Each shortcut must be
-        different. Assist prepares context for review; approval and Ask are
+        different. Answer sends the active session’s approved context when you
+        press it. Assist prepares extra context for review; approval and Ask are
         still required. Clear cancels the answer and clears this conversation.
         Unavailable shortcuts are reported below.
       </small>

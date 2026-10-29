@@ -233,6 +233,27 @@ const bridge: EveryHintBridge = {
   }),
   authoriseLive: (input) =>
     ipcRenderer.invoke("everyhint:intelligence-authorise", input),
+  listen: Object.freeze({
+    get: () => ipcRenderer.invoke("everyhint:listen-get"),
+    start: (input: import("../shared/listen").ListenStart) =>
+      ipcRenderer.invoke("everyhint:listen-start", input),
+    authorise: (input: import("../shared/listen").SharingChoices) =>
+      ipcRenderer.invoke("everyhint:listen-authorise", input),
+    revoke: () => ipcRenderer.invoke("everyhint:listen-revoke"),
+    ask: (input: { question: string }) =>
+      ipcRenderer.invoke("everyhint:listen-ask", input),
+    context: () => ipcRenderer.invoke("everyhint:listen-context"),
+    onState: (
+      listener: (value: import("../shared/listen").ListenSnapshot) => void,
+    ) => {
+      const wrapped = (
+        _event: Electron.IpcRendererEvent,
+        value: import("../shared/listen").ListenSnapshot,
+      ): void => listener(value);
+      ipcRenderer.on("everyhint:listen", wrapped);
+      return () => ipcRenderer.removeListener("everyhint:listen", wrapped);
+    },
+  }),
   pauseLive: () => ipcRenderer.invoke("everyhint:intelligence-pause"),
   getIntelligence: () => ipcRenderer.invoke("everyhint:intelligence-get"),
   setOperatingMode: (mode) =>

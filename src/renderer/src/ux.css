@@ -568,3 +568,136 @@
     border: 1px solid ButtonText;
   }
 }
+.listening-status {
+  font-size: 12px;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+.session-sharing {
+  padding: 14px;
+  border: 1px solid var(--color-border);
+  border-radius: 12px;
+}
+.session-sharing p,
+.session-sharing small {
+  font-size: 12px;
+  line-height: 1.6;
+}
+.session-sharing .ai-choice {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 7px 0;
+}
+.session-sharing input {
+  flex: 0 0 auto;
+}
+.listen-controls {
+  font-size: 12px;
+  line-height: 1.5;
+}
+.listen-controls p {
+  margin: 5px 0;
+}
+.listen-controls .inline-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+.context-transparency {
+  max-height: 40dvh;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid var(--color-border);
+  border-radius: 10px;
+}
+.context-transparency img {
+  max-width: 100%;
+  height: auto;
+}
+.response-diagnostics {
+  font-size: 11px;
+  color: var(--color-text-secondary);
+}
+.composer-row {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+}
+.composer-row textarea {
+  flex: 1;
+  min-width: 0;
+}
+.composer-row button {
+  align-self: center;
+  min-width: 55px;
+}
+.is-assistant .content:has(.live-conversation) {
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+.is-assistant .assistant-host:has(.live-conversation),
+.is-assistant .assistant-body:has(.live-conversation),
+.is-assistant .session-workspace:has(.live-conversation) {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.is-assistant .live-conversation {
+  flex: 1;
+  min-height: 0;
+  padding: 10px;
+  gap: 7px;
+}
+.is-assistant .live-conversation .ai-responses {
+  flex: 1;
+  min-height: 65px;
+  max-height: none;
+}
+.is-assistant .live-conversation .ai-question {
+  flex: none;
+  margin-top: 0;
+}
+.is-assistant .live-conversation .ai-actions:empty {
+  display: none;
+}
+.is-assistant .live-conversation .response-diagnostics {
+  display: none;
+}
+.is-assistant .live-conversation .ai-response > strong,
+.is-assistant .live-conversation .ai-response > small {
+  display: none;
+}
+.is-assistant .live-conversation .ai-response .text-button,
+.is-assistant .live-conversation .listen-controls .text-button {
+  min-height: 24px;
+  padding: 2px 0;
+  font-size: 11px;
+}
+.is-assistant .live-conversation .ai-actions:not(:has(button:not([hidden]))) {
+  display: none;
+}
+.is-assistant .live-conversation .listening-status {
+  font-size: 11px;
+  line-height: 1.3;
+}
+.is-assistant .live-conversation .listen-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 2px 8px;
+}
+.is-assistant .live-conversation .listen-controls .inline-actions {
+  gap: 4px;
+}
+.is-assistant .live-conversation .listen-controls small {
+  max-width: 260px;
+}
+.is-assistant .session-workspace:has(.live-conversation) .session-options {
+  flex: none;
+  margin-top: 0;
+}

@@ -111,9 +111,13 @@ export function contextPrompt(
     | "modeContext"
     | "knowledge"
     | "workspaceContext"
+    | "conversationRequest"
   >,
 ): string {
   return (
+    (review.conversationRequest
+      ? "Use only the supplied recent conversation (at most two minutes) and authorised screen. For 'help' or no typed question, answer the most recent clear question or assistance need; otherwise offer brief grounded conversational guidance without inventing a question. For say-next, code explanation, latest-question and summary requests, use this same context and state missing or unreadable details. Timestamps are chronological; microphone and systemAudio are sources, not speaker identities.\n"
+      : "") +
     (review.modeContext
       ? modePrompt(review.modeContext.mode, review.modeContext.outputLanguage)
       : ASSIST_PRESETS[review.preset ?? "general"].instruction) +

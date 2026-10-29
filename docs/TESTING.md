@@ -1,5 +1,11 @@
 # Windows RC verification — 2026-10-29
 
+## Current Listen & Ask verification — 2026-10-29
+
+Baseline `fab74cc`, source version **0.5.0**. `npm run check` passes **765 tests / 60 files**, preserving all 722 prior cases; 39 new Listen cases, three model-readiness cases and one shortcut-migration case cover the integration. Provider gates pass **5 plan + 6 SDK loopback tests**, and compiled native encrypted storage passes **12 assertions**. All retained P1–P11 Electron suites and the new Windows Listen suite are rerun; **391 assertions across 11 suites**, including 36 Listen assertions; command receipts are in [listen-verification.json](evidence/listen-verification.json).
+
+The new `npm run smoke:listen` exercises real native hotkeys from a separate foreground Windows Forms process, actual selected test-window JPEG capture, native tiny.en with synthetic microphone/system speech, deterministic signed OAuth/catalog/Responses, Enter/Shift+Enter, optional context, no repeated review, layout visibility and cancellation/rebinding/Stop. No genuine new provider request, physical audio or sharing-receiver test occurred. [Complete acceptance and unperformed gates](LISTEN_ACCEPTANCE.md). Earlier reports below are historical milestone evidence.
+
 ## Current UX milestone verification — 2026-10-29
 
 Baseline `e00813a`, source version **0.5.0**. [UX acceptance and complete manual/release gaps](UX_ACCEPTANCE.md); [structured receipt](evidence/ux-verification.json). The source gate passes **722 unit/regression cases / 59 files**, preserving all 706 baseline cases. Provider fixtures: **5 plan + 6 SDK tests**. Actual compiled encrypted storage/native key: **12 assertions**. Ten Electron suites total **354 assertions**: core 47, AI 44, speech 11, UI 47, intelligence 28, meetings 42, personal 34, context 36, Windows privacy 20, new UX lifecycle 45.

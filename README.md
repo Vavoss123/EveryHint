@@ -2,7 +2,7 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 implements explicit, reviewed ChatGPT plan requests through official Sign in with ChatGPT and the Responses API. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service. The current UI foundation uses the verified EverySession design system, with an ordinary dashboard and a separate floating assistant.
+EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 provides the official Sign in with ChatGPT and Responses transport; the Listen & Ask milestone adds deliberate requests within a separately approved session context scope. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service. The current UI foundation uses the verified EverySession design system, with an ordinary dashboard and a separate floating assistant.
 
 ## Install and run
 
@@ -23,13 +23,19 @@ npm start
 
 Dependency installation and Electron's first native binary download need internet access. Application capture stays local. P11 adds opt-in Windows window-content protection, private per-user NSIS packaging and a [manual new-version update flow](docs/UPDATES.md). Updates stay unconfigured by user choice until real signing, hosting and trusted keys are ready; no update request is made now. [Build instructions, measurements, acceptance matrix and release blockers](docs/P11_ACCEPTANCE.md) distinguish controlled automation from real devices. No screen-sharing receiver scenario is certified; the user kept those and physical hardware checks pending. Enterprise is permanently removed; mobile is unstarted. No public release was made.
 
+## Listen and ask
+
+Connect ChatGPT once, then **Start EveryHint → authorise local sources → optionally allow transcript/screen sharing for this session → Start**. If needed, Start offers an explicit local speech-model download. Continue talking and press **Ctrl+Alt+Enter**, or type **help** in the assistant and press **Enter**. No transcription panel or per-request context checkboxes are needed within that scope.
+
+Only bounded final speech from the last two minutes and a fresh approved image are sent on a deliberate request. Raw audio stays local. Local capture, session sharing and each request are separate choices; the sharing grant expires within one hour and is never restored. Live needs its own separate permission. [Exact behavior, actual Windows verification and remaining physical/genuine-provider limits](docs/LISTEN_ACCEPTANCE.md).
+
 ## Interface and product roadmap
 
 The **dashboard** is an ordinary Windows window. **Start EveryHint** opens fresh source/participant consent; idle shows no Stop. The separate floating assistant puts answers and input first. New installations have a brief setup wizard; upgrades preserve existing configuration and never restore recording permission.
 
 - Minimise keeps the taskbar entry. **Window menu → Hide to Tray** hides the dashboard; tray **Show dashboard** restores it. **Quit EveryHint** stops work and exits. Active Close offers background, Stop and quit, or Cancel.
-- **Ctrl+Alt+Space** shows/hides the floating assistant by default; **Ctrl+Alt+A** opens Ask, **Ctrl+Alt+P** pauses/resumes and **Ctrl+Alt+Shift+X** stops. Configure and see actual registration in **Settings → Shortcuts**. Hiding never grants or stops capture by itself.
-- **Assistant** provides answers, a message input, mode selection, Attach Context and a secondary conversation menu. Review selected context and freshly approve Ask before remote transmission. Session options retain local transcription, Auto-Hint, time-limited Live authorisation and meeting controls.
+- **Ctrl+Alt+Enter — Answer from conversation** opens the floating assistant and streams one answer from approved session context. **Ctrl+Alt+Space** shows/hides it; **Ctrl+Alt+A** keeps the explicit compose/review flow, **Ctrl+Alt+P** pauses/resumes and **Ctrl+Alt+Shift+X** stops. Configure and see actual registration in **Settings → Shortcuts**. Hiding never grants or stops capture by itself.
+- **Assistant** provides answers, a message input, mode selection, Attach Context and a secondary conversation menu. Start automatically transcribes authorised audio locally. Separately allow transcript and/or screen sharing for this session, then press Answer or type **help** and **Enter** without repeated review. **Shift+Enter** adds a newline. **View Context** is optional; **Revoke sharing** is immediate. Extra attachments retain review. Session options preserve Auto-Hint, separate time-limited Live authorisation and meeting controls.
 - Main navigation is Home, Assistant, Meetings, Knowledge, Calendar, People, Modes and one Settings entry. Settings has General, Audio & Screen, Shortcuts, Privacy & Data, Account & AI and Advanced sections.
 - New installs default to dark. Light/System and existing preferences remain. Pin/opacity apply only to the assistant. Poppins/Inter are bundled locally; no remote fonts are loaded.
 - History/search comes first. Existing encrypted history can reopen using its existing Windows-protected key; saving/automatic saving remain opt-in under Privacy & Data.

@@ -6,6 +6,7 @@ import type {
   ProviderStatus,
 } from "../../../shared/ai";
 import { record } from "../../../shared/validation";
+import { defaultCatalogModel } from "../../../shared/connection";
 import { RESPONSE_INSTRUCTIONS } from "../context";
 import { ProviderError } from "../errors";
 import type { ChatGptAccounts } from "./accounts";
@@ -198,6 +199,24 @@ export class ChatGptProvider implements AIProvider {
     this.selected = null;
     this.owner = null;
     this.verified.clear();
+  }
+  get selectedModel(): string | null {
+    return this.selected;
+  }
+  // Called only by a deliberate session-sharing or Ask action, never startup.
+  async readyForRequest(): Promise<void> {
+    if ((await this.inspect()).ready) return;
+    const previous = this.selected;
+    await this.discoverModels();
+    const model = previous
+      ? this.models.find((item) => item.id === previous)
+      : defaultCatalogModel(this.models);
+    if (!model)
+      throw new ProviderError(
+        "permissions",
+        "The selected model is unavailable for this account. Choose an available model in Account & AI.",
+      );
+    this.selectModel(model.id);
   }
   private fresh(): boolean {
     return (

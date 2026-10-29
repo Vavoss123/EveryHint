@@ -4,6 +4,12 @@ import { useIntelligenceSnapshot } from "./useIntelligenceSnapshot";
 import { LiveStatus } from "./LiveConsent";
 import { SettingsPage, type SettingsSection } from "./SettingsPage";
 import { SetupWizard } from "./SetupWizard";
+import {
+  SharingFields,
+  SpeechSetup,
+  noSharing,
+  useListen,
+} from "./ListenControls";
 import { SpeechControl } from "./SpeechControl";
 import { createRoot } from "react-dom/client";
 import type {
@@ -43,6 +49,8 @@ function unwrap<T>(result: Result<T>): T {
 function App() {
   const contextualWorkspace = useWorkspace();
   const intelligence = useIntelligenceSnapshot();
+  const listen = useListen();
+  const [sessionSharing, setSessionSharing] = useState({ ...noSharing });
   const assistant = useAssistantSnapshot();
   const meetings = useMeetings();
   const [requestedMeetingId, setRequestedMeetingId] = useState<string | null>(
@@ -198,6 +206,7 @@ function App() {
     setPreparing(false);
   }
   function meetingCapture(): void {
+    setSessionSharing({ ...noSharing });
     setSettingsOpen(false);
     setPreparing(true);
     setAcknowledged(false);
@@ -337,13 +346,6 @@ function App() {
   function prepare(): void {
     void run(async () => {
       unwrap(
-        await window.everyhint.prepare({
-          ...(screenConsent ? { sourceId } : {}),
-          ...(microphoneConsent ? { microphoneDeviceId } : {}),
-          consent: consent(),
-        }),
-      );
-      unwrap(
         await window.everyhint.saveSettings({
           ...app!.settings,
           preferredSources: {
@@ -358,7 +360,22 @@ function App() {
           app!.settings.preferredHelp ?? "manual",
         ),
       );
-      unwrap(await window.everyhint.session("start"));
+      unwrap(
+        await window.everyhint.listen.start({
+          capture: {
+            ...(screenConsent ? { sourceId } : {}),
+            ...(microphoneConsent ? { microphoneDeviceId } : {}),
+            consent: consent(),
+          },
+          sharing: {
+            ...sessionSharing,
+            transcript:
+              sessionSharing.transcript && (microphoneConsent || systemConsent),
+            screen: sessionSharing.screen && screenConsent,
+          },
+        }),
+      );
+      setSessionSharing({ ...noSharing });
       setPreparing(false);
       setDestination("assistant");
     });
@@ -635,7 +652,9 @@ function App() {
                 ? "Sending authorised meeting text"
                 : response.automatic
                   ? "Sending authorised Live context"
-                  : "Sending reviewed context"
+                  : listen?.managed
+                    ? "Sending approved conversation context"
+                    : "Sending reviewed context"
               : "Generating answer"}
           </span>
           <button
@@ -778,7 +797,7 @@ function App() {
               )}
             </div>
           )}
-          {app.warnings.length > 0 && (
+          {dashboard && app.warnings.length > 0 && (
             <details className="desktop-notices">
               <summary>
                 {app.warnings.length} desktop notice
@@ -791,7 +810,7 @@ function App() {
               ))}
             </details>
           )}
-          <div hidden={!pageVisible}>
+          <div className="assistant-host" hidden={!pageVisible}>
             {settingsOpen && (
               <SettingsPage
                 key={settingsSection}
@@ -957,9 +976,20 @@ function App() {
                     )}
                   </>
                 )}
+                {(microphoneConsent || systemConsent) && <SpeechSetup />}
+                <SharingFields
+                  audio={microphoneConsent || systemConsent}
+                  screen={screenConsent}
+                  value={sessionSharing}
+                  change={setSessionSharing}
+                />
                 <button
                   className="primary full"
                   disabled={
+                    (((sessionSharing.transcript &&
+                      (microphoneConsent || systemConsent)) ||
+                      (sessionSharing.screen && screenConsent)) &&
+                      !sessionSharing.acknowledged) ||
                     (!screenConsent && !microphoneConsent && !systemConsent) ||
                     (screenConsent && !sourceId) ||
                     !acknowledged ||
@@ -971,7 +1001,7 @@ function App() {
                 </button>
               </div>
             )}
-            <div hidden={settingsOpen || preparing}>
+            <div className="assistant-body" hidden={settingsOpen || preparing}>
               <div className="session-workspace">
                 <AssistantPanel
                   capture={session}
@@ -1017,8 +1047,16 @@ function App() {
         <SessionControls state={session.state} action={action} busy={busy} />
         {(active || resumable) && (
           <span className="muted">
-            {active ? "Session active" : "Session paused"} ·{" "}
-            {intelligence?.live ? "Automatic AI authorised" : "Manual AI"}
+            {active
+              ? listen?.managed
+                ? listen.phase === "listening"
+                  ? "Listening"
+                  : listen.phase === "transcription-paused"
+                    ? "Transcription paused � capture on"
+                    : "Starting local transcription"
+                : "Session active"
+              : "Session paused"}{" "}
+            · {intelligence?.live ? "Automatic AI authorised" : "Manual AI"}
           </span>
         )}
       </footer>

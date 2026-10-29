@@ -135,7 +135,14 @@ try {
     .getByRole("button", { name: "Review & send", exact: true })
     .click();
   await page.getByLabel("Context review", { exact: true }).waitFor();
-  check(await page.getByLabel("Context review",{exact:true}).evaluate(el=>el.getBoundingClientRect().height<=innerHeight*0.65+2), "Transmission review stays in a bounded sheet");
+  check(
+    await page
+      .getByLabel("Context review", { exact: true })
+      .evaluate(
+        (el) => el.getBoundingClientRect().height <= innerHeight * 0.65 + 2,
+      ),
+    "Transmission review stays in a bounded sheet",
+  );
   const reviewId = (await ai()).review.requestId;
   check(
     !(await page
@@ -189,7 +196,13 @@ try {
   await shot("dashboard-light");
   await settingsSection(page, "General");
   await page.getByLabel("Colour theme", { exact: true }).selectOption("system");
+  await page.waitForFunction(
+    () => document.documentElement.dataset.theme === "system",
+  );
   await page.emulateMedia({ colorScheme: "dark", reducedMotion: "reduce" });
+  await page.waitForFunction(
+    () => getComputedStyle(document.documentElement).colorScheme === "dark",
+  );
   check(
     await page.evaluate(
       () => getComputedStyle(document.documentElement).colorScheme === "dark",
@@ -330,7 +343,7 @@ try {
     "Unavailable transcript context is absent",
   );
   await page.getByText("Attach Context", { exact: true }).click();
-  await page.evaluate(()=>window.everyhint.assistant("discard-review"));
+  await page.evaluate(() => window.everyhint.assistant("discard-review"));
   const actual = await ai(),
     fixture = {
       ...actual,

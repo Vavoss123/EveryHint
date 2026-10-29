@@ -14,6 +14,7 @@ import { ShortcutSettings } from "./ShortcutSettings";
 import { MeetingPreferencesPanel } from "./MeetingSessionControls";
 import { HistoryDataControls } from "./HistoryDataControls";
 import { SpeechControl } from "./SpeechControl";
+import { useAssistantSnapshot } from "./useAssistantSnapshot";
 
 export const SETTINGS_SECTIONS = [
   "General",
@@ -42,6 +43,7 @@ export function SettingsPage({
   chooseSources: () => void;
 }) {
   const [section, setSection] = useState<SettingsSection>(initial);
+  const latestResponse = useAssistantSnapshot()?.responses.at(-1);
   const settings = app.settings;
   const audioReady =
     app.session.state === "ACTIVE" &&
@@ -140,7 +142,8 @@ export function SettingsPage({
                   {
                     {
                       toggle: "Show / hide overlay",
-                      assist: "Ask EveryHint",
+                      answer: "Answer from conversation",
+                      assist: "Compose / review context",
                       pause: "Pause / resume",
                       stop: "Stop session",
                       clear: "Clear conversation",
@@ -207,6 +210,31 @@ export function SettingsPage({
           <>
             <DesktopPrivacy app={app} save={save} updatesOnly />
             <ProviderSettings />
+            {latestResponse && (
+              <details>
+                <summary>Last AI response diagnostics</summary>
+                <p>
+                  {latestResponse.status} · Model:{" "}
+                  {latestResponse.model ?? "not reported"}
+                </p>
+                <p>
+                  First text:{" "}
+                  {latestResponse.firstTextAt === null
+                    ? "not received"
+                    : `${latestResponse.firstTextAt - latestResponse.startedAt} ms`}
+                  . Total:{" "}
+                  {latestResponse.endedAt === null
+                    ? "in progress"
+                    : `${latestResponse.endedAt - latestResponse.startedAt} ms`}
+                  .
+                </p>
+                <p>
+                  Input / output tokens:{" "}
+                  {latestResponse.usage?.inputTokens ?? "not reported"} /{" "}
+                  {latestResponse.usage?.outputTokens ?? "not reported"}.
+                </p>
+              </details>
+            )}
             <details>
               <summary>Detection and Live assistance limits</summary>
               <IntelligenceSettingsPanel

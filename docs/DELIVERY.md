@@ -1,3 +1,11 @@
+# Listen & Ask integration delivery — 2026-10-29
+
+Implemented on `fab74cc`, version **0.5.0**: automatic local transcription on authorised Start; two-minute final conversation context; local P7 latest-question selection; configurable native **Ctrl+Alt+Enter — Answer from conversation**; direct context-aware typed Ask/Enter; optional exact View Context; separate revocable transcript/screen session sharing; accurate explicit model readiness; and a floating composer with visible Ask/Hide/Pause/Stop. The original capture, Whisper, P6 Responses transport, Live permissions and P1–P11 data/features remain.
+
+**765 tests / 60 files**, **11 provider fixture tests**, **12 native encrypted-storage assertions** and **391 Electron assertions / 11 suites** pass; [the receipt](evidence/listen-verification.json) records exact final counts. Windows controlled verification uses actual native key registration/injection/focus, an owned native screen window and native Whisper with synthetic audio. New OAuth/catalog/Responses are deterministic fixtures; genuine AI/physical devices/receiving apps remain unperformed. Updated the product specification and the actual 103-row inventory source and regenerated its matrix. [Consent, context budgets, bindings, changed behavior, verification and retained release gates](LISTEN_ACCEPTANCE.md).
+
+No genuine/paid provider request, version bump, installer replacement or release/publication. Distribution remains NO-GO under the retained RC gates. The personal running instance was preserved; occupied older shortcuts were rebound only in isolated test profiles. Commit title: `feat: add EveryHint context-aware push-to-answer`.
+
 # Desktop UX restructuring delivery — 2026-10-29
 
 Implemented UX.1–UX.4 from `e00813a` without a version increment or publication. The dashboard is an ordinary Windows application; the separate floating assistant is optional and unpinned by default. Added real minimise/restore, labelled tray/quit actions, custom displayed overlay shortcuts and explicit active-close choices. Session controls now follow actual capture state. Home, chat/context review, one-time setup, account readiness, grouped history, two-column modes and six Settings sections replace the verbose daily workflows. Existing encryption, local records, custom modes/documents, source permissions and time-limited AI sharing remain intact.

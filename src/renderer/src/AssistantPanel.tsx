@@ -5,6 +5,8 @@ import type { Result } from "../../shared/contracts";
 import { ModeSelector } from "./PersonalPages";
 import type { SessionSnapshot } from "../../shared/contracts";
 import type { TranscriptEvent } from "../../shared/transcription";
+import { ListenControls, useListen } from "./ListenControls";
+import { DEFAULT_HOTKEYS } from "../../shared/shortcuts";
 import { ResponseText } from "./ResponseText";
 import { ACTION_LABELS } from "../../shared/intelligence";
 import { usePersonal } from "./PersonalPages";
@@ -36,6 +38,19 @@ export function AssistantPanel({
 }) {
   const [snapshot, setSnapshot] = useState<AssistantSnapshot | null>(null);
   const personal = usePersonal();
+  const listen = useListen();
+  const [answerShortcut, setAnswerShortcut] = useState(DEFAULT_HOTKEYS.answer);
+  useEffect(() => {
+    const accept = (value: import("../../shared/contracts").AppSnapshot) =>
+      setAnswerShortcut(
+        value.settings.answerShortcut ?? DEFAULT_HOTKEYS.answer,
+      );
+    const off = window.everyhint.onSnapshot(accept);
+    void window.everyhint.getSnapshot().then((r) => {
+      if (r.ok) accept(r.value);
+    });
+    return off;
+  }, []);
   const workspace = useWorkspace();
   const [workspaceSelection, setWorkspaceSelection] = useState(
     emptyWorkspaceSelection(),
@@ -126,6 +141,12 @@ export function AssistantPanel({
     invalidate();
     setOptions((previous) => ({ ...previous, [key]: value }));
   }
+  function askConversation(): Promise<void> {
+    return run(async () => {
+      unwrap(await window.everyhint.listen.ask({ question }));
+      setQuestion("");
+    });
+  }
   function prepareReview(): Promise<void> {
     if (
       !snapshot ||
@@ -193,11 +214,37 @@ export function AssistantPanel({
   };
   return (
     <section
-      className="assistant-panel panel-stack"
+      className={`assistant-panel panel-stack ${listen?.managed && !attachOpen ? "live-conversation" : ""}`}
       aria-label="EveryHint assistant"
     >
+      <p className="listening-status" role="status">
+        {listen?.managed
+          ? listen.phase === "listening"
+            ? "Listening"
+            : listen.phase === "paused"
+              ? "Paused"
+              : listen.phase === "transcription-paused"
+                ? "Transcription paused · capture on"
+                : listen.phase === "error"
+                  ? "Listening error"
+                  : "Starting local transcription…"
+          : capture.state === "ACTIVE"
+            ? "Session active"
+            : "Idle"}
+        {listen?.managed && (
+          <> · {answerShortcut.replaceAll("Control", "Ctrl")} to answer</>
+        )}
+      </p>
       <div className="chat-toolbar">
         <ModeSelector />
+        {listen?.managed && (
+          <button
+            className="text-button"
+            onClick={() => void window.everyhint.window("hide")}
+          >
+            Hide
+          </button>
+        )}
         <details>
           <summary aria-label="Conversation menu">•••</summary>
           <div className="menu-popover">
@@ -216,8 +263,9 @@ export function AssistantPanel({
             <details>
               <summary>Conversation privacy</summary>
               <p>
-                Follow-ups use selected previous text. Select screen and
-                transcript context again for a new request.
+                {listen?.managed
+                  ? "Ask uses this session's approved recent conversation and screen. View Context shows the last request. Extra attachments use their own review."
+                  : "Follow-ups use selected previous text. Select screen and transcript context again for a new request."}
               </p>
               <p>
                 Conversation memory expires after 15 minutes. Clear cancels the
@@ -243,13 +291,17 @@ export function AssistantPanel({
         {!snapshot.responses.length && (
           <p className="muted">Your next answer will appear here.</p>
         )}
-        {snapshot.responses.map((response) => (
+        {(listen?.managed &&
+        !attachOpen &&
+        new URLSearchParams(location.search).get("overlay") === "1"
+          ? snapshot.responses.slice(-1)
+          : snapshot.responses
+        ).map((response) => (
           <article className="ai-response" key={response.requestId}>
             <strong>{response.question || "Help with selected context"}</strong>
             <small>
               {response.provider === "codex" ? "ChatGPT" : "Claude"} ·{" "}
               {labels[response.status]}
-              {response.model ? ` · ${response.model}` : ""}
             </small>
             {response.automatic && !response.meetingPurpose && (
               <small>
@@ -300,17 +352,21 @@ export function AssistantPanel({
                 {response.error.message}
               </p>
             )}
-            <small>
-              {response.firstTextAt !== null
-                ? `First text ${((response.firstTextAt - response.startedAt) / 1000).toFixed(2)}s · `
-                : ""}
-              {response.endedAt !== null
-                ? `Total ${((response.endedAt - response.startedAt) / 1000).toFixed(2)}s`
-                : "Waiting for provider…"}
-              {response.usage
-                ? ` · Input ${response.usage.inputTokens ?? "unavailable"} / output ${response.usage.outputTokens ?? "unavailable"} tokens${response.usage.estimatedUsd !== undefined ? ` · Estimated $${response.usage.estimatedUsd.toFixed(4)}` : ""}`
-                : ""}
-            </small>
+            <details className="response-diagnostics">
+              <summary>Response details</summary>
+              <small>
+                {response.model ? `Model ${response.model} · ` : ""}
+                {response.firstTextAt !== null
+                  ? `First text ${((response.firstTextAt - response.startedAt) / 1000).toFixed(2)}s · `
+                  : ""}
+                {response.endedAt !== null
+                  ? `Total ${((response.endedAt - response.startedAt) / 1000).toFixed(2)}s`
+                  : "Waiting for provider…"}
+                {response.usage
+                  ? ` · Input ${response.usage.inputTokens ?? "unavailable"} / output ${response.usage.outputTokens ?? "unavailable"} tokens${response.usage.estimatedUsd !== undefined ? ` · Estimated $${response.usage.estimatedUsd.toFixed(4)}` : ""}`
+                  : ""}
+              </small>
+            </details>
             <button
               className="text-button"
               disabled={!response.text}
@@ -323,72 +379,105 @@ export function AssistantPanel({
             >
               Copy response
             </button>
-            {response === latest && !active && (
-              <>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() => {
-                    setQuestion("");
-                    document
-                      .querySelector<HTMLTextAreaElement>(
-                        '[aria-label="Your question"]',
-                      )
-                      ?.focus();
-                  }}
-                >
-                  Ask follow-up
-                </button>
-                <button
-                  className="text-button"
-                  disabled={busy}
-                  onClick={() =>
-                    void run(async () => {
-                      const nextOptions = { ...DEFAULT_CONTEXT };
-                      setQuestion(response.question);
-                      setOptions(nextOptions);
-                      setAcknowledged(false);
-                      unwrap(
-                        await window.everyhint.reviewContext({
-                          question: response.question,
-                          options: nextOptions,
-                          action: response.action,
-                          regenerateId: response.requestId,
-                        }),
-                      );
-                      requestAnimationFrame(() =>
-                        document
-                          .querySelector('[aria-label="Context review"]')
-                          ?.scrollIntoView({ block: "start" }),
-                      );
-                    })
-                  }
-                >
-                  Regenerate · review first
-                </button>
-              </>
-            )}
+            {response === latest &&
+              !active &&
+              (!listen?.managed || attachOpen) && (
+                <>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() => {
+                      setQuestion("");
+                      document
+                        .querySelector<HTMLTextAreaElement>(
+                          '[aria-label="Your question"]',
+                        )
+                        ?.focus();
+                    }}
+                  >
+                    Ask follow-up
+                  </button>
+                  <button
+                    className="text-button"
+                    disabled={busy}
+                    onClick={() =>
+                      void run(async () => {
+                        const nextOptions = { ...DEFAULT_CONTEXT };
+                        setQuestion(response.question);
+                        setOptions(nextOptions);
+                        setAcknowledged(false);
+                        unwrap(
+                          await window.everyhint.reviewContext({
+                            question: response.question,
+                            options: nextOptions,
+                            action: response.action,
+                            regenerateId: response.requestId,
+                          }),
+                        );
+                        requestAnimationFrame(() =>
+                          document
+                            .querySelector('[aria-label="Context review"]')
+                            ?.scrollIntoView({ block: "start" }),
+                        );
+                      })
+                    }
+                  >
+                    Regenerate · review first
+                  </button>
+                </>
+              )}
           </article>
         ))}
       </div>
       {copied && <p role="status">Response copied.</p>}
       <label className="ai-question">
-        {latest
-          ? "Question or follow-up (optional)"
-          : "Your question (optional)"}
-        <textarea
-          aria-label="Your question"
-          value={question}
-          rows={2}
-          maxLength={6000}
-          disabled={active || busy}
-          placeholder="Ask EveryHint…"
-          onChange={(event) => {
-            invalidate();
-            setQuestion(event.target.value);
-          }}
-        />
+        {listen?.managed
+          ? "Ask about this conversation"
+          : latest
+            ? "Question or follow-up (optional)"
+            : "Your question (optional)"}
+        <div className="composer-row">
+          <textarea
+            aria-label="Your question"
+            value={question}
+            rows={2}
+            maxLength={6000}
+            disabled={active || busy}
+            placeholder="Ask EveryHint…"
+            onKeyDown={(event) => {
+              if (
+                event.key === "Enter" &&
+                !event.shiftKey &&
+                !event.nativeEvent.isComposing
+              ) {
+                event.preventDefault();
+                if (listen?.managed && !attachOpen) void askConversation();
+                else void prepareReview();
+              }
+            }}
+            onChange={(event) => {
+              invalidate();
+              setQuestion(event.target.value);
+            }}
+          />
+          {listen?.managed && !attachOpen && (
+            <button
+              className="primary"
+              disabled={busy && !active}
+              onClick={() => {
+                if (active)
+                  void run(async () =>
+                    unwrap(await window.everyhint.assistant("cancel")),
+                  );
+                else void askConversation();
+              }}
+            >
+              {active ? "Cancel request" : "Ask"}
+            </button>
+          )}
+        </div>
       </label>
+      <ListenControls capture={capture} listen={listen} />
       <details
         className="attach-context"
         open={attachOpen}
@@ -478,11 +567,16 @@ export function AssistantPanel({
         <button
           className="secondary"
           disabled={busy || active}
-          onClick={() => void prepareReview()}
+          hidden={!!listen?.managed && !attachOpen}
+          onClick={() =>
+            void (listen?.managed && !attachOpen
+              ? askConversation()
+              : prepareReview())
+          }
         >
-          Review & send
+          {listen?.managed && !attachOpen ? "Ask" : "Review & send"}
         </button>
-        {active && (
+        {active && (!listen?.managed || attachOpen) && (
           <button
             className="danger"
             onClick={() =>

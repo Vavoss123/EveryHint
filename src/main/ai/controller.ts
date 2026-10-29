@@ -29,6 +29,7 @@ export class AssistantController {
   private claudeApiBilling = false;
   private statuses: ProviderStatus[];
   private review: ContextReview | null = null;
+  private sessionReviewId: string | undefined;
   private responses: AIResponse[] = [];
   private history: ConversationTurn[] = [];
   private sentImages = new Set<string>();
@@ -49,7 +50,8 @@ export class AssistantController {
   private captureSession: string | null = null;
   private preparation = 0;
   private referenceGuard:
-    { requestId: string; valid: () => boolean } | undefined;
+    | { requestId: string; valid: () => boolean }
+    | undefined;
   constructor(
     private readonly providers: readonly AIProvider[],
     private readonly sources: () => {
@@ -97,7 +99,8 @@ export class AssistantController {
       selected: this.selected,
       providers: this.statuses,
       claudeApiBilling: this.claudeApiBilling,
-      review: this.review,
+      review:
+        this.sessionReviewId === this.review?.requestId ? null : this.review,
       responses: this.responses,
     });
   }
@@ -198,6 +201,7 @@ export class AssistantController {
     reference?: { context: MeetingAIContext; valid: () => boolean },
     automaticKnowledgeIds?: string[],
     automaticWorkspaceSelection?: import("../../shared/workspace").WorkspaceSelection,
+    sessionPermission?: () => boolean,
   ): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     if (this.active)
@@ -298,6 +302,8 @@ export class AssistantController {
     const finish = (capture: SessionSnapshot): void => {
       if (generation !== this.preparation || this.closed || this.active)
         throw new Error("Assist preparation was cancelled. Get Answer again.");
+      if (sessionPermission && !sessionPermission())
+        throw new Error("Session sharing was revoked during preparation.");
       const { events } = this.sources();
       const review = buildReview(
         input,
@@ -344,7 +350,8 @@ export class AssistantController {
       }
       if (
         review.screenshot &&
-        this.sentImages.has(imageHash(review.screenshot.dataUrl))
+        this.sentImages.has(imageHash(review.screenshot.dataUrl)) &&
+        !sessionPermission
       )
         if (automatic) {
           review.screenshot = null;
@@ -402,12 +409,24 @@ export class AssistantController {
             "Workspace context exceeds the selected text budget. Select fewer sources.",
           );
       }
+      if (sessionPermission) {
+        if (!review.transcripts.length && !review.screenshot)
+          throw new Error(
+            "No recent conversation or approved screenshot is available yet. Wait for speech to finish, or allow screen sharing.",
+          );
+        review.conversationRequest = true;
+        review.prompt = contextPrompt(review);
+        review.textChars = review.prompt.length;
+        if (review.textChars > input.options.totalChars)
+          throw new Error("Conversation context exceeds the request limit.");
+        this.sessionReviewId = review.requestId;
+      }
       this.review = review;
       this.reviewTimer = setTimeout(
         () => this.discardReview(),
         Math.max(0, review.expiresAt - this.now()),
       );
-      if (!automatic) this.publish();
+      if (!automatic && !sessionPermission) this.publish();
     };
     const captureAndFinish = () => {
       if (input.options.screenshot && this.freshCapture)
@@ -431,6 +450,7 @@ export class AssistantController {
     return captureAndFinish();
   }
   discardReview(): void {
+    this.sessionReviewId = undefined;
     this.referenceGuard = undefined;
     this.preparation++;
     if (this.reviewTimer) clearTimeout(this.reviewTimer);
@@ -509,7 +529,38 @@ export class AssistantController {
     review.textChars = review.prompt.length;
     this.publish();
   }
+  async requestFromSession(
+    value: unknown,
+    valid: () => boolean,
+    prepared: (review: ContextReview) => void,
+  ): Promise<void> {
+    if (!valid()) throw new Error("Session sharing is unavailable.");
+    if (this.review)
+      throw new Error(
+        "Finish or close the pending context review before asking from the conversation.",
+      );
+    await this.prepare(value, false, undefined, undefined, undefined, valid);
+    const pending = this.review as ContextReview | null;
+    if (!valid() || !pending || this.sessionReviewId !== pending.requestId) {
+      this.discardReview();
+      throw new Error("Session sharing changed during preparation.");
+    }
+    const review = structuredClone(pending);
+    await this.submit(
+      { reviewId: review.requestId, acknowledged: true },
+      valid,
+      true,
+    );
+    if (valid()) prepared(review);
+  }
   async ask(value: unknown, canSend?: () => boolean): Promise<void> {
+    return this.submit(value, canSend, false);
+  }
+  private async submit(
+    value: unknown,
+    canSend: (() => boolean) | undefined,
+    sessionScoped: boolean,
+  ): Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
     const input = record(value);
     exactKeys(input, ["reviewId", "acknowledged"]);
@@ -530,7 +581,11 @@ export class AssistantController {
     const provider = this.providers.find(
       (provider) => provider.id === this.selected,
     )!;
-    if (Boolean(request.automatic) !== Boolean(canSend))
+    if (
+      sessionScoped !== (request.requestId === this.sessionReviewId) ||
+      (!sessionScoped && Boolean(request.automatic) !== Boolean(canSend)) ||
+      (sessionScoped && !canSend)
+    )
       throw new Error(
         "Automatic reviews belong to Live Assist. Prepare a manual review to send manually.",
       );
@@ -610,6 +665,7 @@ export class AssistantController {
     this.publish();
     // Reservation happens synchronously; double clicks cannot race auth inspection.
     void (async () => {
+      let completed = false;
       try {
         const status = await provider.inspect(this.claudeApiBilling);
         if (!this.current(response)) return;
@@ -664,7 +720,7 @@ export class AssistantController {
           response.status = "generating";
           if (event.type === "complete") {
             clearTimeout(timer);
-            response.status = "completed";
+            completed = true;
             response.endedAt = this.now();
             response.usage = event.usage ?? null;
             response.model = event.model ?? null;
@@ -707,7 +763,7 @@ export class AssistantController {
           }
           this.publishText(response);
         }
-        if (this.current(response) && response.status !== "completed")
+        if (this.current(response) && !completed)
           throw new ProviderError(
             "process",
             "The provider stopped before completing the response.",
@@ -733,6 +789,8 @@ export class AssistantController {
         if (this.current(response)) {
           clearTimeout(timer);
           this.active = undefined;
+          if (completed && response.status === "generating")
+            response.status = "completed";
           this.publish();
         }
       }

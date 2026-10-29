@@ -17,6 +17,7 @@ describe("global hotkeys", () => {
       stop: vi.fn(),
       assist: vi.fn(),
       clear: vi.fn(),
+      answer: vi.fn(),
     };
     const controller = new HotkeyController(registry);
     expect(controller.register(handlers).every((key) => key.registered)).toBe(
@@ -28,13 +29,14 @@ describe("global hotkeys", () => {
       "stop",
       "assist",
       "clear",
+      "answer",
     ] as const) {
       callbacks.get(DEFAULT_HOTKEYS[action])!();
       expect(handlers[action]).toHaveBeenCalledTimes(1);
     }
     controller.dispose();
     controller.dispose();
-    expect(registry.unregister).toHaveBeenCalledTimes(5);
+    expect(registry.unregister).toHaveBeenCalledTimes(6);
   });
   it("reports conflicts and thrown registration errors, preserving successful shortcuts", () => {
     const registry = {
@@ -55,11 +57,13 @@ describe("global hotkeys", () => {
       stop: vi.fn(),
       assist: vi.fn(),
       clear: vi.fn(),
+      answer: vi.fn(),
     });
     expect(statuses.map((status) => status.registered)).toEqual([
       false,
       false,
       true,
+      false,
       false,
       false,
     ]);
@@ -77,13 +81,14 @@ describe("global hotkeys", () => {
       stop: vi.fn(),
       assist: vi.fn(),
       clear: vi.fn(),
+      answer: vi.fn(),
     };
     controller.register(handlers);
     controller.register(handlers, {
       ...DEFAULT_HOTKEYS,
       toggle: "Control+Shift+Space",
     });
-    expect(registry.unregister).toHaveBeenCalledTimes(5);
+    expect(registry.unregister).toHaveBeenCalledTimes(6);
     expect(registry.register).toHaveBeenCalledWith(
       "Control+Shift+Space",
       handlers.toggle,

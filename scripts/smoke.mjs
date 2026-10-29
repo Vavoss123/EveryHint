@@ -241,7 +241,24 @@ try {
         .getByLabel("Microphone device", { exact: true })
         .selectOption("synthetic-mic");
     }
-    await page.getByRole("button", { name: "Start EveryHint" }).click();
+    const local = await page.evaluate(
+      async ({ microphone, systemAudio }) => {
+        const prepared = await window.everyhint.prepare({
+          consent: {
+            microphone,
+            systemAudio,
+            screen: false,
+            acknowledged: true,
+          },
+          ...(microphone ? { microphoneDeviceId: "synthetic-mic" } : {}),
+        });
+        if (!prepared.ok) return prepared;
+        return window.everyhint.session("start");
+      },
+      { microphone, systemAudio },
+    );
+    assert.ok(local.ok, local.error);
+    await uxNavigate(page, "Assistant");
     await waitForSnapshot(
       page,
       (state) =>

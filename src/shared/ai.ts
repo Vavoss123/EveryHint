@@ -182,6 +182,7 @@ export interface ConversationTurn {
   answer: string;
 }
 export interface AIRequest {
+  conversationRequest?: boolean;
   workspaceContext?: WorkspaceAIContext;
   knowledge?: import("./knowledge").KnowledgeExcerpt[];
   modeContext?: import("./personal").ModeContext;

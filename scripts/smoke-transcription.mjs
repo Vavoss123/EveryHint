@@ -106,9 +106,11 @@ try {
   await page
     .getByText("Capture diagnostics and transcription logs", { exact: true })
     .click();
-  await page
-    .getByRole("button", { name: "Enable transcription", exact: true })
-    .click();
+  await wait(page, (state) => state.state === "LISTENING");
+  check(
+    true,
+    "Start automatically enables local transcription without another panel",
+  );
   await wait(page, (state) =>
     state.events.some(
       (event) => event.state === "partial" && event.text.length,

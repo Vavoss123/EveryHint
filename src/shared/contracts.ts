@@ -83,6 +83,7 @@ export interface Settings {
   opacity?: number;
   protectWindow?: boolean;
   assistShortcut?: string;
+  answerShortcut?: string;
   clearShortcut?: string;
   toggleShortcut?: string;
   pauseShortcut?: string;
@@ -107,7 +108,13 @@ export interface WindowBounds {
   width: number;
   height: number;
 }
-export type HotkeyAction = "toggle" | "pause" | "stop" | "assist" | "clear";
+export type HotkeyAction =
+  | "toggle"
+  | "pause"
+  | "stop"
+  | "assist"
+  | "clear"
+  | "answer";
 export type HotkeyBindings = Record<HotkeyAction, string>;
 export interface HotkeyStatus {
   action: HotkeyAction;
@@ -126,6 +133,7 @@ export interface AppSnapshot {
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };
 export interface EveryHintBridge {
+  listen: import("./listen").ListenBridge;
   desktopStatus(): Promise<Result<import("./desktop").DesktopStatus>>;
   update(
     action: import("./updates").UpdateAction,

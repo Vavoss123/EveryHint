@@ -1,5 +1,13 @@
 # EveryHint product specification
 
+## Current Listen & Ask contract — 2026-10-29
+
+The focused milestone on `fab74cc` makes **Start listening → press Ctrl+Alt+Enter → streamed answer** and **type help → Enter** the primary desktop experience. Fresh local capture consent automatically starts the existing local Whisper pipeline for chosen audio; screen capture stays selected-source-only. Separate, unsaved session sharing approves transcript and/or screen for deliberate requests for at most one hour. It never enables inference on capture or grants automatic Live permission. Revoke, Stop, scope/connection/mode changes, expiry, reload and existing fail-closed lifecycle controls invalidate pending work.
+
+The existing bounded P6 builder uses current final source-labelled speech from at most the last 120 seconds (6,000 transcript/20,000 serialized text characters) and a fresh approved native image (1600×900, 1.5 MB). P7 picks the latest clear question or the response is asked for honest grounded guidance; no available context produces a local explanation without inference. Typed requests use that scope without repeated checkboxes/review; View Context is optional. Extra history, knowledge and saved workspace material retain their explicit reviewed transfer. ChatGPT model metadata refresh occurs only on explicit sharing/Ask, from the actual account catalog, with no paid fallback or invented access. Enter sends and Shift+Enter adds a newline. The separate overlay keeps its composer/Ask/Hide/Pause/Stop visible and puts response diagnostics in Advanced Settings.
+
+[Listen acceptance, exact bindings, permissions, limits, evidence and remaining manual gates](LISTEN_ACCEPTANCE.md) supersede earlier per-request-review descriptions for this scoped path. Existing reviewed Manual Assist and separately expiring automatic Live remain. Version is **0.5.0**; no installer or release is published.
+
 ## Current desktop UX contract — 2026-10-29
 
 The UX milestone on baseline `e00813a` restructures P1–P10 without replacing their engines or security boundaries. A normal dashboard and a separate, initially hidden assistant replace the shared window. Dashboard pinning is disabled; minimise/restore/tray/quit and explicit active-close choices are available. Session controls derive from capture state; visibility never grants or revokes capture/Live permission by itself.

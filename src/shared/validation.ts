@@ -14,6 +14,7 @@ export const DEFAULT_SETTINGS: Settings = {
   opacity: 1,
   protectWindow: false,
   assistShortcut: DEFAULT_HOTKEYS.assist,
+  answerShortcut: DEFAULT_HOTKEYS.answer,
   clearShortcut: DEFAULT_HOTKEYS.clear,
   toggleShortcut: DEFAULT_HOTKEYS.toggle,
   pauseShortcut: DEFAULT_HOTKEYS.pause,
@@ -74,6 +75,7 @@ export function parseSettings(value: unknown): Settings {
     "opacity",
     "protectWindow",
     "assistShortcut",
+    "answerShortcut",
     "clearShortcut",
     "intelligence",
     "toggleShortcut",
@@ -122,6 +124,9 @@ export function parseSettings(value: unknown): Settings {
     input.assistShortcut === undefined
       ? DEFAULT_HOTKEYS.assist
       : input.assistShortcut,
+  );
+  const answerShortcut = parseShortcut(
+    input.answerShortcut ?? DEFAULT_HOTKEYS.answer,
   );
   const clearShortcut = parseShortcut(
     input.clearShortcut === undefined
@@ -194,8 +199,9 @@ export function parseSettings(value: unknown): Settings {
       pauseShortcut,
       stopShortcut,
       assistShortcut,
+      answerShortcut,
       clearShortcut,
-    ]).size !== 5
+    ]).size !== 6
   )
     throw new Error(
       "Each shortcut must be different, including Show/hide, Pause and Stop.",
@@ -209,6 +215,7 @@ export function parseSettings(value: unknown): Settings {
     opacity,
     protectWindow: input.protectWindow === true,
     assistShortcut,
+    answerShortcut,
     clearShortcut,
     toggleShortcut,
     pauseShortcut,

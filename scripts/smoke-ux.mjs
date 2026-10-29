@@ -226,6 +226,21 @@ try {
       throw new Error("Network forbidden in UX smoke");
     };
   });
+  // Preserve a running personal instance's native keys. The smoke exercises
+  // this profile's actual configured bindings when defaults are occupied.
+  await page.evaluate(async () => {
+    const current = (await window.everyhint.getSnapshot()).value;
+    if (current.hotkeys.every((h) => h.registered)) return;
+    const result = await window.everyhint.saveSettings({
+      ...current.settings,
+      toggleShortcut: "Control+Alt+Shift+Space",
+      pauseShortcut: "Control+Alt+Shift+P",
+      stopShortcut: "Control+Alt+Shift+Z",
+      assistShortcut: "Control+Alt+Shift+A",
+      clearShortcut: "Control+Alt+Shift+V",
+    });
+    if (!result.ok) throw Error(result.error);
+  });
   check(
     (
       await page.evaluate(() => window.everyhint.getSnapshot())
@@ -362,7 +377,13 @@ try {
     ),
     "Native tray menu retains active status and an enabled Stop control in the background",
   );
-  nativeWindows("-Action", "Shortcut", "-Accelerator", "Control+Alt+P");
+  nativeWindows(
+    "-Action",
+    "Shortcut",
+    "-Accelerator",
+    (await page.evaluate(() => window.everyhint.getSnapshot())).value.settings
+      .pauseShortcut,
+  );
   await page.waitForFunction(
     async () =>
       (await window.everyhint.getSnapshot()).value.session.state === "PAUSED",
@@ -373,7 +394,13 @@ try {
       .count()) === 1,
     "Global Pause works while hidden and exposes Resume",
   );
-  nativeWindows("-Action", "Shortcut", "-Accelerator", "Control+Alt+P");
+  nativeWindows(
+    "-Action",
+    "Shortcut",
+    "-Accelerator",
+    (await page.evaluate(() => window.everyhint.getSnapshot())).value.settings
+      .pauseShortcut,
+  );
   await page.waitForFunction(
     async () =>
       (await window.everyhint.getSnapshot()).value.session.state === "ACTIVE",
@@ -398,7 +425,13 @@ try {
         .state === "ACTIVE",
     "Actual native close prompt offers background capture and keeps the active session",
   );
-  nativeWindows("-Action", "Shortcut", "-Accelerator", "Control+Alt+Shift+X");
+  nativeWindows(
+    "-Action",
+    "Shortcut",
+    "-Accelerator",
+    (await page.evaluate(() => window.everyhint.getSnapshot())).value.settings
+      .stopShortcut,
+  );
   await page.waitForFunction(
     async () =>
       (await window.everyhint.getSnapshot()).value.session.state === "STOPPED",

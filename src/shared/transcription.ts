@@ -16,7 +16,7 @@ export const DEFAULT_TRANSCRIPTION_SETTINGS: TranscriptionSettings = {
   silenceMs: 900,
   maxSegmentMs: 12000,
   overlapMs: 400,
-  retentionMinutes: 15,
+  retentionMinutes: 2,
   maxEvents: 200,
 };
 export interface TranscriptEvent {

@@ -391,3 +391,67 @@ describe("answer-only ChatGPT Responses transport", () => {
     expect((await s.provider.inspect()).message).toContain("unverified");
   });
 });
+
+describe("deliberate Listen model readiness", () => {
+  it("does not access a catalog until explicitly requested, then selects verified image metadata", async () => {
+    const account = {
+        identity: "a",
+        registration: registration(),
+        token: vi.fn(async () => "synthetic"),
+      },
+      transport = vi.fn(async (_url: string) => {
+        void _url;
+        return json(catalog);
+      });
+    const provider = new ChatGptProvider(account, transport);
+    await provider.inspect();
+    expect(transport).not.toHaveBeenCalled();
+    await provider.readyForRequest();
+    expect((await provider.inspect()).selectedModel).toBe("fixture-image");
+    await provider.readyForRequest();
+    expect(transport).toHaveBeenCalledTimes(1);
+  });
+  it("refreshes stale metadata on a deliberate action while preserving the chosen model", async () => {
+    let now = Date.now();
+    const account = {
+        identity: "a",
+        registration: registration(),
+        token: vi.fn(async () => "synthetic"),
+      },
+      transport = vi.fn(async (_url: string) => {
+        void _url;
+        return json(catalog);
+      });
+    const provider = new ChatGptProvider(account, transport, () => now);
+    await provider.readyForRequest();
+    provider.selectModel("fixture-text");
+    now += 300001;
+    expect((await provider.inspect()).ready).toBe(false);
+    await provider.readyForRequest();
+    expect((await provider.inspect()).selectedModel).toBe("fixture-text");
+    expect(transport).toHaveBeenCalledTimes(2);
+  });
+  it("fails when the previous model disappears without choosing a fallback or making inference", async () => {
+    let now = Date.now();
+    const account = {
+        identity: "a",
+        registration: registration(),
+        token: vi.fn(async () => "synthetic"),
+      },
+      transport = vi.fn(async (_url: string) => {
+        void _url;
+        return json(catalog);
+      });
+    const provider = new ChatGptProvider(account, transport, () => now);
+    await provider.readyForRequest();
+    now += 300001;
+    transport.mockImplementationOnce(async () =>
+      json({ models: catalog.models.slice(0, 1) }),
+    );
+    await expect(provider.readyForRequest()).rejects.toThrow(/unavailable/);
+    expect((await provider.inspect()).ready).toBe(false);
+    expect(transport.mock.calls.every(([url]) => url.endsWith("/models"))).toBe(
+      true,
+    );
+  });
+});

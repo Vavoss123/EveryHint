@@ -8,6 +8,8 @@ import type { AppSnapshot } from "../../shared/contracts";
 import type { AssistantSnapshot } from "../../shared/ai";
 import { DESTINATIONS, type Destination } from "../../shared/navigation";
 import { Icon } from "./components/Icon";
+import { useListen } from "./ListenControls";
+import { DEFAULT_HOTKEYS } from "../../shared/shortcuts";
 
 export function DashboardNav({
   selected,
@@ -130,6 +132,7 @@ export function DashboardHome({
     (item) => item.id === assistant.selected,
   );
   const running = ["ACTIVE", "PAUSED", "READY"].includes(app.session.state);
+  const listen = useListen();
   return (
     <section className="home-page" aria-label="Home overview">
       <div className="home-topline">
@@ -159,6 +162,23 @@ export function DashboardHome({
           <button className="primary" onClick={() => navigate("assistant")}>
             Open your session
           </button>
+        )}
+        {listen?.managed && (
+          <p className="listening-status" role="status">
+            {listen.phase === "listening"
+              ? "Listening"
+              : listen.phase === "paused"
+                ? "Paused"
+                : listen.phase === "transcription-paused"
+                  ? "Transcription paused · capture on"
+                  : "Starting local transcription…"}{" "}
+            · Press{" "}
+            {(app.settings.answerShortcut ?? DEFAULT_HOTKEYS.answer).replaceAll(
+              "Control",
+              "Ctrl",
+            )}{" "}
+            for an answer, or type “help” in the assistant.
+          </p>
         )}
         <div className="source-indicators" aria-label="Capture source states">
           {(["microphone", "systemAudio", "screen"] as const).map((id) => (

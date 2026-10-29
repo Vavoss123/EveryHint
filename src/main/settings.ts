@@ -1,3 +1,4 @@
+import { parseShortcut } from "../shared/shortcuts";
 import { existsSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import type { Settings, WindowBounds } from "../shared/contracts";
 import {
@@ -27,7 +28,24 @@ export class SettingsStore {
       exactKeys(stored, ["version", "settings", "bounds"]);
       if (stored.version !== 1)
         throw new Error("Unsupported settings version.");
-      this.settings = parseSettings(stored.settings);
+      const prior = record(stored.settings);
+      if (prior.answerShortcut === undefined) {
+        const used = new Set(
+          Object.entries(prior)
+            .filter(([key]) => key.endsWith("Shortcut"))
+            .map(([, value]) => parseShortcut(value)),
+        );
+        prior.answerShortcut = [
+          "Control+Alt+Enter",
+          "Control+Alt+Shift+Enter",
+          "Control+Alt+F12",
+          ...Array.from(
+            { length: 24 },
+            (_, index) => `Control+Alt+Shift+F${index + 1}`,
+          ),
+        ].find((key) => !used.has(key));
+      }
+      this.settings = parseSettings(prior);
       // An ordinary upgrade never forces existing users into first-run setup.
       if (this.settings.setupComplete === undefined)
         this.settings.setupComplete = true;
