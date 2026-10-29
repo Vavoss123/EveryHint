@@ -1,0 +1,1077 @@
+{
+  "assessment": "NO-GO",
+  "requestedCandidate": "0.5.1",
+  "testedVersion": "0.5.0",
+  "runtimeBaseline": "ead3ec9",
+  "runtimeSourceChanged": false,
+  "versionIncremented": false,
+  "verifiedAt": "2026-10-29T07:34:20.773Z",
+  "timezone": "Europe/London",
+  "artifact": {
+    "path": "release/EveryHint-0.5.0-x64-private-unsigned-setup.exe",
+    "bytes": 241628302,
+    "sha256": "e2c491a2cf8c6b3e00b3d8dd4bf346a8f4fdb90cf774ceba10debf6acea47370"
+  },
+  "environment": {
+    "os": "Windows 11 Home",
+    "build": "10.0.26200",
+    "architecture": "x64",
+    "cpu": "AMD Ryzen 7 PRO 8840HS w/ Radeon 780M Graphics",
+    "logicalProcessors": 16,
+    "ramBytes": 29706903552,
+    "hypervisorPresent": true,
+    "note": "Available host; not a clean machine or proof of physical-device media acceptance."
+  },
+  "commands": [
+    {
+      "command": "npm run check",
+      "exitCode": 0,
+      "result": "706 tests / 57 files; theme/spec/type/lint/build pass",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run test:ai-sdk",
+      "exitCode": 0,
+      "result": "6 local SDK tests",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run test:plan",
+      "exitCode": 0,
+      "result": "5 local HTTP/JWT/SSE/native-vault tests",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run test:meetings",
+      "exitCode": 0,
+      "result": "12 native encrypted-storage assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/stress-meetings.mjs",
+      "exitCode": 0,
+      "result": "25 cycles / 5 worker restarts",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node --experimental-transform-types scripts/test-inference.mjs --release-runtime",
+      "exitCode": 0,
+      "result": "2 actual bundled-runtime inferences",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke",
+      "exitCode": 0,
+      "result": "47 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:ai",
+      "exitCode": 0,
+      "result": "44 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:speech",
+      "exitCode": 0,
+      "result": "11 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:ui",
+      "exitCode": 0,
+      "result": "44 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:intelligence",
+      "exitCode": 0,
+      "result": "28 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:meetings",
+      "exitCode": 0,
+      "result": "42 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:personal",
+      "exitCode": 0,
+      "result": "34 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run smoke:context",
+      "exitCode": 0,
+      "result": "36 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/smoke-windows.mjs",
+      "exitCode": 0,
+      "result": "20 Electron assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/smoke-packaged.mjs",
+      "exitCode": 0,
+      "result": "12 final-binary assertions",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/verify-rc-packaged.mjs",
+      "exitCode": 0,
+      "result": "54 extended final-binary assertions; credential/profile cleanup verified",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run personal:bench",
+      "exitCode": 0,
+      "result": "10 documents / 3.99M source characters",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm run context:bench",
+      "exitCode": 0,
+      "result": "3,000 generated records",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/verify-context-ai.mjs --dry-run",
+      "exitCode": 0,
+      "result": "No-network fixture brief; zero genuine requests",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/benchmark-screen.mjs",
+      "exitCode": 0,
+      "result": "50 synthetic native screen-processing samples",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/audit-windows-package.mjs",
+      "exitCode": 0,
+      "result": "Archive/helper/fuses/path/signature audit",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/test-update-verifier.mjs",
+      "exitCode": 0,
+      "result": "Valid Windows signature / wrong publisher / unsigned rejection",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "npm audit --json",
+      "exitCode": 0,
+      "result": "0 known advisories",
+      "executed": "2026-10-29"
+    },
+    {
+      "command": "node scripts/verify-rc-installer.mjs",
+      "exitCode": 0,
+      "result": "Read-only comparison: exe, ASAR, Whisper and both native modules match (5 files); installer not executed",
+      "executed": "2026-10-29"
+    }
+  ],
+  "counts": {
+    "unitTests": 706,
+    "unitFiles": 57,
+    "providerFixtureTests": 11,
+    "nativeStorageAssertions": 12,
+    "electronExisting": 318,
+    "electronExtended": 54,
+    "electronTotal": 372
+  },
+  "packaged": {
+    "status": "passed",
+    "assertions": 54,
+    "checks": [
+      "Packaged app rejects developer renderer override",
+      "Packaged identity and unconfigured updates",
+      "Startup restores no capture permission",
+      "Startup restores no automatic AI grant",
+      "Only isolated identity fixtures restored, without plan permission",
+      "No inference readiness without a plan grant/catalog",
+      "Forged Ask rejected without inference",
+      "Identity-only model discovery rejected before provider transport",
+      "Windows display-affinity configuration reads WDA_EXCLUDEFROMCAPTURE (not receiver proof)",
+      "Keyboard Space disables actual Windows affinity",
+      "Keyboard Space re-enables actual Windows affinity",
+      "Rendered Settings controls have programmatic labels ([])",
+      "Reduced-motion styles apply under emulated accessibility media (OS/Narrator acceptance pending)",
+      "Packaged encrypted SQLite worker creates a meeting",
+      "Account switch rejects the previous encrypted scope",
+      "Account B cannot retrieve Account A meeting ({\"ok\":false,\"error\":\"This meeting is not available in the unlocked profile.\"})",
+      "Switching back restores A without losing its encrypted data",
+      "Unconnected local sign-out is safe and idempotent (no real revocation claimed)",
+      "Bundled helper validates and transcription defaults off",
+      "Packaged Whisper cannot acquire unconsented audio",
+      "Real bundled Whisper transcribes both synthetic sources within queue bounds",
+      "Audio verification never captures the real desktop",
+      "Packaged Live authorisation refuses a fixture account without plan/model permission",
+      "Stop drains transcription queue",
+      "No AI responses or provider inference throughout capture",
+      "Graceful packaged quit returns zero (observed 0)",
+      "Owned main process and descendants exit after graceful quit",
+      "No fixture meeting-title plaintext in SQLite",
+      "No fixture meeting-title plaintext in SQLite",
+      "Packaged app rejects developer renderer override",
+      "Packaged identity and unconfigured updates",
+      "Startup restores no capture permission",
+      "Startup restores no automatic AI grant",
+      "Packaged encrypted records survive a full graceful restart",
+      "Saved synthetic transcript loads after restart",
+      "Actual packaged Whisper child is running before active Quit",
+      "Graceful packaged quit returns zero (observed 0)",
+      "Owned main process and descendants exit after graceful quit",
+      "Active Quit releases owned EveryHint.exe child",
+      "Active Quit releases owned EveryHint.exe child",
+      "Active Quit releases owned EveryHint.exe child",
+      "Active Quit releases owned EveryHint.exe child",
+      "Active Quit releases owned EveryHint.exe child",
+      "Active Quit releases owned EveryHint.exe child",
+      "Active Quit releases owned everyhint-transcriber.exe child",
+      "Active Quit releases owned conhost.exe child",
+      "Packaged app rejects developer renderer override",
+      "Packaged identity and unconfigured updates",
+      "Startup restores no capture permission",
+      "Startup restores no automatic AI grant",
+      "Active Quit flushes saved final text and leaves no stuck active meeting",
+      "Graceful packaged quit returns zero (observed 0)",
+      "Owned main process and descendants exit after graceful quit",
+      "No packaged renderer errors"
+    ],
+    "physicalCapture": false,
+    "genuineOAuth": false,
+    "genuineAIRequests": 0,
+    "syntheticIdentityRegistrations": true,
+    "providerGrant": false,
+    "affinity": {
+      "success": true,
+      "affinity": 17,
+      "windowFound": true,
+      "visible": true,
+      "error": 0
+    },
+    "accessibilityMedia": {
+      "reduced": true,
+      "forced": true,
+      "transition": "0s",
+      "animation": "none"
+    },
+    "unnamedControls": [],
+    "restarts": 2,
+    "quits": [
+      {
+        "ms": 153.80619999999908,
+        "exitCode": 0,
+        "remainingOwnedProcesses": 0
+      },
+      {
+        "ms": 162.6018999999942,
+        "exitCode": 0,
+        "remainingOwnedProcesses": 0
+      },
+      {
+        "ms": 167.731200000002,
+        "exitCode": 0,
+        "remainingOwnedProcesses": 0
+      }
+    ],
+    "rendererErrors": [],
+    "whisper": {
+      "loadMs": 91.7812,
+      "averageLatencyMs": 294.5465714285714,
+      "queueLength": 0,
+      "droppedJobs": 0,
+      "gaps": 0,
+      "completedJobs": 14,
+      "workerCpuPercent": 376.308,
+      "workerMemoryBytes": 173342720
+    },
+    "cleanup": {
+      "credentialsCleared": true,
+      "profileRemoved": true,
+      "forcedProcessTermination": false
+    }
+  },
+  "performance": {
+    "workload": "Visible packaged app; looping owned synthetic mic/system sources, actual bundled tiny.en Whisper; five short Win32 samples after final text, with known fixture data only.",
+    "readyMs": 664.6139000000001,
+    "sampleSpanMs": 8221.542399999998,
+    "sampleCount": 5,
+    "mainWorkingSetMax": 171225088,
+    "workerWorkingSetMax": 173363200,
+    "observedQueueMax": 0,
+    "ipcMaxMs": 6.732299999999668,
+    "collectorMeanMs": 630.3669999999998,
+    "cpuPercentSamples": [
+      154.99654761629188,
+      79.86079312944346,
+      84.7123227163879,
+      86.8425693547786
+    ],
+    "cpuPercentMean": 101.60305820422546,
+    "cpuDefinition": "Sum of owned process CPU-time deltas, native Whisper included; 100% = one logical CPU. Not comparable to prior Electron-only normalized counters.",
+    "physicalMediaAcceptance": false,
+    "matchedPhysicalRegressionComparison": false
+  },
+  "storageStress": {
+    "status": "passed",
+    "cycles": 25,
+    "workerRestarts": 5,
+    "remoteRequests": 0,
+    "meanCycleMs": 21.291488,
+    "maxCycleMs": 48.33959999999999
+  },
+  "knowledge": {
+    "node": "24.22.0",
+    "electron": "45.0.0",
+    "fixture": "10 generated documents, 399,000 source characters each; full extraction sections include 100-character overlap",
+    "documentCount": 10,
+    "indexedSections": 3630,
+    "storedSourceCharacters": 3990000,
+    "encryptedImportMeanMs": 10.592290000000002,
+    "retrievalSamplesMs": [
+      117.8963,
+      105.4282,
+      91.17009999999999,
+      98.54579999999993,
+      97.80730000000005
+    ],
+    "retrievalMeanMs": 102.16954,
+    "retrievalMaxMs": 117.8963,
+    "additionalExcerptChars": 4800,
+    "serializedExcerptChars": 5489,
+    "emptyBytes": 40960,
+    "databaseBytes": 5079040,
+    "encryptedIndexGrowthBytes": 5038080,
+    "baselineWorkerHeapBytes": 5875928,
+    "afterWorkerHeapBytes": 21772708,
+    "sharedTestProcessRssBytes": 129888256,
+    "remoteRequests": 0,
+    "note": "Single local synthetic run. RSS is the combined standalone test process and worker; V8 heap limits do not cap all native/external allocations. No startup full-document index is loaded."
+  },
+  "workspace": {
+    "node": "24.22.0",
+    "electron": "45.0.0",
+    "fixture": "1,000 synthetic events / 1,000 people / 1,000 structured memories; actual compiled encrypted SQLite worker",
+    "records": 3000,
+    "workerOpenMs": 50.3689,
+    "encryptedBatchMs": {
+      "event": 26.197500000000005,
+      "person": 19.3955,
+      "memory": 20.8896
+    },
+    "bytesAfterCategory": {
+      "event": 389120,
+      "person": 770048,
+      "memory": 1392640
+    },
+    "peopleSearch": {
+      "samplesMs": [
+        17.3168,
+        13.203099999999978,
+        14.342099999999988,
+        10.007200000000012,
+        7.7771999999999935,
+        12.258399999999995,
+        14.001400000000018
+      ],
+      "meanMs": 12.700885714285713,
+      "maxMs": 17.3168,
+      "returned": 1,
+      "scanned": 1000
+    },
+    "memoryRetrieval": {
+      "samplesMs": [
+        23.63560000000001,
+        15.366700000000037,
+        17.64699999999999,
+        17.948900000000037,
+        17.7226,
+        13.664900000000046,
+        14.680999999999983
+      ],
+      "meanMs": 17.238100000000014,
+      "maxMs": 23.63560000000001,
+      "returned": 25,
+      "scanned": 1000
+    },
+    "personMatchedMemory": {
+      "samplesMs": [
+        9.888300000000015,
+        7.787599999999998,
+        11.961099999999988,
+        10.451199999999972,
+        12.17089999999996,
+        11.53370000000001,
+        12.27520000000004
+      ],
+      "meanMs": 10.86685714285714,
+      "maxMs": 12.27520000000004,
+      "returned": 20,
+      "scanned": 1000
+    },
+    "emptyBytes": 40960,
+    "databaseBytes": 1392640,
+    "encryptedGrowthBytes": 1351680,
+    "baselineWorkerHeapBytes": 5896224,
+    "afterWorkerHeapBytes": 13190004,
+    "sharedProcessRssBytes": 93614080,
+    "remoteRequests": 0,
+    "note": "Single local run. Searches rank the bounded 1,000-record category and return 25. RSS includes standalone process and worker; no real Google latency or genuine AI latency is measured here."
+  },
+  "signatureVerifier": {
+    "status": "passed",
+    "validWindowsSystemBinaryAccepted": true,
+    "wrongPublisherRejected": true,
+    "unsignedInstallerRejected": true,
+    "genuineReleaseFeed": false
+  },
+  "limits": [
+    "No genuine AI/provider browser sign-in/revocation tested.",
+    "Real microphones, Windows playback, receiving devices and clean Windows installs are unperformed.",
+    "Physical performance, Narrator/high contrast/native DPI/OS sleep/hotplug remain pending.",
+    "Prior 30-minute endurance is historical, not a new RC device run.",
+    "No matched performance regression conclusion or leak-free claim from short samples."
+  ],
+  "findings": {
+    "reproducibleProductDefects": [],
+    "harnessCorrections": [
+      "Retention acknowledgement is mandatory.",
+      "Use identity-only synthetic registrations for account isolation; signed-out registrations share local-only history.",
+      "Read the ready visible application HWND, not a hidden/message window.",
+      "Treat an empty owned-process query as successful cleanup."
+    ],
+    "published": false,
+    "updatesConfigured": false
+  },
+  "automatedMatrix": [
+    {
+      "id": "A01",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Theme/spec consistency, TypeScript, zero-warning lint, production build",
+      "result": "PASS",
+      "evidence": "`npm run check`; source runtime remains unchanged from `ead3ec9`."
+    },
+    {
+      "id": "A02",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Unit/regression suite",
+      "result": "PASS",
+      "evidence": "**706 tests / 57 files**; no prior P1–P10 tests removed."
+    },
+    {
+      "id": "A03",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Installed Claude SDK loopback and ChatGPT plan HTTP/JWT/SSE/native-vault fixtures",
+      "result": "PASS",
+      "evidence": "**6 + 5 tests**; local servers/fixture replies, not genuine OAuth or AI."
+    },
+    {
+      "id": "A04",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Native encrypted meeting storage",
+      "result": "PASS",
+      "evidence": "**12 assertions**, 500 segments, persistence/reopen/deletion; 25 additional save/load/delete cycles and 5 worker restarts."
+    },
+    {
+      "id": "A05",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Existing eight Electron suites",
+      "result": "PASS",
+      "evidence": "Core 47, AI 44, speech 11, UI 44, intelligence 28, meetings 42, personal 34, context 36 = **286 assertions**."
+    },
+    {
+      "id": "A06",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "P11 Windows and fused packaged startup smoke",
+      "result": "PASS",
+      "evidence": "**20 + 12 assertions**; configuration/restarts/security bridge/disabled update refusal."
+    },
+    {
+      "id": "A07",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Extended final packaged application",
+      "result": "PASS",
+      "evidence": "**54 assertions**, bringing executed Electron assertions to **372**. Uses real final binary, bundled helper, SQLite and OS keyring with isolated synthetic data."
+    },
+    {
+      "id": "A08",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Actual native window affinity and keyboard checkbox",
+      "result": "PASS",
+      "evidence": "Own visible `Chrome_WidgetWin_1`: `GetWindowDisplayAffinity` reads **0x11**; Space toggles **0 → 0x11**. This is configuration, not receiver verification."
+    },
+    {
+      "id": "A09",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Packaged microphone/system-audio pipelines and local Whisper",
+      "result": "PASS — fixture scope",
+      "evidence": "Looping owned WebAudio inputs through real bundled Whisper, both final sources, bounded queue, no desktop capture or provider permission. Physical devices remain W03–W05. Development-helper sentinel cannot replace the bundled helper."
+    },
+    {
+      "id": "A10",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Packaged encryption, scope/account separation, restart",
+      "result": "PASS — fixture scope",
+      "evidence": "Synthetic identity-only registrations with **no plan permission**; old scope rejected, B cannot read A, A reopens its records; title marker absent from SQLite; saved final speech survives full restart. Not real browser sign-in or token revocation."
+    },
+    {
+      "id": "A11",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Sign-out/inference/Live guards",
+      "result": "PASS — limited scope",
+      "evidence": "Unconnected sign-out is idempotent; model discovery/forged Ask rejected without plan permission; no responses or restored Live grant. Authorised Live scheduling/cap/cancellation has unit/transport-fixture coverage. Real connected sign-out, switching and Live remain U01/U02."
+    },
+    {
+      "id": "A12",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Graceful Quit, including active Whisper and saved capture",
+      "result": "PASS",
+      "evidence": "Three exits with code 0; all owned processes/descendants gone. Active Quit flushes final text and does not leave a stuck active meeting; two restarts restore no capture/Live permission."
+    },
+    {
+      "id": "A13",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Accessibility automation",
+      "result": "PASS — limited scope",
+      "evidence": "Basic rendered Settings-label audit finds zero unnamed controls; keyboard privacy toggle; reduced-motion styles disable transitions/animation; forced-colors media emulation. Existing narrow 125% Live geometry passes. This is not Narrator, actual OS high contrast or native DPI acceptance."
+    },
+    {
+      "id": "A14",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Final archive/helper/fuse/developer-path and installer payload audit",
+      "result": "PASS",
+      "evidence": "Same 0.5.0 installer SHA-256 as P11. Read-only extraction matches the tested exe, ASAR, Whisper and both native `.node` modules (5 files); installer never executed. Helper integrity/exclusions/fuses pass. RunAsNode remains enabled for the documented Claude path."
+    },
+    {
+      "id": "A15",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Update trust and dependency checks",
+      "result": "PASS — disabled/fixture scope",
+      "evidence": "Unit signature/checksum/cancel guards; actual signed Windows system binary accepted, wrong publisher/unsigned installer rejected; **0 known npm advisories**. No signed EveryHint feed/install performed."
+    },
+    {
+      "id": "A16",
+      "category": "AUTOMATED",
+      "status": "PASS",
+      "scope": "Local knowledge/workspace load and brief dry-run",
+      "result": "PASS",
+      "evidence": "Actual encrypted workers; bounded excerpts; no-network brief dry-run; see structured timing receipt. Genuine Google and AI are not inferred."
+    }
+  ],
+  "manualMatrix": [
+    {
+      "id": "E-10-Discord-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Discord",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Discord-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Discord",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Discord-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Discord",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Discord-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Discord",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Teams-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Teams",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Teams-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Teams",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Teams-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Teams",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Teams-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Teams",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Zoom-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Zoom",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Zoom-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Zoom",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Zoom-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Zoom",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Zoom-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Zoom",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Windows_recorder-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Windows recorder",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Windows_recorder-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Windows recorder",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Windows_recorder-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Windows recorder",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-10-Windows_recorder-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 10",
+      "application": "Windows recorder",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Discord-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Discord",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Discord-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Discord",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Discord-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Discord",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Discord-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Discord",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Teams-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Teams",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Teams-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Teams",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Teams-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Teams",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Teams-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Teams",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Zoom-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Zoom",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Zoom-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Zoom",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Zoom-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Zoom",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Zoom-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Zoom",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Windows_recorder-S1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Windows recorder",
+      "scope": "entire monitor 1",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Windows_recorder-S2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Windows recorder",
+      "scope": "second monitor and moving overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Windows_recorder-W1",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Windows recorder",
+      "scope": "EveryHint window",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "E-11-Windows_recorder-W2",
+      "category": "EXTERNAL_RECEIVER",
+      "os": "Windows 11",
+      "application": "Windows recorder",
+      "scope": "different application with overlay",
+      "status": "PENDING",
+      "prerequisite": "Receiver/device session not performed; recorder scope must be supported"
+    },
+    {
+      "id": "W01",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "Windows 10",
+      "application": "EveryHint",
+      "scope": "Windows 10 clean install upgrade uninstall",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W02",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "Windows 11",
+      "application": "EveryHint",
+      "scope": "Windows 11 clean install upgrade uninstall",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W03",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "physical microphone",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W04",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "real system audio",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W05",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "matched real-device performance endurance",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W06",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "tray hotkeys multiple instances",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W07",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "OS lock sleep permissions",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W08",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "native DPI and multiple monitors",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W09",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "Narrator keyboard high contrast",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W10",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "unexpected shutdown and key loss",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W11",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "genuine browser OAuth accounts sign-out",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "W12",
+      "category": "PHYSICAL_WINDOWS",
+      "os": "each claimed OS",
+      "application": "EveryHint",
+      "scope": "retained P1-P10 real-call quality",
+      "status": "PENDING",
+      "prerequisite": "Requires approved test environment/operator observations"
+    },
+    {
+      "id": "U01",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "fresh genuine AI/Live grant",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    },
+    {
+      "id": "U02",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "approved genuine account changes",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    },
+    {
+      "id": "U03",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "approved disposable Windows/security execution",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    },
+    {
+      "id": "U04",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "signed release and redistribution approval",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    },
+    {
+      "id": "U05",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "signed update hosting/key acceptance",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    },
+    {
+      "id": "U06",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "genuine Google approval/configuration",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    },
+    {
+      "id": "U07",
+      "category": "BLOCKED_APPROVAL",
+      "os": "",
+      "application": "EveryHint",
+      "scope": "independent security and release ownership review",
+      "status": "BLOCKED",
+      "prerequisite": "Missing prerequisite; see RC_ACCEPTANCE.md"
+    }
+  ],
+  "installerPayload": {
+    "installerSha256": "e2c491a2cf8c6b3e00b3d8dd4bf346a8f4fdb90cf774ceba10debf6acea47370",
+    "installerExecuted": false,
+    "installationPerformed": false,
+    "registryAcceptance": "not tested",
+    "comparisons": [
+      {
+        "file": "EveryHint.exe",
+        "sha256": "31cfa21de7ce8eff957c29cec2754afcdc73035a15b17a83f2b640e9befe5d06",
+        "match": true
+      },
+      {
+        "file": "resources/app.asar",
+        "sha256": "cb3689cfaa2e0d73cac7aff059eced13a9a36563dfe9e8a222dc80aea1df5cf6",
+        "match": true
+      },
+      {
+        "file": "resources/speech/everyhint-transcriber.exe",
+        "sha256": "60f616ff4d45e6eb29090d109fa5f4f74d73acaea05c659b56ac7bc9cb791b9f",
+        "match": true
+      },
+      {
+        "file": "resources/app.asar.unpacked/node_modules/@napi-rs/canvas-win32-x64-msvc/skia.win32-x64-msvc.node",
+        "sha256": "5d00cf716176a32c2a289f48cad19637131fe7de394c4fed58ae48043325943a",
+        "match": true
+      },
+      {
+        "file": "resources/app.asar.unpacked/node_modules/@napi-rs/keyring-win32-x64-msvc/keyring.win32-x64-msvc.node",
+        "sha256": "52b16658275b7848f8081a6542fee3448f1b1c5d3a36487107ae0e7cec95ac6f",
+        "match": true
+      }
+    ],
+    "cleanup": true,
+    "status": "passed"
+  }
+}

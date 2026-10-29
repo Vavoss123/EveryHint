@@ -1,5 +1,7 @@
 # P11 Windows acceptance and release readiness
 
+**Latest verification:** [Windows RC assessment](RC_ACCEPTANCE.md), 2026-10-29, is **NO-GO** for promotion/distribution. It retests the unchanged 0.5.0 runtime at `ead3ec9`, adds actual packaged affinity/Whisper/storage/account-fixture/active-Quit checks, and supplies the remaining physical/receiver procedures. No 0.5.1 artifact/version has been justified. The P11 evidence below remains historical with its original scope.
+
 As of **2026-10-29**, version **0.5.0**, baseline `d9d1ca8`. P11 software and private build verification are delivered; public distribution is blocked by the gates below. Enterprise is permanently removed. Mobile is unstarted and outside this work. Earlier milestone records retain their historical dates and gaps; this document controls current release status.
 
 ## Evidence categories

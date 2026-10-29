@@ -1,4 +1,14 @@
-# P11 delivery — Windows privacy and private desktop release preparation
+# Windows RC verification delivery — 2026-10-29
+
+**NO-GO for 0.5.1 promotion/distribution.** Verified the unchanged **0.5.0 runtime at `ead3ec9`**; no reproducible product defect or version increment was justified. This delivery adds verification scripts, exact manual procedures, a category-separated acceptance matrix, a 51-row observation CSV and measured receipts. Product features, EverySession styling, secure IPC, local-first processing and update configuration are unchanged. No installer was replaced, published or installed over personal data.
+
+Fresh gates: **706 unit tests / 57 files**, **11 provider fixture tests**, **12 native storage assertions**, **372 Electron assertions** (318 retained + 54 extended packaged). Real bundled Whisper handled synthetic microphone/system sources; native Windows display-affinity off/0x11 and keyboard toggling, actual encrypted profile separation/persistence, active-Quit/child cleanup and two restarts passed. Known signed Windows binary / wrong publisher / unsigned-installer checks passed; npm audit reports zero known advisories. The 25 executed commands and scoped measurements are in [rc-verification.json](evidence/rc-verification.json). Read-only extraction matched 5 critical NSIS payload files to the tested app; installation/registry behavior remains untested.
+
+[Current matrix and every remaining blocker](RC_ACCEPTANCE.md); [exact receiver/install/device/account/accessibility procedures](RC_MANUAL_TESTS.md). All physical/receiver tests remain pending under the existing user choice, genuine requests need fresh grants, and signing/distribution/update hosting approvals are absent. Actual clean Windows 10/11 install/upgrade/uninstall, real packaged OAuth/sign-out/account switching/Live, hardware performance/OS lifecycle/DPI/accessibility and retained P1–P10 quality gates are not marked passed. Synthetic identities do not establish genuine account validity or remote revocation. No new AI request, placeholder update host, mobile or enterprise work occurred.
+
+The retained unsigned installer remains `release/EveryHint-0.5.0-x64-private-unsigned-setup.exe`, **241,628,302 bytes**, SHA-256 **e2c491a2cf8c6b3e00b3d8dd4bf346a8f4fdb90cf774ceba10debf6acea47370**. It matches the original P11 receipt. Build provenance/release gates remain mandatory; no 0.5.1 installer has been cut.
+
+## Historical P11 delivery — Windows privacy and private desktop release preparation
 
 Version **0.5.0**, baseline `d9d1ca8`, 2026-10-29. [Decision/checkpoints](DECISIONS/P11-windows.md), [acceptance matrix, measurements, build instructions and release checklist](P11_ACCEPTANCE.md). Enterprise is permanently removed; mobile is unstarted. Historical sections below describe delivery-time state and retain unperformed manual acceptance.
 
