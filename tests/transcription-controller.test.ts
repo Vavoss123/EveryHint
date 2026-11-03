@@ -145,6 +145,39 @@ describe("local transcription lifecycle", () => {
     expect(test.worker.start).toHaveBeenCalledTimes(1);
     test.controller.dispose();
   });
+  it("settles speech in progress into final text without waiting for silence", async () => {
+    const test = setup();
+    await test.controller.enable();
+    test.feed("microphone", 3000, 0.2);
+    await vi.advanceTimersByTimeAsync(0);
+    expect(test.controller.value.events.at(-1)?.state).toBe("partial");
+    const settling = test.controller.settle();
+    await vi.advanceTimersByTimeAsync(100);
+    await settling;
+    expect(test.controller.value.events).toHaveLength(1);
+    expect(test.controller.value.events[0]!.state).toBe("final");
+    test.controller.dispose();
+  });
+  it("stops waiting for a stuck recognition after the time limit", async () => {
+    const test = setup(),
+      pending = deferred<InferenceResult>();
+    await test.controller.enable();
+    test.worker.infer.mockReturnValueOnce(pending.promise);
+    test.feed("microphone", 3000, 0.2);
+    let done = false;
+    void test.controller.settle(4000).then(() => (done = true));
+    await vi.advanceTimersByTimeAsync(3900);
+    expect(done).toBe(false);
+    await vi.advanceTimersByTimeAsync(200);
+    expect(done).toBe(true);
+    pending.resolve(result);
+    test.controller.dispose();
+  });
+  it("does nothing when transcription is off", async () => {
+    const test = setup();
+    await expect(test.controller.settle()).resolves.toBeUndefined();
+    test.controller.dispose();
+  });
   it.each(["pause", "stop", "clear", "shutdown"] as const)(
     "cancels %s without publishing late results",
     async (action) => {

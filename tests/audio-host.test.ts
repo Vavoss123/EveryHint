@@ -150,7 +150,20 @@ describe("main-process audio lifecycle and permissions", () => {
       ipc("everyhint:audio-pcm")(workerEvent(), { token: "current", frame }),
     ).toBe(false);
     expect(consume).toHaveBeenCalledTimes(1);
+    host.setTranscriptionToken("current");
+    const stale = workerEvent();
     host.stop();
+    // Late frames from the stopped worker and unrelated senders are dropped.
+    expect(ipc("everyhint:audio-pcm")(stale, { token: "current", frame })).toBe(
+      false,
+    );
+    expect(
+      ipc("everyhint:audio-pcm")(
+        { sender: {}, senderFrame: null },
+        { token: "current", frame },
+      ),
+    ).toBe(false);
+    expect(consume).toHaveBeenCalledTimes(1);
   });
   it("turns synchronous capture-context creation failures into rejected startup", async () => {
     const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn());

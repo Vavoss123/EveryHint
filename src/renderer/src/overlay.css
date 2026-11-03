@@ -351,3 +351,28 @@ body,
   color: var(--color-brand-ink);
   border: 1px solid var(--color-border);
 }
+.overlay-transcript-toggle {
+  padding: 1px 8px;
+  font-size: 11px;
+  border-radius: 999px;
+}
+.overlay-transcript-toggle[aria-pressed="true"] {
+  color: var(--color-brand-ink);
+  border-color: var(--color-brand-ink);
+}
+.overlay-transcript {
+  max-height: 96px;
+  overflow-y: auto;
+  padding: 6px 14px;
+  border-bottom: 1px solid var(--color-border);
+  font-size: 12px;
+  line-height: 1.4;
+  background: var(--color-surface);
+}
+.overlay-transcript p {
+  margin: 0 0 2px;
+}
+.overlay-transcript .is-partial {
+  color: var(--color-text-secondary);
+  font-style: italic;
+}

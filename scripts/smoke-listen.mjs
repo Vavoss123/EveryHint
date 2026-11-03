@@ -345,6 +345,20 @@ try {
     nativeOverlay.visible && nativeOverlay.focused,
     "Native Ctrl+Alt+Enter opens and focuses the floating assistant from another application",
   );
+  const live = floating.getByLabel("Live transcript", { exact: true });
+  await live
+    .getByText(/country/i)
+    .first()
+    .waitFor({ timeout: 15000 });
+  check(
+    (await live.locator("strong").allTextContents()).some((t) =>
+      ["You", "Them"].includes(t),
+    ),
+    "The overlay shows the live transcript with You/Them labels",
+  );
+  await floating.screenshot({
+    path: join(root, "artifacts", "everyhint-overlay-transcript.png"),
+  });
   const first = (await calls())[0],
     text = JSON.stringify(first);
   check(

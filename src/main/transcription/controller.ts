@@ -312,6 +312,24 @@ export class TranscriptionController {
       }
     }
   }
+  /**
+   * Finalizes speech in progress and waits (bounded) until recognition has
+   * caught up, so a request sees what was just said.
+   */
+  async settle(timeoutMs = 4000, pause = 50): Promise<void> {
+    if (this.state !== "LISTENING") return;
+    for (const segmenter of Object.values(this.segmenters))
+      segmenter?.finalize();
+    const deadline = Date.now() + timeoutMs;
+    while (
+      this.state === "LISTENING" &&
+      (this.busy ||
+        this.queues.microphone.length > 0 ||
+        this.queues.systemAudio.length > 0) &&
+      Date.now() < deadline
+    )
+      await new Promise((done) => setTimeout(done, pause));
+  }
   dispose(): void {
     this.cancel("OFF");
     this.store.clear();

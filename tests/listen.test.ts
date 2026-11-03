@@ -185,6 +185,7 @@ function setup() {
     stop,
     enableSpeech,
     speechReady: vi.fn(async () => {}),
+    settleSpeech: vi.fn(async () => {}),
     binding: (includeModel = true) =>
       JSON.stringify([
         account.identity,
@@ -705,6 +706,38 @@ describe("deliberate conversation requests reuse the ChatGPT Responses transport
       },
     ]);
     expect(JSON.stringify(s.requests[1])).toContain("Grounded fixture answer");
+  });
+  it("finalizes speech in progress so the newest question is sent", async () => {
+    const s = setup();
+    await s.start();
+    const partial = {
+      ...s.event("What is your notice period", "systemAudio", -500),
+      state: "partial" as const,
+    };
+    s.speech.events = [
+      s.event("Tell me about your last project", "systemAudio", -20000),
+      partial,
+    ];
+    // Finalizing turns the line being spoken into final text.
+    s.ports.settleSpeech.mockImplementationOnce(async () => {
+      s.speech.events = [
+        s.speech.events[0]!,
+        { ...partial, text: "What is your notice period?", state: "final" },
+      ];
+    });
+    await s.listen.ask({ question: "" });
+    await flush();
+    expect(s.ports.settleSpeech).toHaveBeenCalledTimes(1);
+    expect(JSON.stringify(s.requests[0])).toContain(
+      "What is your notice period?",
+    );
+  });
+  it("does not wait for speech when only the screen is shared", async () => {
+    const s = setup();
+    await s.start({ transcript: false, screen: true, acknowledged: true });
+    await s.listen.ask({ question: "help" });
+    await flush();
+    expect(s.ports.settleSpeech).not.toHaveBeenCalled();
   });
   it("sends a typed question as text only when sharing is off", async () => {
     const s = setup();

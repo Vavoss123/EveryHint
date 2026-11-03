@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { AppSnapshot, Result } from "../../shared/contracts";
 import type { ContextReview, ProviderId } from "../../shared/ai";
+import type { TranscriptionSnapshot } from "../../shared/transcription";
 import { useAssistantSnapshot } from "./useAssistantSnapshot";
 import { useListen } from "./useListen";
 import { usePersonal, personalCommand } from "./PersonalState";
@@ -17,6 +18,14 @@ const QUICK_ACTIONS = [
   ],
   ["Fact-check", "Fact-check the most recent claim in the conversation."],
 ] as const;
+const TRANSCRIPT_KEY = "everyhint.overlayTranscript";
+function readTranscriptPreference(): boolean {
+  try {
+    return localStorage.getItem(TRANSCRIPT_KEY) !== "off";
+  } catch {
+    return true;
+  }
+}
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
   return result.value;
@@ -29,6 +38,15 @@ export function FloatingAssistant() {
   const [question, setQuestion] = useState("");
   const [busy, setBusy] = useState(false),
     [error, setError] = useState<string | null>(null);
+  const [speech, setSpeech] = useState<TranscriptionSnapshot | null>(null),
+    [showTranscript, setShowTranscript] = useState(readTranscriptPreference);
+  useEffect(() => {
+    const off = window.everyhint.onTranscription(setSpeech);
+    void window.everyhint.getTranscription().then((result) => {
+      if (result.ok) setSpeech(result.value);
+    });
+    return off;
+  }, []);
   const [menu, setMenu] = useState(false),
     [context, setContext] = useState<ContextReview | null>(null),
     [view, setView] = useState(false);
@@ -276,6 +294,23 @@ export function FloatingAssistant() {
           >
             <span aria-hidden="true">●</span> {status}
           </span>
+          {app?.session.state === "ACTIVE" && (
+            <button
+              className="overlay-transcript-toggle"
+              aria-pressed={showTranscript}
+              onClick={() => {
+                const next = !showTranscript;
+                setShowTranscript(next);
+                try {
+                  localStorage.setItem(TRANSCRIPT_KEY, next ? "on" : "off");
+                } catch {
+                  // The preference is a convenience only.
+                }
+              }}
+            >
+              Transcript
+            </button>
+          )}
           {app?.clickThrough && (
             <span className="overlay-click-through" role="status">
               Click-through · Ctrl+Alt+Space
@@ -439,6 +474,9 @@ export function FloatingAssistant() {
           </div>
         )}
       </header>
+      {showTranscript && app?.session.state === "ACTIVE" && (
+        <LiveTranscript speech={speech} sessionId={app.session.sessionId} />
+      )}
       <section
         className="overlay-answer"
         aria-label={view ? "Last request context" : "Assistant responses"}
@@ -631,5 +669,44 @@ export function FloatingAssistant() {
         </div>
       </form>
     </main>
+  );
+}
+/** The last few lines being heard, including words still being recognised. */
+function LiveTranscript({
+  speech,
+  sessionId,
+}: {
+  speech: TranscriptionSnapshot | null;
+  sessionId: string | null;
+}) {
+  const lines = (speech?.events ?? [])
+    .filter((event) => event.sessionId === sessionId && event.text.trim())
+    .sort((a, b) => a.startMs - b.startMs)
+    .slice(-4);
+  return (
+    <section
+      className="overlay-transcript"
+      aria-label="Live transcript"
+      aria-live="polite"
+    >
+      {lines.length ? (
+        lines.map((line) => (
+          <p
+            key={line.id}
+            className={line.state === "partial" ? "is-partial" : undefined}
+          >
+            <strong>{line.source === "microphone" ? "You" : "Them"}</strong>{" "}
+            {line.text}
+            {line.state === "partial" ? "…" : ""}
+          </p>
+        ))
+      ) : (
+        <p className="is-partial">
+          {speech?.state === "LISTENING"
+            ? "Listening… speech will appear here."
+            : "Transcription is not running."}
+        </p>
+      )}
+    </section>
   );
 }

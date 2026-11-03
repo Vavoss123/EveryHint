@@ -23,6 +23,8 @@ interface Ports {
   stop(): void;
   enableSpeech(): Promise<void>;
   speechReady(): Promise<void>;
+  /** Waits until speech in progress has been transcribed. */
+  settleSpeech(): Promise<void>;
   // Includes account, plan permission, provider, model, mode and assistant session.
   binding(includeModel?: boolean): string;
   owner(): string;
@@ -436,6 +438,14 @@ export class ListenController {
         throw new Error(
           "Sharing or session changed. Ask again after allowing sharing.",
         );
+      if (!textOnly && grant!.transcript) {
+        // Include the words just spoken, not only already-final lines.
+        await this.ports.settleSpeech();
+        if (!valid())
+          throw new Error(
+            "Sharing or session changed. Ask again after allowing sharing.",
+          );
+      }
       const capture = this.ports.capture();
       const scope = textOnly ? { transcript: false, screen: false } : grant!;
       // The model reads the transcript itself; a heuristic detected question

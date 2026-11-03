@@ -812,6 +812,7 @@ async function initialise(): Promise<void> {
       start: () => controller.action("start"),
       stop: stopCapture,
       enableSpeech: () => speech!.enable(),
+      settleSpeech: () => speech!.settle(),
       speechReady: async () => {
         await speech!.installation.ensureReady(speech!.value.settings.model);
       },

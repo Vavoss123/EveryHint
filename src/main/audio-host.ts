@@ -134,8 +134,15 @@ export class ElectronAudioCapture implements AudioCaptureManager {
     ipcMain.handle(
       "everyhint:audio-pcm",
       (event: IpcMainInvokeEvent, value: unknown): boolean => {
-        const current = this.trusted(event),
-          input = record(value);
+        let current: Operation;
+        try {
+          current = this.trusted(event);
+        } catch {
+          // Frames still in flight from a stopped or replaced worker, or from
+          // any other sender, are dropped rather than raised as errors.
+          return false;
+        }
+        const input = record(value);
         exactKeys(input, ["token", "frame"]);
         if (
           current.plan.mode !== "capture" ||

@@ -127,6 +127,12 @@ export class SpeechSegmenter {
       overlapMs: active.overlapMs,
     });
   }
+  /** Ends the utterance in progress now, so its words become final text. */
+  finalize(): void {
+    this.send(true);
+    this.active = null;
+    this.preRoll = [];
+  }
   gap(): void {
     this.send(true);
     this.reset();
