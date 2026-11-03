@@ -373,10 +373,33 @@ try {
         (source) => source.state === "CAPTURING",
       ),
     );
+    const overlayVisible = () =>
+      desktop.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find((w) => w.webContents.getURL().includes("overlay=1"))
+          .isVisible(),
+      );
+    const dashboardVisible = () =>
+      desktop.evaluate(({ BrowserWindow }) =>
+        BrowserWindow.getAllWindows()
+          .find(
+            (w) =>
+              w.webContents.getURL().includes("index.html") &&
+              !w.webContents.getURL().includes("overlay=1"),
+          )
+          .isVisible(),
+      );
+    if (!(await overlayVisible()))
+      await page.evaluate(() => window.everyhint.window("overlay"));
+    check(await overlayVisible(), "overlay is open during the session");
     await page.getByRole("button", { name: /Stop/ }).click();
     await waitForSnapshot(
       page,
       (state) => state.session.state === "STOPPED" && !state.session.consent,
+    );
+    check(
+      !(await overlayVisible()) && (await dashboardVisible()),
+      "ending the session hides the overlay and shows the dashboard",
     );
     check(
       !desktop

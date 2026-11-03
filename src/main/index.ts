@@ -127,6 +127,7 @@ let hotkeys: HotkeyStatus[] = [];
 const warnings: string[] = [];
 let revision = 0;
 let quitting = false;
+let lastSessionState: SessionState | undefined;
 let saveTimer: ReturnType<typeof setTimeout> | undefined;
 let lastTrayState: string | undefined;
 let privacy: WindowPrivacy | undefined;
@@ -533,7 +534,27 @@ function updateTray(): void {
       `EveryHint${listening?.sharing ? " · AI context allowed" : ""}${postEnabled ? " · End notes enabled" : ""}${recording ? " · saving final text" : ""} · ${state}`,
     );
 }
+// When a running session ends, put the overlay away and return to the
+// dashboard so the next step (Start again, notes) is visible.
+function sessionEnded(): void {
+  const state = controller?.value.state;
+  const ended =
+    (lastSessionState === "ACTIVE" || lastSessionState === "PAUSED") &&
+    (state === "STOPPED" || state === "IDLE" || state === "ERROR");
+  lastSessionState = state;
+  if (!ended || quitting) return;
+  if (clickThrough) {
+    clickThrough = false;
+    if (overlay && !overlay.isDestroyed()) {
+      overlay.setIgnoreMouseEvents(false);
+      overlay.setOpacity(overlayOpacity());
+    }
+  }
+  hideOverlay();
+  show();
+}
 function publish(): void {
+  sessionEnded();
   if (speech && controller) speech.captureChanged(controller.value);
   if (assistant && controller) assistant.captureChanged(controller.value);
   listen?.observe();
