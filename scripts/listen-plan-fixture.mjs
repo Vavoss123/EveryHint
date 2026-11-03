@@ -110,9 +110,14 @@ export async function installListenPlanFixture({ shell }) {
       const prompt = body.input?.[0]?.content?.[0]?.text ?? "";
       const start = prompt.lastIndexOf('\n{"question"');
       const reference = start >= 0 ? JSON.parse(prompt.slice(start + 1)) : null;
-      const excerpt = reference?.meetingContext?.excerpts?.find(
-        (e) => e.text.trim().length >= 12,
-      );
+      const notesRequest =
+        !!reference?.meetingContext &&
+        prompt.includes("Write clear, useful notes");
+      const excerpt =
+        notesRequest &&
+        reference.meetingContext.excerpts.find(
+          (e) => e.text.trim().length >= 12,
+        );
       const claim = (text) => ({
         text,
         evidence: [
@@ -122,13 +127,23 @@ export async function installListenPlanFixture({ shell }) {
       });
       const answer = excerpt
         ? JSON.stringify({
+            title: "Fixture planning call",
             overview: claim("Fixture overview of the session."),
-            topics: [claim("Fixture topic.")],
-            points: [],
-            decisions: [],
-            actions: [],
-            outstanding: [],
-            nextSteps: [],
+            topics: [claim("Fixture topic."), claim("Second fixture topic.")],
+            points: [claim("A fixture point worth remembering.")],
+            decisions: [claim("The team agreed on the fixture plan.")],
+            actions: [
+              {
+                ...claim("Send the fixture recap"),
+                owner: null,
+                deadline: null,
+                status: "open",
+              },
+            ],
+            outstanding: [
+              { ...claim("Budget is still open."), uncertainty: "uncertain" },
+            ],
+            nextSteps: [claim("Meet again next week.")],
           })
         : `Fixture answer ${number}: grounded in supplied context.`;
       if (excerpt) fixture.notes = (fixture.notes ?? 0) + 1;

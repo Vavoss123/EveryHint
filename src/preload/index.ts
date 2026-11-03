@@ -200,6 +200,16 @@ const bridge: EveryHintBridge = {
         import("../shared/meeting-bridge").MeetingBridge["end"]
       >[0],
     ) => ipcRenderer.invoke("everyhint:meetings-end", input),
+    chat: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["chat"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-chat", input),
+    cancelChat: (
+      input: Parameters<
+        import("../shared/meeting-bridge").MeetingBridge["cancelChat"]
+      >[0],
+    ) => ipcRenderer.invoke("everyhint:meetings-chat-cancel", input),
     prepareAI: (
       input: Parameters<
         import("../shared/meeting-bridge").MeetingBridge["prepareAI"]

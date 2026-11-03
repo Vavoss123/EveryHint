@@ -440,6 +440,8 @@ export class MeetingAIController {
       summary.template = structuredClone(draft.summary.template);
     summary.generatedAt = draft.summary.generatedAt;
     doc.summary = summary;
+    // Replace only the generic auto-save title, never one the user chose.
+    if (draft.title && /^Meeting \d/.test(doc.title)) doc.title = draft.title;
     doc.editedSections = doc.editedSections.filter(
       (section) => !sections.includes(section as SummarySection),
     );

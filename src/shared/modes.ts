@@ -2,6 +2,7 @@ import { ACTION_LABELS, type ContextualAction } from "./actions";
 import { exactKeys, record } from "./validation";
 import {
   builtInTemplates,
+  BUILT_IN_EPOCH,
   parseTemplate,
   type NoteTemplate,
 } from "./templates";
@@ -276,7 +277,16 @@ export function parseConfig(value: unknown): PersonalConfig {
     input.version === 1 ? builtInTemplates() : input.templates;
   if (!Array.isArray(rawTemplates) || rawTemplates.length > 50)
     throw new Error("Maximum 50 templates.");
-  const templates = rawTemplates.map(parseTemplate),
+  const current = builtInTemplates();
+  const templates = rawTemplates
+      .map(parseTemplate)
+      .map(
+        (template) =>
+          (template.builtIn &&
+            template.updatedAt === BUILT_IN_EPOCH &&
+            current.find((b) => b.id === template.id)) ||
+          template,
+      ),
     defaultTemplateId =
       input.version === 1 ? "standard" : localId(input.defaultTemplateId);
   if (

@@ -533,9 +533,10 @@ try {
   await wait(ai, (s) => s.responses.at(-1)?.status === "generating");
   hotkey(configured.find((h) => h.action === "stop").accelerator);
   await wait(appState, (s) => s.session.state === "STOPPED");
+  // Ending the session starts its notes request, which is expected.
   check(
-    !(await ai()).responses.some((r) =>
-      ["sending", "generating"].includes(r.status),
+    !(await ai()).responses.some(
+      (r) => !r.meetingPurpose && ["sending", "generating"].includes(r.status),
     ) && (await desktop.evaluate(() => globalThis.__listenFixture.aborted > 0)),
     "The registered Stop shortcut aborts an in-flight streamed answer",
   );
@@ -579,9 +580,47 @@ try {
       notesDoc.value.summary.overview.evidence[0].quote.length >= 12,
     "The saved meeting holds the transcript and notes quoting it",
   );
+  check(
+    notesDoc.value.title === "Fixture planning call",
+    "The generic session title is replaced by the AI title",
+  );
   await page.getByRole("button", { name: "Open notes", exact: true }).click();
   await page.getByRole("heading", { name: notesDoc.value.title }).waitFor();
-  check(true, "Open notes shows the saved meeting");
+  check(
+    await page
+      .getByLabel("Meeting notes", { exact: true })
+      .getByText("A fixture point worth remembering.")
+      .isVisible(),
+    "Open notes shows the saved meeting with readable notes",
+  );
+  const chat = page.getByLabel("Ask about this meeting", { exact: true });
+  await chat
+    .getByRole("button", { name: "What were the key takeaways?" })
+    .click();
+  await chat
+    .locator(".chat-answer")
+    .getByText(/Fixture answer/)
+    .waitFor();
+  check(true, "A suggested question is answered in the meeting chat");
+  await chat
+    .getByLabel("Question about this meeting", { exact: true })
+    .fill("Make that shorter");
+  await chat
+    .getByLabel("Question about this meeting", { exact: true })
+    .press("Enter");
+  await wait(
+    () => chat.locator(".chat-answer").count(),
+    (count) => count === 2,
+  );
+  const followUp = (await calls()).at(-1);
+  check(
+    JSON.stringify(followUp).includes("Q: What were the key takeaways?") &&
+      JSON.stringify(followUp).includes("New question: Make that shorter"),
+    "Follow-up questions carry the earlier chat turn",
+  );
+  await page.screenshot({
+    path: join(root, "artifacts", "everyhint-meeting-notes.png"),
+  });
   await settingsSection(page, "Shortcuts");
   check(
     (await page

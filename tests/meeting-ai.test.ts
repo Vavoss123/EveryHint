@@ -357,10 +357,21 @@ describe("P8.2 grounded meeting drafts and frozen sharing", () => {
     expect(draft.actions[0]!.owner).toBeNull();
     expect(draft.actions[0]!.deadline).toBeNull();
     expect(draft.actions[0]!.uncertainty).toBe("uncertain");
+    // An unverifiable quote is dropped instead of discarding the notes.
     fixture.actions[0]!.evidence[0]!.quote = "Made up supporting quote";
+    const loose = parseMeetingDraft(
+      "```json\n" +
+        JSON.stringify({ ...fixture, title: "Release review" }) +
+        "\n```",
+      context,
+      null,
+      Date.now(),
+    );
+    expect(loose.actions[0]!.evidence).toEqual([]);
+    expect(loose.title).toBe("Release review");
     expect(() =>
-      parseMeetingDraft(JSON.stringify(fixture), context, null, Date.now()),
-    ).toThrow(/did not match/);
+      parseMeetingDraft("Sorry, I cannot help.", context, null, Date.now()),
+    ).toThrow(/expected format/);
     const long = Array.from({ length: 200 }, (_, index) => ({
       ...segments[0]!,
       id: `large-${index}`,
@@ -369,8 +380,8 @@ describe("P8.2 grounded meeting drafts and frozen sharing", () => {
     const bounded = buildMeetingContext([doc], long, s.selection);
     expect(
       bounded.excerpts.reduce((sum, excerpt) => sum + excerpt.text.length, 0),
-    ).toBeLessThanOrEqual(12000);
-    expect(JSON.stringify(bounded.excerpts).length).toBeLessThanOrEqual(14500);
+    ).toBeLessThanOrEqual(60000);
+    expect(JSON.stringify(bounded.excerpts).length).toBeLessThanOrEqual(84000);
     expect(bounded.notices.some((notice) => notice.includes("bounded"))).toBe(
       true,
     );

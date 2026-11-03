@@ -9,6 +9,8 @@ export interface NoteTemplate {
   updatedAt: number;
   sections: { heading: string; instructions: string; source: SummarySection }[];
 }
+// Built-in templates still carrying this timestamp have never been edited.
+export const BUILT_IN_EPOCH = 1793145600000;
 export function builtInTemplates(): NoteTemplate[] {
   const definitions: [string, string, [string, SummarySection][]][] = [
     [
@@ -16,10 +18,12 @@ export function builtInTemplates(): NoteTemplate[] {
       "Standard Meeting",
       [
         ["Overview", "overview"],
-        ["Discussion points", "topics"],
+        ["Topics", "topics"],
+        ["Key points", "points"],
         ["Decisions", "decisions"],
         ["Action items", "actions"],
-        ["Follow-ups", "nextSteps"],
+        ["Open questions", "outstanding"],
+        ["Next steps", "nextSteps"],
       ],
     ],
     [
@@ -60,8 +64,8 @@ export function builtInTemplates(): NoteTemplate[] {
     id,
     name,
     builtIn: true,
-    createdAt: 1793145600000,
-    updatedAt: 1793145600000,
+    createdAt: BUILT_IN_EPOCH,
+    updatedAt: BUILT_IN_EPOCH,
     sections: sections.map(([heading, source]) => ({
       heading,
       source,

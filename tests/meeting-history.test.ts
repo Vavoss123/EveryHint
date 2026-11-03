@@ -1,3 +1,4 @@
+import { MeetingChat } from "../src/main/meetings/chat";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { mkdtempSync, readFileSync, readdirSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
@@ -447,6 +448,7 @@ async function ipcSetup(saved = true) {
     changed = vi.fn(),
     sourcesChanged = vi.fn(async () => {});
   registerMeetingIPC({
+    chat: new MeetingChat(s.ai),
     snapshotAI: () => ({ ...s.ai.value, ...s.post.value }),
     handle: (name, action) => {
       routes.set(name, action);

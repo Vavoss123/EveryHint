@@ -81,7 +81,7 @@ describe("P9 grounded note templates", () => {
     };
     await h.command({ type: "save-template", template });
     expect(h.controller.template("custom").sections[0]?.heading).toBe(
-      "Follow-ups",
+      "Next steps",
     );
     await h.command({
       type: "save-template",
@@ -168,7 +168,7 @@ describe("P9 grounded note templates", () => {
         meetingContext: context,
       });
       expect(prompt).toContain("Custom release review");
-      expect(prompt).toContain("No invented commitments");
+      expect(prompt).toContain("Never invent facts");
       const draft = parseMeetingDraft(
         JSON.stringify(summaryFixture(context)),
         context,
@@ -196,5 +196,29 @@ describe("P9 grounded note templates", () => {
     ).rejects.toThrow("changed");
     expect(h.controller.value.unlocked).toBe(false);
     expect(h.controller.value.config.activeModeId).toBe("general");
+  });
+});
+describe("built-in template upgrades", () => {
+  it("upgrades an unedited built-in and keeps an edited one", () => {
+    const config = defaultConfig();
+    const old = {
+      ...config.templates[0]!,
+      sections: config.templates[0]!.sections.slice(0, 5),
+    };
+    const upgraded = parseConfig({
+      ...config,
+      templates: [old, ...config.templates.slice(1)],
+    });
+    expect(upgraded.templates[0]!.sections.map((s) => s.source)).toContain(
+      "points",
+    );
+    const edited = parseConfig({
+      ...config,
+      templates: [
+        { ...old, updatedAt: old.updatedAt + 1 },
+        ...config.templates.slice(1),
+      ],
+    });
+    expect(edited.templates[0]!.sections).toHaveLength(5);
   });
 });

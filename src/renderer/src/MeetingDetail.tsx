@@ -12,12 +12,14 @@ import type {
   UserActionEdit,
   UserDecisionEdit,
 } from "../../shared/meeting-edits";
-import {
-  EvidenceItem,
-  MeetingAIReview,
-  TemplateSummary,
-} from "./MeetingAIReview";
+import { MeetingAIReview } from "./MeetingAIReview";
 import { MeetingSharingPanel } from "./MeetingSharing";
+import {
+  MeetingChat,
+  NotesView,
+  hasNotes,
+  notesMarkdown,
+} from "./MeetingNotes";
 import { meetingResult, meetingScope } from "./useMeetings";
 
 type Tab = "overview" | "transcript" | "notes" | "ai";
@@ -93,6 +95,7 @@ export function MeetingDetail({
   connection: () => void;
   onDirty: (dirty: boolean) => void;
 }) {
+  const [copiedNotes, setCopiedNotes] = useState(false);
   const [tab, setTab] = useState<Tab>("overview"),
     [editor, setEditor] = useState(() => editorFor(document)),
     [page, setPage] = useState(initialPage),
@@ -306,34 +309,38 @@ export function MeetingDetail({
         <button className="secondary" onClick={() => onBack()}>
           Back to history
         </button>
-        <button className="secondary" onClick={() => setTab("notes")}>
-          Rename or edit
-        </button>
-        <button
-          className="secondary"
-          disabled={dirty || busy}
-          onClick={() => onOpen(document.id)}
-        >
-          Reload saved meeting
-        </button>
+        <div className="button-row">
+          {hasNotes(document) && (
+            <button
+              className="secondary"
+              onClick={() =>
+                void run(async () => {
+                  await window.everyhint.copyResponse(notesMarkdown(document));
+                  setCopiedNotes(true);
+                  setTimeout(() => setCopiedNotes(false), 1500);
+                })
+              }
+            >
+              {copiedNotes ? "Copied" : "Copy notes"}
+            </button>
+          )}
+          <button className="secondary" onClick={() => setTab("notes")}>
+            Rename or edit
+          </button>
+        </div>
       </div>
       <div className="page-heading">
         <div>
-          <p className="eyebrow">SAVED LOCALLY · {document.status}</p>
           <h1>{document.title}</h1>
+          <p className="muted">
+            {new Date(
+              document.startedAt ?? document.createdAt,
+            ).toLocaleString()}{" "}
+            · {Math.max(1, Math.round(document.durationMs / 60000))} min
+            {document.status === "active" ? " · in progress" : ""}
+          </p>
         </div>
       </div>
-      <p className="muted">
-        Started{" "}
-        {new Date(document.startedAt ?? document.createdAt).toLocaleString()} ·{" "}
-        {Math.round(document.durationMs / 60000)} min · {document.segmentCount}{" "}
-        final segments · updated {new Date(document.updatedAt).toLocaleString()}
-      </p>
-      <small>
-        Saved {new Date(document.createdAt).toLocaleString()} ·{" "}
-        {document.runs.length} separate capture segment(s) · tags:{" "}
-        {document.tags.join(", ") || "None"}
-      </small>
       {dirty && (
         <div className="warning" role="status">
           You have unsaved edits. Save or revert them before
@@ -377,7 +384,14 @@ export function MeetingDetail({
               buttons?.[next]?.focus();
             }}
           >
-            {value === "ai" ? "AI" : value[0]!.toUpperCase() + value.slice(1)}
+            {
+              {
+                overview: "Summary",
+                transcript: "Transcript",
+                notes: "Edit notes",
+                ai: "AI tools",
+              }[value]
+            }
           </button>
         ))}
       </div>
@@ -388,119 +402,64 @@ export function MeetingDetail({
         className="panel-stack"
       >
         {tab === "overview" && (
-          <>
-            {document.summary?.template && (
-              <TemplateSummary
+          <div className="meeting-summary-layout">
+            <div className="panel-stack">
+              <NotesView
                 doc={document}
                 open={(ref) => void openEvidence(ref)}
               />
-            )}
-            <div hidden={Boolean(document.summary?.template)}>
-              <h2>Overview</h2>
-              {document.summary?.overview ? (
-                <EvidenceItem
-                  item={document.summary.overview}
-                  open={(ref) => void openEvidence(ref)}
-                />
-              ) : (
-                <p className="muted">
-                  No summary has been saved. Generate a reviewed draft in AI, or
-                  write your own notes.
-                </p>
+              {document.notes.trim() && (
+                <section>
+                  <h3>Your notes</h3>
+                  <p className="meeting-plain">{document.notes}</p>
+                </section>
               )}
-              {(["topics", "points", "outstanding", "nextSteps"] as const).map(
-                (section) =>
-                  document.summary?.[section].length ? (
-                    <section key={section}>
-                      <h3>
-                        {
-                          {
-                            topics: "Main topics",
-                            points: "Important points",
-                            outstanding: "Outstanding questions",
-                            nextSteps: "Suggested next steps",
-                          }[section]
-                        }
-                      </h3>
-                      {document.summary[section].map((item, index) => (
-                        <EvidenceItem
-                          key={index}
-                          item={item}
-                          open={(ref) => void openEvidence(ref)}
-                        />
-                      ))}
-                    </section>
-                  ) : null,
-              )}
-              <h2>Decisions</h2>
-              {document.decisions.length ? (
-                document.decisions.map((item) => (
-                  <EvidenceItem
-                    key={item.id}
-                    item={item}
-                    open={(ref) => void openEvidence(ref)}
-                  />
-                ))
-              ) : (
-                <p className="muted">No decisions saved.</p>
-              )}
-              <h2>Action items</h2>
-              {document.actions.length ? (
-                document.actions.map((item) => (
-                  <article className="card panel-stack" key={item.id}>
-                    <EvidenceItem
-                      item={item}
-                      open={(ref) => void openEvidence(ref)}
-                    />
-                    <small>
-                      {item.owner ?? "Unassigned"} ·{" "}
-                      {item.deadline ?? "Not specified"} ·{" "}
-                      {item.status.replace("-", " ")}
-                    </small>
-                  </article>
-                ))
-              ) : (
-                <p className="muted">No agreed action items saved.</p>
-              )}
-            </div>
-            {(document.summaryVersions ?? []).map((version, index) => (
-              <details key={`${version.savedAt}-${index}`}>
-                <summary>
-                  Previous saved summary ·{" "}
-                  {new Date(version.savedAt).toLocaleString()}
-                </summary>
-                {version.summary.template ? (
-                  <TemplateSummary
+              {(document.summaryVersions ?? []).map((version, index) => (
+                <details key={`${version.savedAt}-${index}`}>
+                  <summary>
+                    Earlier notes · {new Date(version.savedAt).toLocaleString()}
+                  </summary>
+                  <NotesView
                     doc={version}
                     open={(ref) => void openEvidence(ref)}
                   />
-                ) : (
-                  <pre className="knowledge-text">
-                    {JSON.stringify(version, null, 2)}
-                  </pre>
-                )}
-              </details>
-            ))}
-            <h2>Manual notes</h2>
-            <p className="meeting-plain">
-              {document.notes || "No manual notes saved."}
-            </p>
-            <details>
-              <summary>Capture segments and source metadata</summary>
-              {document.runs.map((run) => (
-                <p key={run.sessionId}>
-                  {new Date(run.startedAt).toLocaleString()} –{" "}
-                  {run.endedAt
-                    ? new Date(run.endedAt).toLocaleString()
-                    : "In progress"}{" "}
-                  ·{" "}
-                  {run.sources
-                    .map((source) => `${source.kind}: ${source.name}`)
-                    .join(" · ")}
-                </p>
+                </details>
               ))}
-            </details>
-          </>
+              <details>
+                <summary>Details</summary>
+                <p className="muted">
+                  {document.segmentCount} transcript segments · saved{" "}
+                  {new Date(document.createdAt).toLocaleString()} · updated{" "}
+                  {new Date(document.updatedAt).toLocaleString()} · tags:{" "}
+                  {document.tags.join(", ") || "none"}
+                </p>
+                {document.runs.map((run) => (
+                  <p key={run.sessionId}>
+                    {new Date(run.startedAt).toLocaleString()} –{" "}
+                    {run.endedAt
+                      ? new Date(run.endedAt).toLocaleString()
+                      : "In progress"}{" "}
+                    ·{" "}
+                    {run.sources
+                      .map((source) => `${source.kind}: ${source.name}`)
+                      .join(" · ")}
+                  </p>
+                ))}
+                <button
+                  className="secondary"
+                  disabled={dirty || busy}
+                  onClick={() => onOpen(document.id)}
+                >
+                  Reload saved meeting
+                </button>
+              </details>
+            </div>
+            <MeetingChat
+              state={state}
+              document={document}
+              assistant={assistant}
+            />
+          </div>
         )}
         {tab === "transcript" && (
           <>

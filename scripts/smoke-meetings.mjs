@@ -202,9 +202,9 @@ try {
     (await state()).session.state === "IDLE",
     "creating a saved draft never acquires media",
   );
-  await page.getByRole("tab", { name: "Notes", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit notes", exact: true }).click();
   await page
-    .getByRole("tab", { name: "Notes", exact: true })
+    .getByRole("tab", { name: "Edit notes", exact: true })
     .press("ArrowLeft");
   check(
     (await page
@@ -217,11 +217,11 @@ try {
     .press("Home");
   check(
     (await page
-      .getByRole("tab", { name: "Overview", exact: true })
+      .getByRole("tab", { name: "Summary", exact: true })
       .getAttribute("aria-selected")) === "true",
     "meeting tabs support Home navigation",
   );
-  await page.getByRole("tab", { name: "Notes", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit notes", exact: true }).click();
   await page
     .getByLabel("Manual meeting notes", { exact: true })
     .fill('My saffron notes <img src="https://invalid.example/x">');
@@ -248,14 +248,14 @@ try {
     ).includes("saffron"),
     "navigation preserves unsaved meeting notes",
   );
-  await page.getByRole("tab", { name: "AI", exact: true }).click();
+  await page.getByRole("tab", { name: "AI tools", exact: true }).click();
   check(
     await page
       .getByRole("button", { name: "Review meeting AI context", exact: true })
       .isDisabled(),
     "unsaved edits block AI generation/apply",
   );
-  await page.getByRole("tab", { name: "Notes", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit notes", exact: true }).click();
   const savedStart = performance.now();
   await page
     .getByRole("button", { name: "Save meeting edits", exact: true })
@@ -324,7 +324,7 @@ try {
   await page
     .getByRole("button", { name: "Open, edit or export meeting", exact: true })
     .click();
-  await page.getByRole("tab", { name: "Notes", exact: true }).click();
+  await page.getByRole("tab", { name: "Edit notes", exact: true }).click();
   check(
     (await page.getByLabel("Action 1 owner", { exact: true }).inputValue()) ===
       "" &&
@@ -522,7 +522,7 @@ try {
       "My supplied speaker",
     "explicit user speaker correction saves through real IPC/worker",
   );
-  await page.getByRole("tab", { name: "AI", exact: true }).click();
+  await page.getByRole("tab", { name: "AI tools", exact: true }).click();
   await page.getByLabel("Meeting AI share microphone", { exact: true }).check();
   await page
     .getByRole("button", { name: "Review meeting AI context", exact: true })

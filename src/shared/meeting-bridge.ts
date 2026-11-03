@@ -108,6 +108,15 @@ export interface MeetingBridge {
     }>,
   ): Promise<Result<MeetingDocument>>;
   cancelAI(input: MeetingScope<void>): Promise<Result<void>>;
+  /** Asks about one saved meeting and resolves with the answer text. */
+  chat(
+    input: MeetingScope<{
+      id: string;
+      question: string;
+      history: { question: string; answer: string }[];
+    }>,
+  ): Promise<Result<string>>;
+  cancelChat(input: MeetingScope<void>): Promise<Result<void>>;
   authorisePost(
     input: MeetingScope<{
       expected: PostMeetingContext;

@@ -49,6 +49,7 @@ export function DashboardApp() {
   const [answerWith, setAnswerWith] = useState<ProviderId | null>(null);
   const [hideFromCapture, setHideFromCapture] = useState(true);
   const [saveNotes, setSaveNotes] = useState(true);
+  const [dismissedNotes, setDismissedNotes] = useState<string | null>(null);
   const assistant = useAssistantSnapshot();
   const meetings = useMeetings();
   const [requestedMeetingId, setRequestedMeetingId] = useState<string | null>(
@@ -434,8 +435,10 @@ export function DashboardApp() {
   const pageVisible =
     !dashboard || destination === "assistant" || settingsOpen || preparing;
   const response = assistant?.responses.at(-1);
+  // Meeting chat shows its own progress and Stop button.
   const sharing =
-    response?.status === "sending" || response?.status === "generating";
+    (response?.status === "sending" || response?.status === "generating") &&
+    response.meetingPurpose !== "ask";
   const active = session.state === "ACTIVE";
   const resumable = session.state === "PAUSED";
   const ready = session.state === "READY";
@@ -662,19 +665,31 @@ export function DashboardApp() {
           </span>
         </div>
       )}
-      {app.sessionNotes && (
-        <div className="session-notes-status" role="status">
-          <span>{app.sessionNotes.message}</span>
-          {app.sessionNotes.meetingId && !app.sessionNotes.working && (
-            <button
-              className="secondary"
-              onClick={() => openMeetings(app.sessionNotes!.meetingId!)}
-            >
-              Open notes
-            </button>
-          )}
-        </div>
-      )}
+      {app.sessionNotes &&
+        dismissedNotes !== JSON.stringify(app.sessionNotes) && (
+          <div className="session-notes-status" role="status">
+            <span>{app.sessionNotes.message}</span>
+            {app.sessionNotes.meetingId && !app.sessionNotes.working && (
+              <button
+                className="secondary"
+                onClick={() => openMeetings(app.sessionNotes!.meetingId!)}
+              >
+                Open notes
+              </button>
+            )}
+            {!app.sessionNotes.working && (
+              <button
+                className="icon-button"
+                aria-label="Dismiss"
+                onClick={() =>
+                  setDismissedNotes(JSON.stringify(app.sessionNotes))
+                }
+              >
+                <Icon name="close" />
+              </button>
+            )}
+          </div>
+        )}
       <MeetingStatus
         state={meetings.state}
         ai={meetings.ai}

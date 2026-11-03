@@ -328,9 +328,9 @@ export class AssistantController {
         review.notices.push(...reference.context.notices);
         review.prompt = contextPrompt(review);
         review.textChars = review.prompt.length;
-        if (review.textChars > 20000)
+        if (review.textChars > 100000)
           throw new Error(
-            "Selected meeting context exceeds 20,000 serialized characters. Select fewer excerpts.",
+            "Selected meeting context is too long. Select fewer meetings or excerpts.",
           );
         this.referenceGuard = {
           requestId: review.requestId,

@@ -10,6 +10,7 @@ import { editMeeting } from "./edits";
 import type { MeetingController } from "./controller";
 import type { MeetingAIController } from "./ai";
 import type { PostMeetingNotes } from "./post-notes";
+import type { MeetingChat } from "./chat";
 import type { MeetingSharing } from "./sharing";
 
 export function registerMeetingIPC(ports: {
@@ -17,6 +18,7 @@ export function registerMeetingIPC(ports: {
   meetings: MeetingController;
   ai: MeetingAIController;
   post: PostMeetingNotes;
+  chat: MeetingChat;
   sharing: MeetingSharing;
   snapshotAI: () => import("../../shared/meeting-ai").MeetingAIState;
   stop: () => void;
@@ -298,6 +300,11 @@ export function registerMeetingIPC(ports: {
   });
   scoped("ai-ask", (value) => {
     return ai.ask(value);
+  });
+  scoped("chat", (value) => ports.chat.ask(value));
+  scoped("chat-cancel", (value) => {
+    none(value);
+    ports.chat.cancel();
   });
   scoped("ai-apply", async (value) => {
     const saved = await ai.apply(value);

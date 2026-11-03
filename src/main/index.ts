@@ -53,6 +53,7 @@ import { MeetingController } from "./meetings/controller";
 import { MeetingAIController } from "./meetings/ai";
 import { PostMeetingNotes } from "./meetings/post-notes";
 import { SessionNotes } from "./meetings/session-notes";
+import { MeetingChat } from "./meetings/chat";
 import { HistoryWorker } from "./meetings/store";
 import { MeetingPreferencesStore } from "./meetings/preferences";
 import { historyProfile } from "./meetings/keys";
@@ -1342,6 +1343,7 @@ async function initialise(): Promise<void> {
     };
   });
   registerMeetingIPC({
+    chat: new MeetingChat(meetingAI!),
     snapshotAI: meetingAISnapshot,
     sourcesChanged: () => workspace?.sourceChanged("meeting"),
     handle,
