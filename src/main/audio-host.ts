@@ -1,4 +1,10 @@
-import { BrowserWindow, desktopCapturer, ipcMain, session } from "electron";
+import {
+  BrowserWindow,
+  desktopCapturer,
+  ipcMain,
+  session,
+  systemPreferences,
+} from "electron";
 import type {
   IpcMainEvent,
   IpcMainInvokeEvent,
@@ -18,6 +24,8 @@ import { parseAudioReport, type AudioWorkerPlan } from "../shared/audio-ipc";
 import { errorMessage } from "../shared/validation";
 import { trustedDocument } from "./security";
 import { audioPermissionAllowed } from "./audio-permissions";
+import { systemAudioAvailable } from "./platform";
+import { PulseAudioCapture } from "./pulse-audio";
 import { parseAudioFrame } from "../shared/transcription";
 import { exactKeys, record } from "../shared/validation";
 
@@ -37,12 +45,18 @@ export class ElectronAudioCapture implements AudioCaptureManager {
   private operation: Operation | undefined;
   private readonly browserSession: Session;
   private transcriptionToken: string | null = null;
+  private linuxGeneration = 0;
+  private linuxActive = false;
+  private readonly pulse = new PulseAudioCapture((token, frame) =>
+    this.pcm(token, frame),
+  );
   constructor(
     private readonly url: string,
     private readonly preload: string,
     configureSession: (target: Session, audio: boolean) => void,
     private readonly pcm: (token: string, frame: AudioFrame) => boolean = () =>
       false,
+    private readonly platform: NodeJS.Platform = process.platform,
   ) {
     this.browserSession = session.fromPartition("everyhint-audio", {
       cache: false,
@@ -87,7 +101,7 @@ export class ElectronAudioCapture implements AudioCaptureManager {
         current.plan.mode !== "capture" ||
         !current.plan.capture.systemAudio ||
         current.displayGranted ||
-        process.platform !== "win32" ||
+        !systemAudioAvailable(this.platform) ||
         !request.audioRequested ||
         !request.videoRequested ||
         request.frame !== current.window.webContents.mainFrame ||
@@ -121,7 +135,7 @@ export class ElectronAudioCapture implements AudioCaptureManager {
           if (this.operation === current) {
             callback(null);
             this.fail(
-              `Windows loopback could not start: ${errorMessage(error)}`,
+              `System loopback could not start: ${errorMessage(error)}`,
               "systemAudio",
             );
           }
@@ -238,6 +252,10 @@ export class ElectronAudioCapture implements AudioCaptureManager {
     return current;
   }
   async listMicrophones(): Promise<MicrophoneDevice[]> {
+    if (this.linuxActive)
+      throw new Error(
+        "Stop the current audio capture before enumerating devices.",
+      );
     return this.create(
       "devices",
       { microphone: true, systemAudio: false, microphoneDeviceId: "default" },
@@ -250,6 +268,52 @@ export class ElectronAudioCapture implements AudioCaptureManager {
     update: Operation["update"],
     failure: Operation["failure"],
   ): Promise<void> {
+    if (this.operation || this.linuxActive)
+      throw new Error(
+        "Another audio operation is already running. Stop or wait before trying again.",
+      );
+    if (
+      this.platform === "darwin" &&
+      plan.microphone &&
+      systemPreferences.getMediaAccessStatus("microphone") !== "granted"
+    ) {
+      const generation = this.linuxGeneration;
+      const granted = await systemPreferences.askForMediaAccess("microphone");
+      if (generation !== this.linuxGeneration)
+        throw new Error(
+          "Audio startup was cancelled while awaiting microphone permission.",
+        );
+      if (!granted)
+        throw new Error(
+          "Allow EveryHint microphone access in macOS Privacy & Security, then start again.",
+        );
+    }
+    if (this.platform === "linux" && plan.systemAudio) {
+      this.linuxActive = true;
+      const generation = ++this.linuxGeneration;
+      const fail: Operation["failure"] = (message, source) => {
+        if (generation !== this.linuxGeneration) return;
+        this.stop();
+        failure(message, source);
+      };
+      try {
+        await Promise.all([
+          this.pulse.start(update, fail),
+          plan.microphone
+            ? this.create(
+                "capture",
+                { ...plan, systemAudio: false },
+                update,
+                fail,
+              )
+            : Promise.resolve(),
+        ]);
+      } catch (error) {
+        if (generation === this.linuxGeneration) this.stop();
+        throw error;
+      }
+      return;
+    }
     return this.create("capture", plan, update, failure).then(() => {});
   }
   private create(
@@ -283,7 +347,7 @@ export class ElectronAudioCapture implements AudioCaptureManager {
       },
     });
     try {
-      window.setMenu(null);
+      if (this.platform !== "darwin") window.setMenu(null);
       window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
       window.webContents.on("will-navigate", (event) => event.preventDefault());
       window.webContents.on("will-attach-webview", (event) =>
@@ -307,7 +371,7 @@ export class ElectronAudioCapture implements AudioCaptureManager {
         timeout: setTimeout(() => {
           if (this.operation === current)
             this.fail(
-              "Audio startup timed out. Check Windows permissions and devices, then prepare again.",
+              "Audio startup timed out. Check operating-system permissions and devices, then prepare again.",
             );
         }, 20000),
       };
@@ -367,6 +431,10 @@ export class ElectronAudioCapture implements AudioCaptureManager {
     current.window.webContents.send("everyhint:audio-control", { muted });
   }
   stop(): void {
+    this.linuxActive = false;
+    this.linuxGeneration++;
+    this.pulse.stop();
+    this.transcriptionToken = null;
     const current = this.operation;
     if (!current) return;
     this.destroy(current);
@@ -377,6 +445,7 @@ export class ElectronAudioCapture implements AudioCaptureManager {
   }
   setTranscriptionToken(token: string | null): void {
     this.transcriptionToken = token;
+    this.pulse.setToken(token);
     const current = this.operation;
     if (
       current &&

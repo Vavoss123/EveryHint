@@ -1,0 +1,36 @@
+extends: ./electron-builder.common.yml
+extraFiles: []
+extraResources:
+  - from: artifacts/release-speech/runtime
+    to: speech
+    filter: [everyhint-transcriber, whisper-LICENSE]
+linux:
+  target: [AppImage, deb]
+  artifactName: EveryHint-${version}-linux-${arch}.${ext}
+  executableName: everyhint
+  icon: build/icon.png
+  category: Utility
+  synopsis: Local transcription and contextual AI assistance
+  maintainer: Vavoss123 <vavoss123@users.noreply.github.com>
+  desktop:
+    entry:
+      Name: EveryHint
+      Comment: Local transcription and contextual AI assistance
+      StartupWMClass: EveryHint
+deb:
+  depends:
+    - ca-certificates
+    - libgtk-3-0
+    - libnotify4
+    - libnss3
+    - libdrm2
+    - libgbm1
+    - libxss1
+    - libxtst6
+    - libatspi2.0-0
+    - libuuid1
+    - libsecret-1-0
+    - libasound2
+    - xdg-utils
+    - pulseaudio-utils
+  recommends: [gnome-keyring]

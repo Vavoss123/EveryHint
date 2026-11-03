@@ -1,5 +1,5 @@
 import { createHash } from "node:crypto";
-import { AsyncEntry } from "@napi-rs/keyring";
+import { credentialEntry } from "../credentials";
 import { KeyringVault, type CredentialVault } from "../ai/plan/vault";
 import type { GoogleConnection, GoogleService } from "../../shared/workspace";
 import {
@@ -53,9 +53,8 @@ export class GoogleAccount {
       .digest("hex");
     return new GoogleAccount(
       service,
-      new KeyringVault(
-        (slot) =>
-          new AsyncEntry("EveryHint.GoogleOAuth.v1", `${owner}/${slot}`),
+      new KeyringVault((slot) =>
+        credentialEntry("EveryHint.GoogleOAuth.v1", `${owner}/${slot}`),
       ),
       openBrowser,
       changed,

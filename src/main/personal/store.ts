@@ -2,7 +2,7 @@ import { Worker } from "node:worker_threads";
 import { existsSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { AsyncEntry } from "@napi-rs/keyring";
+import { credentialEntry } from "../credentials";
 import { MeetingKeys } from "../meetings/keys";
 
 export class PersonalStore {
@@ -20,8 +20,8 @@ export class PersonalStore {
   constructor(
     private root: string,
     private profile: string,
-    private keys = new MeetingKeys(
-      (p) => new AsyncEntry("EveryHint.Personal.v1", p),
+    private keys = new MeetingKeys((p) =>
+      credentialEntry("EveryHint.Personal.v1", p),
     ),
     private url = new URL("./personal-worker.js", import.meta.url),
   ) {}

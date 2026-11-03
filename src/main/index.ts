@@ -66,7 +66,7 @@ import { WorkspaceController } from "./workspace/controller";
 import { WorkspaceResume } from "./workspace/resume";
 import { GoogleAccount } from "./google/accounts";
 import { MeetingKeys } from "./meetings/keys";
-import { AsyncEntry } from "@napi-rs/keyring";
+import { credentialEntry } from "./credentials";
 import { exportBrief } from "./workspace/export";
 import { parseReview } from "../shared/ai";
 import { meetingId } from "../shared/meetings";
@@ -80,19 +80,35 @@ import { windowsUpdater } from "./updates-electron";
 import updateConfiguration from "../../resources/windows-updates.json";
 import design from "../../resources/design-tokens.json";
 import { presentationBounds, floatingBounds } from "./presentation";
+import {
+  systemAudioAvailable,
+  systemAudioDescription,
+  screenCaptureAvailable,
+} from "./platform";
 
 const directory = dirname(fileURLToPath(import.meta.url));
 app.setName("EveryHint");
-app.setAppUserModelId("com.everyhint.desktop");
+if (process.platform === "win32")
+  app.setAppUserModelId("com.everyhint.desktop");
 // Smoke tests get isolated settings and never start native desktop capture.
 if (process.env.EVERYHINT_TEST_USER_DATA)
   app.setPath("userData", process.env.EVERYHINT_TEST_USER_DATA);
+if (process.platform === "linux") app.setDesktopName("everyhint.desktop");
 protocol.registerSchemesAsPrivileged([
   {
     scheme: "everyhint",
     privileges: { standard: true, secure: true, supportFetchAPI: true },
   },
 ]);
+
+const pulseAvailable =
+  process.platform === "linux" && existsSync("/usr/bin/parec");
+const supportsSystemAudio = systemAudioAvailable(
+  process.platform,
+  undefined,
+  pulseAvailable,
+);
+const supportsWindowEffects = screenCaptureAvailable();
 
 let window: BrowserWindow | undefined;
 let overlay: BrowserWindow | undefined;
@@ -222,7 +238,7 @@ function updateMeetingProfile(): void {
     profile,
     selected
       ? `${selected.label} · local encrypted history`
-      : "Local-only history · this Windows user",
+      : "Local-only history · this operating-system user",
   );
   if (interfaceReady) restoreExistingHistory();
 }
@@ -246,7 +262,13 @@ function snapshot(): AppSnapshot {
     clickThrough,
     sessionNotes: sessionNotes?.status ?? null,
     warnings: [...warnings],
-    systemAudioSupported: process.platform === "win32",
+    systemAudioSupported: supportsSystemAudio,
+    platform: process.platform,
+    systemAudioDescription: systemAudioDescription(
+      process.platform,
+      supportsSystemAudio,
+    ),
+    screenCaptureSupported: screenCaptureAvailable(),
   };
 }
 function icon(state: SessionState): Electron.NativeImage {
@@ -346,10 +368,16 @@ function overlayOpacity(): number {
 // Click-through lets every click reach the application underneath while the
 // overlay stays visible and keyboard shortcuts keep working.
 function setClickThrough(value: boolean): void {
+  if (value && !supportsWindowEffects) {
+    warn(
+      "Click-through is unavailable under Wayland. Use Hide to dismiss the assistant.",
+    );
+    return;
+  }
   clickThrough = value;
   if (overlay && !overlay.isDestroyed()) {
     overlay.setIgnoreMouseEvents(value);
-    overlay.setOpacity(overlayOpacity());
+    if (supportsWindowEffects) overlay.setOpacity(overlayOpacity());
   }
   publish();
 }
@@ -553,7 +581,7 @@ function sessionEnded(): void {
     clickThrough = false;
     if (overlay && !overlay.isDestroyed()) {
       overlay.setIgnoreMouseEvents(false);
-      overlay.setOpacity(overlayOpacity());
+      if (supportsWindowEffects) overlay.setOpacity(overlayOpacity());
     }
   }
   hideOverlay();
@@ -592,9 +620,9 @@ function queueBounds(): void {
 function applyAppearance(): void {
   if (!window || window.isDestroyed()) return;
   window.setAlwaysOnTop(false);
-  window.setOpacity(1);
+  if (supportsWindowEffects) window.setOpacity(1);
   overlay?.setAlwaysOnTop(overlay.isVisible() && store.settings.alwaysOnTop);
-  overlay?.setOpacity(overlayOpacity());
+  if (supportsWindowEffects) overlay?.setOpacity(overlayOpacity());
   const requested = store.settings.protectWindow !== false;
   if (!privacy || privacy.requested !== requested) {
     privacy = configureWindowPrivacy(window, requested);
@@ -701,6 +729,21 @@ async function initialise(): Promise<void> {
     join(app.getPath("userData"), "settings.json"),
     warn,
   );
+  if (process.platform === "darwin") {
+    Menu.setApplicationMenu(
+      Menu.buildFromTemplate([
+        { role: "appMenu" },
+        { role: "editMenu" },
+        { role: "windowMenu" },
+      ]),
+    );
+    app.dock?.setMenu(
+      Menu.buildFromTemplate([
+        { label: "Open EveryHint", click: show },
+        { label: "Show assistant", click: showOverlay },
+      ]),
+    );
+  }
   configureSession(session.defaultSession);
   const audio = new ElectronAudioCapture(
     new URL("audio.html", documentUrl).href,
@@ -711,8 +754,9 @@ async function initialise(): Promise<void> {
   const speechRoot =
     process.env.EVERYHINT_SPEECH_HOME ??
     join(
-      process.env.LOCALAPPDATA ?? app.getPath("userData"),
-      "EveryHint",
+      process.platform === "win32"
+        ? join(process.env.LOCALAPPDATA ?? app.getPath("userData"), "EveryHint")
+        : app.getPath("userData"),
       "speech",
     );
   const installation = new SpeechInstallation(
@@ -746,7 +790,7 @@ async function initialise(): Promise<void> {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         broadcast("everyhint:audio-meters", event);
     },
-    process.platform === "win32",
+    supportsSystemAudio,
   );
 
   let accountBinding = "";
@@ -952,7 +996,7 @@ async function initialise(): Promise<void> {
         new PersonalStore(
           join(meetingRoot, "context"),
           profile,
-          new MeetingKeys((p) => new AsyncEntry("EveryHint.Context.v1", p)),
+          new MeetingKeys((p) => credentialEntry("EveryHint.Context.v1", p)),
         ),
       google: (profile, service, changed) =>
         GoogleAccount.forProfile(
@@ -1113,7 +1157,7 @@ async function initialise(): Promise<void> {
   };
   overlay.on("move", rememberAssistant);
   overlay.on("resize", rememberAssistant);
-  overlay.setMenu(null);
+  if (process.platform !== "darwin") overlay.setMenu(null);
   overlay.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   overlay.webContents.on("will-navigate", (event) => event.preventDefault());
   overlay.webContents.on("will-attach-webview", (event) =>
@@ -1163,7 +1207,7 @@ async function initialise(): Promise<void> {
   screen.on("display-added", fitWindows);
   applyAppearance();
   nativeTheme.on("updated", applyAppearance);
-  window.setMenu(null);
+  if (process.platform !== "darwin") window.setMenu(null);
   window.webContents.setWindowOpenHandler(() => ({ action: "deny" }));
   window.webContents.on("will-navigate", (event) => event.preventDefault());
   window.webContents.on("will-attach-webview", (event) =>
@@ -1291,7 +1335,9 @@ async function initialise(): Promise<void> {
       return;
     }
     hideOverlay();
-    hide();
+    // Keep a recoverable taskbar/dock entry on Linux desktops without a tray.
+    if (process.platform === "linux") window?.minimize();
+    else hide();
   });
   handle("everyhint:listen-authorise", (input) => listen!.authorise(input));
   handle("everyhint:listen-ask", (input) => listen!.ask(input));
@@ -1634,7 +1680,7 @@ async function initialise(): Promise<void> {
   });
   powerMonitor.on("suspend", () => {
     lockMeetingHistory(
-      "Windows suspend locked local history and revoked remote permission.",
+      "System suspend locked local history and revoked remote permission.",
     );
     accounts?.cancel();
     chatgpt?.invalidate();
@@ -1643,7 +1689,7 @@ async function initialise(): Promise<void> {
   });
   powerMonitor.on("lock-screen", () => {
     lockMeetingHistory(
-      "Windows lock locked local history and revoked remote permission.",
+      "System lock locked local history and revoked remote permission.",
     );
     accounts?.cancel();
     chatgpt?.invalidate();
@@ -1656,7 +1702,10 @@ async function initialise(): Promise<void> {
   restoreExistingHistory();
   await workspace.restoreChosen();
   if (dashboardRequested) show();
-  else if (!store.settings.startHidden || !tray || tray.isDestroyed())
+  else if (process.platform === "linux" && store.settings.startHidden) {
+    window.showInactive();
+    window.minimize();
+  } else if (!store.settings.startHidden || !tray || tray.isDestroyed())
     window.showInactive();
   if (assistantRequested) showOverlay();
   void assistant
@@ -1676,6 +1725,11 @@ async function initialise(): Promise<void> {
 if (!app.requestSingleInstanceLock()) app.quit();
 else {
   app.on("second-instance", show);
+  app.on("activate", (_event, hasVisibleWindows) => {
+    // Focusing an answer also activates the Mac app. Do not open the full
+    // dashboard when that activation already has a visible assistant.
+    if (!hasVisibleWindows) show();
+  });
   void app
     .whenReady()
     .then(() => (initialisation ??= initialise()))

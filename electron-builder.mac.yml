@@ -1,0 +1,21 @@
+extends: ./electron-builder.common.yml
+extraFiles: []
+extraResources:
+  - from: artifacts/release-speech/runtime
+    to: speech
+    filter: [everyhint-transcriber, whisper-LICENSE]
+mac:
+  target: [dmg, zip]
+  artifactName: EveryHint-${version}-mac-${arch}.${ext}
+  icon: build/icon.png
+  category: public.app-category.productivity
+  minimumSystemVersion: "14.2"
+  identity: "-"
+  hardenedRuntime: false
+  gatekeeperAssess: false
+  signIgnore: ["(^|/)speech/everyhint-transcriber$"]
+  extendInfo:
+    NSMicrophoneUsageDescription: EveryHint uses your microphone only after you authorise a listening session.
+    NSAudioCaptureUsageDescription: EveryHint transcribes system playback only during a session you authorise.
+  entitlements: build/entitlements.mac.plist
+  entitlementsInherit: build/entitlements.mac.plist

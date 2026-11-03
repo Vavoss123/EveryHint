@@ -1,5 +1,13 @@
 # EveryHint architecture
 
+## Native desktop targets — 0.7.0
+
+Windows/macOS/Linux share renderer, sandbox/preload trust, local capture consent, scoped inference, stores and crypto. A common electron-builder base contains only portable files/fuses; Windows, macOS and Linux supply separate resources/targets. Native helper builds match OS/CPU and POSIX manifests bind both. Mac helper ad-hoc signing precedes hashing and the final app signer preserves that helper. Mac app/edit/window menus and Dock restore reuse existing windows; activation of an already visible assistant does not restore the dashboard.
+
+macOS 14.2+ uses explicit microphone permission and the Electron CoreAudio Tap loopback path with usage descriptions. Permission denial/Stop cannot create late capture. Linux playback uses a main-owned `/usr/bin/parec` default-output monitor, fixed arguments/no shell, bounded float PCM and the existing transcription token. Microphone stays in the original isolated audio renderer. Stop/Pause abort both. Missing tools/server fail visibly. Wayland's thumbnail-based screen path is disabled, not presented as working; X11/Xorg is required for screen context. Linux minimises the dashboard for recovery when a tray indicator is absent.
+
+One credential-entry factory preserves Windows/macOS stores and forces Linux Secret Service, avoiding volatile kernel-keyring fallback for encrypted database keys. No namespaces/schemas/plaintext fallback changed. Native jobs build/test on Mac arm64, Mac x64 and Linux x64. [Requirements, verification limits and build/permission details](CROSS_PLATFORM.md). Current-host Windows checks are not native Mac/Linux evidence.
+
 ## Overlay and background lifecycle correction
 
 FIX.1–FIX.4 retains the existing single-instance lock and memoises initialisation; second-launch/show requests during startup are queued. The ordinary dashboard uses `skipTaskbar: false`; the focusable Windows toolbar assistant uses `skipTaskbar: true` both at creation and explicit show. Hide/minimise removes native topmost state; explicit show restores the pin preference. Both documents reuse existing main-owned controllers and exact-document IPC trust. Capture/state publications never show a window.

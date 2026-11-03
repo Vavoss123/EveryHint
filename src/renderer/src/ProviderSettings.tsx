@@ -77,9 +77,9 @@ export function ClaudePanel() {
           />
         </label>
         <small>
-          Create a key at console.anthropic.com. It is stored in Windows
-          Credential Manager, and saving it turns Claude on. Requests are billed
-          to your Anthropic API account.
+          Create a key at console.anthropic.com. It is stored in your operating
+          system's credential store, and saving it turns Claude on. Requests are
+          billed to your Anthropic API account.
         </small>
         <div className="button-row">
           <button

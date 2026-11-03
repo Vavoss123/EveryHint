@@ -1,0 +1,185 @@
+{
+  "date": "2026-11-03T18:23:27.442229+00:00",
+  "version": "0.7.0",
+  "sourceBaseline": "c46f22c770b3d3a9c87be5aa3f76f693f63c9e2a",
+  "purpose": "Native macOS/Linux build targets and desktop/audio portability for GitHub distribution",
+  "buildHost": {
+    "platform": "win32",
+    "arch": "x64",
+    "cleanVM": false
+  },
+  "sourceChecks": {
+    "command": "npm run check",
+    "passed": true,
+    "tests": 719,
+    "files": 60,
+    "baselineTestsRetained": 702,
+    "newTests": 17
+  },
+  "nativeWindowsRegression": {
+    "passed": true,
+    "assertions": 158,
+    "suites": {
+      "core": 53,
+      "speech": 12,
+      "meetings": 42,
+      "listen": 51
+    },
+    "scope": "Actual Electron, native global keys/foreground fixture, owned-window capture, synthetic audio/local Whisper, provider fixtures"
+  },
+  "planFixtures": {
+    "command": "npm run test:plan",
+    "passed": true,
+    "tests": 5
+  },
+  "encryptedStorage": {
+    "command": "npm run test:meetings",
+    "passed": true,
+    "assertions": 12
+  },
+  "rebuiltWindowsHelperInference": {
+    "command": "npm run speech:test -- --release-runtime",
+    "model": "tiny.en",
+    "syntheticFixture": "upstream JFK",
+    "sources": [
+      "microphone",
+      "systemAudio"
+    ],
+    "passed": true
+  },
+  "windowsInstaller": {
+    "path": "release/EveryHint-Setup-0.7.0.exe",
+    "bytes": 138782822,
+    "sha256": "8c8a6b94715e7133cc941fd82f9faa4b552fa47922b0dadb4b73082e63ec12fa"
+  },
+  "windowsPackageAudit": {
+    "passed": true,
+    "asarEntries": 3069,
+    "helper": {
+      "schema": 1,
+      "arch": "x64",
+      "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+      "bytes": 2184192,
+      "sha256": "e24d77f3f07fdd2861aa7e678ebfca36d7c619c39e3f926ca266cc8a42365e31"
+    },
+    "developerHomePathsFound": 0,
+    "modelsBundled": false,
+    "runAsNode": "disabled",
+    "signing": "unsigned; unknown-publisher/SmartScreen warnings possible"
+  },
+  "windowsPayload": {
+    "command": "npm run package:verify",
+    "passed": true,
+    "matchingHashes": 8
+  },
+  "windowsInstalledApp": {
+    "command": "node scripts/smoke-packaged.mjs",
+    "passed": true,
+    "assertions": 13,
+    "nativeCredentialModuleLoaded": true,
+    "appLocalRuntimePresent": true,
+    "systemRuntimeUsedOnThisHost": true
+  },
+  "windowsInstallerLifecycle": {
+    "version": "0.7.0",
+    "assertions": 16,
+    "silentInstall": true,
+    "completed": true,
+    "cleanVM": false,
+    "checks": [
+      "Installer exits successfully without elevation",
+      "Installer writes the actual application executable",
+      "Exactly one current-user uninstall record has the correct version",
+      "Uninstall registration points only to the isolated test directory",
+      "Native credential runtime is installed beside the app",
+      "Speech helper is installed",
+      "Start menu shortcut is created",
+      "Start menu shortcut targets the installed application",
+      "Installed application passes the real packaged-renderer smoke",
+      "Installer exits successfully without elevation",
+      "Installer writes the actual application executable",
+      "Reinstall updates the existing current-user registration without duplication",
+      "Uninstaller removes the installed application",
+      "Uninstaller removes its registration",
+      "Uninstaller removes its Start menu shortcut",
+      "No test desktop shortcut remains"
+    ]
+  },
+  "priorInstallerUnchanged": {
+    "path": "release/EveryHint-Setup-0.6.0.exe",
+    "sha256": "0b91727bc1466f6a89dad159e53a80c7fe6a84a2e2c1e8e0f1724a338a50fb3c"
+  },
+  "github": {
+    "repository": "Vavoss123/EveryHint",
+    "workflow": ".github/workflows/posix-installers.yml",
+    "yamlValidated": true,
+    "nativeJobs": [
+      {
+        "runner": "macos-15",
+        "platform": "darwin",
+        "arch": "arm64",
+        "formats": [
+          "dmg",
+          "zip"
+        ]
+      },
+      {
+        "runner": "macos-15-intel",
+        "platform": "darwin",
+        "arch": "x64",
+        "formats": [
+          "dmg",
+          "zip"
+        ]
+      },
+      {
+        "runner": "ubuntu-22.04",
+        "platform": "linux",
+        "arch": "x64",
+        "formats": [
+          "AppImage",
+          "deb"
+        ]
+      }
+    ],
+    "hostedWorkflowRun": false,
+    "pushed": false,
+    "uploaded": false
+  },
+  "nativePosixVerification": {
+    "packagingConfigurationsValidated": [
+      "electron-builder.mac.yml",
+      "electron-builder.linux.yml"
+    ],
+    "nativePackagesBuilt": false,
+    "nativePackagesExecuted": false,
+    "reason": "This Windows host has no Mac or installed Linux subsystem",
+    "nativeCI": "pending",
+    "hardwareAcceptance": "pending"
+  },
+  "platformLimits": {
+    "macOSMinimum": "14.2",
+    "macSigning": "ad-hoc; no Developer ID identity or notarization",
+    "linuxArchitectures": [
+      "x64"
+    ],
+    "linuxBaseline": "Ubuntu 22.04 / Debian 12 or compatible newer desktop",
+    "linuxSystemAudio": "default playback monitor via /usr/bin/parec; PulseAudio/PipeWire-Pulse required",
+    "linuxCredentials": "persistent Secret Service required; no kernel-keyring/plaintext fallback",
+    "waylandScreenContext": false,
+    "waylandClickThrough": false,
+    "screenContextLinux": "X11/Xorg",
+    "captureExclusion": "Windows-only; no receiver invisibility guarantee",
+    "automaticUpdates": "unconfigured"
+  },
+  "physicalAudioCaptured": false,
+  "genuineAIRequests": 0,
+  "genuineGoogleRequests": 0,
+  "unperformed": [
+    "Mac/Linux native GitHub jobs",
+    "macOS permission prompts and Keychain on physical hardware",
+    "Linux real playback/microphone/Secret Service/compositor behavior",
+    "physical sharing receivers",
+    "clean Windows VM without an existing VC runtime"
+  ]
+}

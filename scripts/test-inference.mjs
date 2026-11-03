@@ -4,9 +4,8 @@ import { mkdir, writeFile } from "node:fs/promises";
 import { WhisperWorker } from "../src/main/transcription/worker.ts";
 import { verifyModel } from "../src/main/transcription/model-files.ts";
 import { loadSpeechFixture } from "./speech-fixture.mjs";
-const root =
-  process.env.EVERYHINT_SPEECH_HOME ??
-  join(process.env.LOCALAPPDATA, "EveryHint", "speech");
+import { speechHome } from "./speech-home.mjs";
+const root = speechHome();
 assert.ok(
   await verifyModel(join(root, "models"), "tiny.en"),
   "Install the verified tiny.en model before running actual inference.",
@@ -16,7 +15,14 @@ const fixture = await loadSpeechFixture(
   process.argv.includes("--install-fixture"),
 );
 const worker = new WhisperWorker(
-  join(process.argv.includes("--release-runtime")?"artifacts/release-speech/runtime":join(root,"runtime"), "everyhint-transcriber.exe"),
+  join(
+    process.argv.includes("--release-runtime")
+      ? "artifacts/release-speech/runtime"
+      : join(root, "runtime"),
+    process.platform === "win32"
+      ? "everyhint-transcriber.exe"
+      : "everyhint-transcriber",
+  ),
 );
 try {
   const ready = await worker.start(
@@ -38,7 +44,12 @@ try {
     results,
   };
   await mkdir("artifacts", { recursive: true });
-  await writeFile(process.argv.includes("--release-runtime")?"artifacts/p11-inference.json":"artifacts/inference.json", JSON.stringify(report, null, 2));
+  await writeFile(
+    process.argv.includes("--release-runtime")
+      ? "artifacts/p11-inference.json"
+      : "artifacts/inference.json",
+    JSON.stringify(report, null, 2),
+  );
   console.log(JSON.stringify(report, null, 2));
 } finally {
   worker.stop();

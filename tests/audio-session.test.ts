@@ -134,7 +134,7 @@ describe("independent multi-source sessions", () => {
   it("rejects loopback on unsupported operating systems", () => {
     expect(() =>
       setup(false).session.prepare({ consent: consent(false, false, true) }),
-    ).toThrow("Windows only");
+    ).toThrow("System audio is unavailable on this system");
   });
   it("reports actual startup and zeroes all sources immediately on pause and stop", async () => {
     const test = setup();

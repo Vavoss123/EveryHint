@@ -1,5 +1,11 @@
 # Windows RC verification — 2026-10-29
 
+## Platform port — 0.7.0, 2026-11-03
+
+Source gate: **719 tests / 60 files**, retaining all 702 baseline cases. New coverage verifies OS/version capabilities, ELF/Mach-O/PE architectures, persistent Linux secrets, bounded playback PCM/token rotation/Stop/failures, macOS permission denial/late cancellation and runtime OS binding. Windows loopback unit fixtures are explicitly simulated on every host and cannot accidentally start Linux recording. Three packaging configurations and the three native GitHub jobs validate locally.
+
+Windows regression: **158 assertions** across core (53), speech (12), meetings (42) and Listen (51), including native keys/focus, synthetic Whisper through both audio sources and owned-window capture. Plan fixtures **5 tests**, native encrypted storage **12 assertions**, and rebuilt helper synthetic inference pass. The rebuilt Windows installer passes its resource/fuse audit, 8 payload hash comparisons, 13 installed-app assertions and 16 actual install/reinstall/uninstall checks; these are recorded in the platform receipt. [Guide and honest native-platform limits](CROSS_PLATFORM.md), [structured receipt](evidence/platform-0.7.0.json). No Mac/Linux executable, native permission prompt, audio device, compositor or receiver has been certified by Windows tests; the GitHub native jobs still need execution.
+
 ## Windows installer 0.6.0 — 2026-11-03
 
 The current source gate passes **702 tests / 58 files**. Plan fixtures pass **5 tests**. The release helper transcribes the cached synthetic fixture successfully twice. The new installer passes the package/native signature/fuse audit and **8 payload hash comparisons**. The actual installed executable passes **13 packaged-renderer/native-module assertions**. Current-user install/reinstall/Start menu registration/installed launch/uninstall pass **16 checks**. The lifecycle test refuses an existing EveryHint installation/process/shortcut; it uses a unique workspace test directory and an isolated app profile. No genuine AI or physical audio was used.

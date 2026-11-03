@@ -1,5 +1,10 @@
 export type SessionState =
-  "IDLE" | "READY" | "ACTIVE" | "PAUSED" | "STOPPED" | "ERROR";
+  | "IDLE"
+  | "READY"
+  | "ACTIVE"
+  | "PAUSED"
+  | "STOPPED"
+  | "ERROR";
 export type SourceKind = "screen" | "window";
 export interface CaptureSource {
   id: string;
@@ -102,7 +107,12 @@ export interface WindowBounds {
   height: number;
 }
 export type HotkeyAction =
-  "toggle" | "pause" | "stop" | "assist" | "clear" | "answer";
+  | "toggle"
+  | "pause"
+  | "stop"
+  | "assist"
+  | "clear"
+  | "answer";
 export type HotkeyBindings = Record<HotkeyAction, string>;
 export interface HotkeyStatus {
   action: HotkeyAction;
@@ -126,6 +136,9 @@ export interface AppSnapshot {
   sessionNotes?: SessionNotesStatus | null;
   warnings: string[];
   systemAudioSupported: boolean;
+  platform?: string;
+  systemAudioDescription?: string;
+  screenCaptureSupported?: boolean;
 }
 export type SessionAction = "start" | "pause" | "resume" | "stop";
 export type Result<T> = { ok: true; value: T } | { ok: false; error: string };

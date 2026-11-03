@@ -1,5 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ElectronAudioCapture } from "../src/main/audio-host";
+import { systemPreferences } from "electron";
 
 const native = vi.hoisted(() => ({
   check: vi.fn(),
@@ -32,6 +33,10 @@ vi.mock("electron", () => ({
     }),
   },
   desktopCapturer: { getSources: native.getSources },
+  systemPreferences: {
+    getMediaAccessStatus: vi.fn(() => "granted"),
+    askForMediaAccess: vi.fn(async () => true),
+  },
   ipcMain: { handle: native.handle, on: native.on },
   BrowserWindow: class {
     destroyed = false;
@@ -107,13 +112,60 @@ describe("main-process audio lifecycle and permissions", () => {
     native.constructorFailure = false;
   });
   afterEach(() => vi.useRealTimers());
+  it("keeps denied macOS microphone permission from creating a capture worker", async () => {
+    vi.mocked(systemPreferences.getMediaAccessStatus).mockReturnValueOnce(
+      "not-determined",
+    );
+    vi.mocked(systemPreferences.askForMediaAccess).mockResolvedValueOnce(false);
+    const host = new ElectronAudioCapture(
+      url,
+      "audio.cjs",
+      vi.fn(),
+      undefined,
+      "darwin",
+    );
+    await expect(
+      host.start({ ...plan, systemAudio: false }, vi.fn(), vi.fn()),
+    ).rejects.toThrow("microphone access");
+    expect(native.windows).toHaveLength(0);
+  });
+  it("does not acquire macOS audio after Stop while an OS permission prompt is pending", async () => {
+    vi.mocked(systemPreferences.getMediaAccessStatus).mockReturnValueOnce(
+      "not-determined",
+    );
+    let grant!: (value: boolean) => void;
+    vi.mocked(systemPreferences.askForMediaAccess).mockImplementationOnce(
+      () =>
+        new Promise<boolean>((r) => {
+          grant = r;
+        }),
+    );
+    const host = new ElectronAudioCapture(
+      url,
+      "audio.cjs",
+      vi.fn(),
+      undefined,
+      "darwin",
+    );
+    const work = host.start({ ...plan, systemAudio: false }, vi.fn(), vi.fn());
+    host.stop();
+    grant(true);
+    await expect(work).rejects.toThrow("cancelled");
+    expect(native.windows).toHaveLength(0);
+  });
   it("creates no capture window until an authorised operation is requested", () => {
-    new ElectronAudioCapture(url, "audio.cjs", vi.fn());
+    new ElectronAudioCapture(url, "audio.cjs", vi.fn(), undefined, "win32");
     expect(native.windows).toHaveLength(0);
   });
   it("only forwards bounded PCM with the current explicit transcription token and authorised source", async () => {
     const consume = vi.fn(() => true),
-      host = new ElectronAudioCapture(url, "audio.cjs", vi.fn(), consume);
+      host = new ElectronAudioCapture(
+        url,
+        "audio.cjs",
+        vi.fn(),
+        consume,
+        "win32",
+      );
     const starting = host.start(
       { ...plan, systemAudio: false },
       vi.fn(),
@@ -166,7 +218,13 @@ describe("main-process audio lifecycle and permissions", () => {
     expect(consume).toHaveBeenCalledTimes(1);
   });
   it("turns synchronous capture-context creation failures into rejected startup", async () => {
-    const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn());
+    const host = new ElectronAudioCapture(
+      url,
+      "audio.cjs",
+      vi.fn(),
+      undefined,
+      "win32",
+    );
     native.constructorFailure = true;
     await expect(host.start(plan, vi.fn(), vi.fn())).rejects.toThrow(
       "creation failed",
@@ -175,7 +233,13 @@ describe("main-process audio lifecycle and permissions", () => {
     expect(vi.getTimerCount()).toBe(0);
   });
   it("binds media access to the exact worker and denies cameras, unrelated senders and activation replay", async () => {
-    const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn()),
+    const host = new ElectronAudioCapture(
+        url,
+        "audio.cjs",
+        vi.fn(),
+        undefined,
+        "win32",
+      ),
       starting = host.start(plan, vi.fn(), vi.fn());
     const window = native.windows[0]!,
       check = native.check.mock.lastCall![0],
@@ -224,7 +288,13 @@ describe("main-process audio lifecycle and permissions", () => {
     expect(window.destroy).toHaveBeenCalledTimes(1);
   });
   it("uses unmuted Windows loopback only for the authorised worker and denies repeat display grants", async () => {
-    const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn()),
+    const host = new ElectronAudioCapture(
+        url,
+        "audio.cjs",
+        vi.fn(),
+        undefined,
+        "win32",
+      ),
       starting = host.start(plan, vi.fn(), vi.fn());
     native.getSources.mockResolvedValueOnce([
       { id: "screen:1:0", name: "Screen" },
@@ -240,12 +310,11 @@ describe("main-process audio lifecycle and permissions", () => {
     expect(callback).toHaveBeenLastCalledWith(null);
     display(request, callback);
     await vi.advanceTimersByTimeAsync(0);
-    if (process.platform === "win32")
-      expect(callback).toHaveBeenLastCalledWith({
-        video: { id: "screen:1:0", name: "Screen" },
-        audio: "loopback",
-      });
-    else expect(callback).toHaveBeenLastCalledWith(null);
+    // These native-window fixtures model the Windows loopback route on every OS.
+    expect(callback).toHaveBeenLastCalledWith({
+      video: { id: "screen:1:0", name: "Screen" },
+      audio: "loopback",
+    });
     display(request, callback);
     expect(callback).toHaveBeenLastCalledWith(null);
     report({ type: "diagnostics", sources });
@@ -253,7 +322,13 @@ describe("main-process audio lifecycle and permissions", () => {
     host.stop();
   });
   it("bounds startup, rejects duplicate operations and destroys resources on emergency stop or shutdown", async () => {
-    const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn());
+    const host = new ElectronAudioCapture(
+      url,
+      "audio.cjs",
+      vi.fn(),
+      undefined,
+      "win32",
+    );
     const pending = host.start(plan, vi.fn(), vi.fn()),
       rejection = expect(pending).rejects.toThrow("cancelled");
     await expect(host.start(plan, vi.fn(), vi.fn())).rejects.toThrow(
@@ -273,7 +348,13 @@ describe("main-process audio lifecycle and permissions", () => {
     expect(native.windows[1]!.destroy).toHaveBeenCalled();
   });
   it("enumerates metadata in a temporary context and rejects unconsented source reports", async () => {
-    const host = new ElectronAudioCapture(url, "audio.cjs", vi.fn()),
+    const host = new ElectronAudioCapture(
+        url,
+        "audio.cjs",
+        vi.fn(),
+        undefined,
+        "win32",
+      ),
       devices = host.listMicrophones();
     report({
       type: "devices",

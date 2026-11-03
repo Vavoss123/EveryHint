@@ -191,8 +191,8 @@ export function MeetingPreferencesPanel({ state }: { state: MeetingState }) {
         </p>
       )}
       <small>
-        Transcript/notes are encrypted with a Windows-protected key. IDs,
-        timing, counts and file size remain visible. Lost keys can make history
+        Transcript/notes are encrypted with an OS-protected key. IDs, timing,
+        counts and file size remain visible. Lost keys can make history
         unreadable; no plaintext fallback is used. Local deletion cannot
         guarantee physical SSD erasure, remove exported copies or recall
         provider data.

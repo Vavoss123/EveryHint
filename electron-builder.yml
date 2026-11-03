@@ -1,15 +1,4 @@
-appId: com.everyhint.desktop
-productName: EveryHint
-directories:
-  output: release
-  buildResources: build
-files:
-  - out/**/*
-  - package.json
-  - '!**/*.map'
-asar: true
-asarUnpack:
-  - '**/*.node'
+extends: ./electron-builder.common.yml
 extraFiles:
   - from: artifacts/release-vc-runtime
     to: .
@@ -25,13 +14,6 @@ extraResources:
     to: vc-runtime-manifest.json
   - from: build/VC-RUNTIME-NOTICES.txt
     to: VC-RUNTIME-NOTICES.txt
-electronFuses:
-  runAsNode: false
-  enableNodeOptionsEnvironmentVariable: false
-  enableNodeCliInspectArguments: false
-  enableEmbeddedAsarIntegrityValidation: true
-  onlyLoadAppFromAsar: true
-  grantFileProtocolExtraPrivileges: false
 win:
   target:
     - target: nsis
@@ -52,4 +34,3 @@ nsis:
   deleteAppDataOnUninstall: false
   runAfterFinish: true
   artifactName: EveryHint-Setup-${version}.${ext}
-publish: null

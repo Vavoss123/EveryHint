@@ -31,7 +31,7 @@ function statuses(): SessionSnapshot["sources"] {
   return {
     screen: status("Screen"),
     microphone: status("Microphone"),
-    systemAudio: status("Windows system audio"),
+    systemAudio: status("System audio"),
   };
 }
 export class CaptureSessionController {
@@ -140,7 +140,9 @@ export class CaptureSessionController {
     if ((consent.microphone || consent.systemAudio) && !this.audio)
       throw new Error("Audio capture is unavailable.");
     if (consent.systemAudio && !this.systemAudioSupported)
-      throw new Error("System audio loopback is supported on Windows only.");
+      throw new Error(
+        "System audio is unavailable on this system. Check the platform requirements or start with microphone/screen only.",
+      );
     const source = consent.screen
       ? this.sources.get(parseSourceId(request.sourceId))
       : null;

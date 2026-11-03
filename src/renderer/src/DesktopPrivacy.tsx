@@ -50,7 +50,11 @@ export function DesktopPrivacy({
           <label className="check">
             <input
               type="checkbox"
-              checked={app.settings.protectWindow === true}
+              checked={
+                app.settings.protectWindow === true &&
+                app.privacy?.state !== "unsupported"
+              }
+              disabled={app.privacy?.state === "unsupported"}
               onChange={(event) =>
                 save({ protectWindow: event.target.checked })
               }

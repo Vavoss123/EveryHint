@@ -363,7 +363,7 @@ describe("P8.1 OS-key strategy and nonsecret profile preferences", () => {
       deleteCredential: async () => false,
     }));
     await expect(denied.load(profile, false)).rejects.toThrow(
-      /Windows credential/,
+      /operating-system credential/,
     );
   });
   it("isolates installations/accounts/local-only and persists only chosen nonsecret settings", () => {

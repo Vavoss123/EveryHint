@@ -156,8 +156,8 @@ export class BrowserAudioCapture {
       if (tracks.length !== 1 || tracks[0]!.readyState !== "live")
         throw new Error(
           source === "systemAudio"
-            ? "Windows returned no live loopback audio. Check output playback and Windows audio permissions."
-            : "The microphone is unavailable. Check Windows microphone privacy settings and allow desktop apps.",
+            ? "System audio returned no live loopback audio track. Check playback and system-audio recording permission in your operating-system settings."
+            : "The microphone is unavailable. Check the selected device and operating-system microphone permission.",
         );
       const track = tracks[0]!;
       if (source === "microphone") track.enabled = !muted;
@@ -202,9 +202,7 @@ export class BrowserAudioCapture {
           state: "CAPTURING",
           name: (
             track.label ||
-            (source === "microphone"
-              ? "Microphone"
-              : "Windows default playback")
+            (source === "microphone" ? "Microphone" : "Default system playback")
           ).slice(0, 200),
           deviceId:
             source === "microphone"
@@ -321,7 +319,7 @@ export class BrowserAudioCapture {
       }
       if (this.current(generation))
         this.fail(
-          `${source === "microphone" ? "Microphone" : "System audio"}: ${errorMessage(error)}. Check Windows privacy settings, device access and other applications using the device.`,
+          `${source === "microphone" ? "Microphone" : "System audio"}: ${errorMessage(error)}. Check operating-system permissions, device access and other applications using the device.`,
           source,
         );
     } finally {
@@ -377,7 +375,7 @@ export class BrowserAudioCapture {
           this.outputs(devices) !== this.outputSignature
         )
           this.fail(
-            "Windows playback devices changed. Prepare system audio again.",
+            "System playback devices changed. Prepare system audio again.",
             "systemAudio",
           );
       })

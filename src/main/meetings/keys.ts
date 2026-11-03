@@ -1,4 +1,4 @@
-import { AsyncEntry } from "@napi-rs/keyring";
+import { credentialEntry } from "../credentials";
 import { createHash, randomBytes } from "node:crypto";
 import { resolve } from "node:path";
 import type { SecretEntry } from "../ai/plan/vault";
@@ -14,7 +14,7 @@ export function historyProfile(home: string, account: string | null): string {
 export class MeetingKeys {
   constructor(
     private readonly entry: (profile: string) => SecretEntry = (profile) =>
-      new AsyncEntry("EveryHint.Meetings.v1", profile),
+      credentialEntry("EveryHint.Meetings.v1", profile),
   ) {}
   async load(profile: string, existing: boolean): Promise<Buffer> {
     let bytes: Buffer | undefined;
@@ -33,7 +33,7 @@ export class MeetingKeys {
       return Buffer.from(bytes);
     } catch {
       throw new Error(
-        "History key is unavailable in the Windows credential store. Existing encrypted history was preserved; no replacement key or plaintext fallback was used.",
+        "History key is unavailable in the operating-system credential store. Existing encrypted history was preserved; no replacement key or plaintext fallback was used.",
       );
     } finally {
       bytes?.fill(0);

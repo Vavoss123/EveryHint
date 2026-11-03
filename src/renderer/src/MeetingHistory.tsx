@@ -221,7 +221,7 @@ function ScopedHistory({
             </h2>
             <p>
               {state.preferences.enabled || state.error
-                ? "Use your Windows-protected key to open saved meetings."
+                ? "Use your OS-protected key to open saved meetings."
                 : "Save a meeting when you want to keep its notes. Enable local history in Settings → Privacy & Data."}
             </p>
             <button

@@ -234,7 +234,10 @@ export function DashboardApp() {
     setPreparing(true);
     setAcknowledged(false);
     // Screen, microphone and system audio are on unless setup chose otherwise.
-    setScreenConsent(app?.settings.preferredSources?.screen ?? true);
+    setScreenConsent(
+      (app?.settings.preferredSources?.screen ?? true) &&
+        app?.screenCaptureSupported !== false,
+    );
     setMicrophoneConsent(app?.settings.preferredSources?.microphone ?? true);
     setSystemConsent(
       (app?.settings.preferredSources?.systemAudio ?? true) &&
@@ -379,7 +382,8 @@ export function DashboardApp() {
       unwrap(
         await window.everyhint.saveSettings({
           ...app!.settings,
-          protectWindow: hideFromCapture,
+          protectWindow:
+            hideFromCapture && app?.privacy?.state !== "unsupported",
           preferredSources: {
             screen: screenConsent,
             microphone: microphoneConsent,
@@ -957,7 +961,10 @@ export function DashboardApp() {
                 <label className="consent-row">
                   <input
                     type="checkbox"
-                    checked={hideFromCapture}
+                    checked={
+                      hideFromCapture && app.privacy?.state !== "unsupported"
+                    }
+                    disabled={app.privacy?.state === "unsupported"}
                     onChange={(event) =>
                       setHideFromCapture(event.target.checked)
                     }
@@ -965,9 +972,9 @@ export function DashboardApp() {
                   <span>
                     Hide EveryHint from screen recordings
                     <small>
-                      Screen shares, recordings and screenshots on Windows skip
-                      EveryHint’s windows. A camera pointed at the screen still
-                      sees them.
+                      {app.privacy?.state === "unsupported"
+                        ? "Window-content protection is unavailable on this platform. Hiding the window does not exclude it from capture."
+                        : "Windows window-content protection is separate from hiding. Check your sharing app; capture exclusion is not guaranteed."}
                     </small>
                   </span>
                 </label>
@@ -976,6 +983,7 @@ export function DashboardApp() {
                   <input
                     type="checkbox"
                     checked={screenConsent}
+                    disabled={app.screenCaptureSupported === false}
                     onChange={(event) => {
                       setScreenConsent(event.target.checked);
                       setSources([]);
@@ -986,7 +994,9 @@ export function DashboardApp() {
                   <span>
                     Screen or application window
                     <small>
-                      Understand the screen or application you choose.
+                      {app.screenCaptureSupported === false
+                        ? "Screen context needs an X11/Xorg Linux session. Audio remains available under Wayland."
+                        : "Understand the screen or application you choose."}
                     </small>
                   </span>
                 </label>
@@ -1016,9 +1026,10 @@ export function DashboardApp() {
                   <span>
                     System audio
                     <small>
-                      {app.systemAudioSupported
-                        ? "Hear conversations playing on your computer."
-                        : "Available on Windows only"}
+                      {app.systemAudioDescription ??
+                        (app.systemAudioSupported
+                          ? "Hear conversations playing on your computer."
+                          : "System audio is unavailable on this system.")}
                     </small>
                   </span>
                 </label>
@@ -1037,9 +1048,8 @@ export function DashboardApp() {
                 {systemConsent && (
                   <p className="warning">
                     System audio can include other people's voices and unrelated
-                    applications. Windows loopback briefly requires a display
-                    track; EveryHint releases it immediately without analysing
-                    its images.
+                    applications. Any accompanying display track is released
+                    without image analysis.
                   </p>
                 )}
                 {microphoneConsent && (
@@ -1054,9 +1064,7 @@ export function DashboardApp() {
                         setMicrophoneDeviceId(event.target.value)
                       }
                     >
-                      <option value="default">
-                        Windows default microphone
-                      </option>
+                      <option value="default">Default microphone</option>
                       {microphones
                         .filter((device) => device.deviceId !== "default")
                         .map((device) => (

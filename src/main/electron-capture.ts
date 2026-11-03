@@ -1,6 +1,7 @@
 import { BrowserWindow, desktopCapturer, systemPreferences } from "electron";
 import type { CaptureSource, ScreenFrame } from "../shared/contracts";
 import type { ScreenCaptureBackend } from "./capture";
+import { screenCaptureAvailable } from "./platform";
 
 export function isOwnSource(id: string, ownIds: string[]): boolean {
   const windowKey = (value: string): string =>
@@ -19,9 +20,15 @@ export class ElectronScreenCapture implements ScreenCaptureBackend {
     );
   }
   private checkPermission(): void {
+    if (!screenCaptureAvailable())
+      throw new Error(
+        "Screen context currently requires an X11/Xorg Linux session. Under Wayland, start with microphone/system audio only.",
+      );
     if (
       process.platform === "darwin" &&
-      systemPreferences.getMediaAccessStatus("screen") !== "granted"
+      ["denied", "restricted"].includes(
+        systemPreferences.getMediaAccessStatus("screen"),
+      )
     ) {
       throw new Error(
         "Screen recording permission is required in system settings. Restart EveryHint after granting it.",

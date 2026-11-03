@@ -311,7 +311,7 @@ export function WorkspaceSettings() {
                   setDraft({ ...draft, notificationTitles: e.target.checked })
                 }
               />
-              Show event titles in Windows notifications
+              Show event titles in desktop notifications
             </label>
             <label className="check">
               <input

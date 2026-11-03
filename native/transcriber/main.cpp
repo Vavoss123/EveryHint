@@ -13,6 +13,8 @@
 #include <io.h>
 #include <windows.h>
 #include <psapi.h>
+#else
+#include <sys/resource.h>
 #endif
 
 using Clock = std::chrono::steady_clock;
@@ -31,6 +33,15 @@ static std::uint64_t memoryBytes() {
 #ifdef _WIN32
   PROCESS_MEMORY_COUNTERS counters{};
   if (GetProcessMemoryInfo(GetCurrentProcess(), &counters, sizeof(counters))) return counters.WorkingSetSize;
+#else
+  struct rusage usage{};
+  if (getrusage(RUSAGE_SELF, &usage) == 0) {
+#ifdef __APPLE__
+    return static_cast<std::uint64_t>(usage.ru_maxrss);
+#else
+    return static_cast<std::uint64_t>(usage.ru_maxrss) * 1024;
+#endif
+  }
 #endif
   return 0;
 }

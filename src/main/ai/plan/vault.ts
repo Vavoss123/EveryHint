@@ -1,4 +1,4 @@
-import { AsyncEntry } from "@napi-rs/keyring";
+import { credentialEntry } from "../../credentials";
 import { createHash, randomUUID } from "node:crypto";
 
 export interface SecretEntry {
@@ -45,8 +45,8 @@ export class KeyringVault implements CredentialVault {
     service = "EveryHint.ChatGPTPlan.v1",
   ): KeyringVault {
     const owner = createHash("sha256").update(home).digest("hex");
-    return new KeyringVault(
-      (slot) => new AsyncEntry(service, `${owner}/${slot}`),
+    return new KeyringVault((slot) =>
+      credentialEntry(service, `${owner}/${slot}`),
     );
   }
   private serial<T>(action: () => Promise<T>): Promise<T> {
