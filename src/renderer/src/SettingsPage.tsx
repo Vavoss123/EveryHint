@@ -1,13 +1,11 @@
 import { useState, type ReactNode } from "react";
 import type { AppSnapshot, Settings } from "../../shared/contracts";
 import type { MeetingState } from "../../shared/meetings";
-import type { IntelligenceSnapshot } from "../../shared/intelligence";
 import { DEFAULT_CONTEXT } from "../../shared/ai";
 import { AccountPanel } from "./AccountPanel";
-import { ProviderSettings } from "./ProviderSettings";
+import { ClaudePanel, ProviderSettings } from "./ProviderSettings";
 import { PersonalSettings, TemplateEditor } from "./PersonalPages";
 import { WorkspaceSettings } from "./WorkspacePages";
-import { IntelligenceSettingsPanel } from "./IntelligencePanel";
 import { TranscriptionPanel } from "./TranscriptionPanel";
 import { DesktopPrivacy } from "./DesktopPrivacy";
 import { ShortcutSettings } from "./ShortcutSettings";
@@ -29,7 +27,6 @@ export function SettingsPage({
   app,
   save,
   meetings,
-  intelligence,
   initial = "General",
   diagnostics,
   chooseSources,
@@ -37,7 +34,6 @@ export function SettingsPage({
   app: AppSnapshot;
   save: (patch: Partial<Settings>) => void;
   meetings: MeetingState | null;
-  intelligence: IntelligenceSnapshot | null;
   initial?: SettingsSection;
   diagnostics: ReactNode;
   chooseSources: () => void;
@@ -205,7 +201,12 @@ export function SettingsPage({
             </p>
           </>
         )}
-        {section === "Account & AI" && <AccountPanel />}
+        {section === "Account & AI" && (
+          <>
+            <AccountPanel />
+            <ClaudePanel />
+          </>
+        )}
         {section === "Advanced" && (
           <>
             <DesktopPrivacy app={app} save={save} updatesOnly />
@@ -235,13 +236,6 @@ export function SettingsPage({
                 </p>
               </details>
             )}
-            <details>
-              <summary>Detection and Live assistance limits</summary>
-              <IntelligenceSettingsPanel
-                snapshot={intelligence}
-                capture={app.session}
-              />
-            </details>
             <details>
               <summary>Context limits</summary>
               <div className="panel-stack">

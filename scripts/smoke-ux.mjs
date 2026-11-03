@@ -67,7 +67,6 @@ try {
   await page
     .getByRole("button", { name: "Continue · AI can be connected later" })
     .click();
-  await page.getByRole("button", { name: "Continue", exact: true }).click();
   await page.getByRole("button", { name: "Finish setup", exact: true }).click();
   await page
     .getByRole("button", { name: "Start EveryHint", exact: true })
@@ -479,8 +478,9 @@ try {
   check(
     afterReload.session.state === "STOPPED" &&
       afterReload.session.consent === null &&
-      (await page.evaluate(() => window.everyhint.getIntelligence())).value
-        .live === null,
+      (await page.evaluate(
+        () => typeof window.everyhint.getIntelligence === "undefined",
+      )),
     "Reloading the floating assistant stops capture and revokes sharing",
   );
   check(
@@ -565,8 +565,9 @@ try {
   check(
     fresh.session.state === "IDLE" &&
       fresh.session.consent === null &&
-      (await restarted.evaluate(() => window.everyhint.getIntelligence())).value
-        .live === null,
+      (await restarted.evaluate(
+        () => typeof window.everyhint.getIntelligence === "undefined",
+      )),
     "Full restart restores no capture or Live sharing permission",
   );
   check(

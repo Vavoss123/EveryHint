@@ -1,17 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { AssistantController } from "../src/main/ai/controller";
 import { CaptureSessionController } from "../src/main/session";
-import { LiveScheduler } from "../src/main/intelligence/live";
 import {
   DEFAULT_CONTEXT,
   type AIRequest,
   type ProviderEvent,
   type ProviderId,
 } from "../src/shared/ai";
-import {
-  DEFAULT_INTELLIGENCE,
-  type LiveContext,
-} from "../src/shared/intelligence";
 import { defaultConfig } from "../src/shared/modes";
 import { backend, deferred } from "./helpers";
 import type { KnowledgeExcerpt } from "../src/shared/knowledge";
@@ -183,19 +178,6 @@ describe("P9 mode/knowledge sharing through the existing provider boundary", () 
     await expect(preparing).rejects.toThrow("cancelled");
     expect(h.assistant.value.review).toBeNull();
   });
-  it("cannot inject knowledge permission through an automatic review payload", () => {
-    const h = setup();
-    expect(() =>
-      h.assistant.prepare(
-        {
-          question: "release",
-          options: DEFAULT_CONTEXT,
-          knowledgeIds: ["release"],
-        },
-        true,
-      ),
-    ).toThrow("scoped Live grant");
-  });
   it("keeps mode context preferences subtractive and blocks disabled contextual actions", async () => {
     const h = setup();
     h.mode.context.history = false;
@@ -232,153 +214,6 @@ describe("P9 mode/knowledge sharing through the existing provider boundary", () 
     expect(h.assistant.value.review!.history[0]?.question).toBe(
       "When is the prototype release?",
     );
-  });
-});
-describe("P9 Live knowledge permission", () => {
-  const context: LiveContext = {
-    modeId: "general",
-    modeName: "General",
-    knowledgeSources: [{ id: "release", name: "Plan" }],
-    accountId: "fixture",
-    accountLabel: "Fixture",
-    model: "fixture",
-    captureSessionId: "capture",
-    captureEpoch: 1,
-    assistantSessionId: "assistant",
-    sourceId: null,
-    sourceName: null,
-    images: false,
-    transcribing: true,
-    available: { microphone: true, systemAudio: false, screenshot: false },
-  };
-  function live() {
-    const h = setup();
-    const questions: import("../src/shared/intelligence").DetectedQuestion[] =
-      [];
-    const scheduler = new LiveScheduler({
-      assistant: h.assistant,
-      context: () => context,
-      settings: () => DEFAULT_INTELLIGENCE,
-      questions: () => questions,
-      mode: () => "live",
-      diagnostics: {
-        analysedTranscripts: 0,
-        duplicateQuestions: 0,
-        unchangedFrames: 0,
-        sampledFrames: 0,
-        screenChanges: 0,
-        detectionMs: 0,
-        screenMs: 0,
-        suggestionsCreated: 0,
-        automaticAttempts: 0,
-        automaticCompletions: 0,
-        suppressedRequests: 0,
-        queueDepth: 0,
-        responseLatencyMs: null,
-      },
-      changed: vi.fn(),
-      status: vi.fn(),
-      event: vi.fn(),
-    });
-    const input = (knowledge?: {
-      enabled: boolean;
-      remote: boolean;
-      ids: string[];
-    }) => ({
-      acknowledged: true,
-      expected: context,
-      sharing: {
-        microphone: true,
-        systemAudio: false,
-        screenshot: false,
-        history: false,
-        ...(knowledge ? { knowledge } : {}),
-      },
-      limits: { sessionMinutes: 30, cooldownSeconds: 30, requestLimit: 20 },
-    });
-    return { scheduler, input, questions, ...h };
-  }
-  it("defaults automatic knowledge off", async () => {
-    const h = live();
-    await h.scheduler.authorise(h.input());
-    expect(h.scheduler.value?.sharing.knowledge).toBeUndefined();
-    expect(h.retrieve).not.toHaveBeenCalled();
-    h.scheduler.revoke("test complete");
-  });
-  it("uses only grant-selected knowledge in the existing automatic scheduler and keeps its cooldown", async () => {
-    const h = live();
-    await h.scheduler.authorise(
-      h.input({ enabled: true, remote: true, ids: ["release"] }),
-    );
-    h.questions.push({
-      id: "q1",
-      sessionId: "capture",
-      transcriptId: "t1",
-      source: "microphone",
-      text: "When is the prototype release?",
-      at: Date.now(),
-      expiresAt: Date.now() + 30000,
-      confidence: 0.99,
-      relevance: 1,
-      automaticEligible: true,
-      reason: "fixture",
-      screen: null,
-      contextIds: [],
-    });
-    h.scheduler.tick();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(h.retrieve).toHaveBeenCalledExactlyOnceWith(
-      "When is the prototype release?",
-      ["release"],
-    );
-    expect(h.codex.respond).toHaveBeenCalledTimes(1);
-    expect(h.codex.respond.mock.calls[0]![0]).toMatchObject({
-      automatic: true,
-      knowledge: [excerpt],
-    });
-    h.scheduler.assistantChanged(h.assistant.value);
-    h.questions.push({
-      ...h.questions[0]!,
-      id: "q2",
-      transcriptId: "t2",
-      text: "What is the checklist deadline?",
-    });
-    h.scheduler.tick();
-    await vi.advanceTimersByTimeAsync(0);
-    expect(h.codex.respond).toHaveBeenCalledTimes(1);
-    expect(h.scheduler.value?.requests).toBe(1);
-    h.scheduler.revoke("test complete");
-  });
-  it("requires separate remote permission and selected sources", async () => {
-    const h = live();
-    await expect(
-      h.scheduler.authorise(
-        h.input({ enabled: true, remote: false, ids: ["release"] }),
-      ),
-    ).rejects.toThrow("separate");
-    await expect(
-      h.scheduler.authorise(h.input({ enabled: true, remote: true, ids: [] })),
-    ).rejects.toThrow("selected");
-  });
-  it("rejects documents outside the authorisation preview", async () => {
-    const h = live();
-    await expect(
-      h.scheduler.authorise(
-        h.input({ enabled: true, remote: true, ids: ["foreign"] }),
-      ),
-    ).rejects.toThrow("outside");
-  });
-  it("binds the active mode and exact selected knowledge sources without extra requests", async () => {
-    const h = live();
-    await h.scheduler.authorise(
-      h.input({ enabled: true, remote: true, ids: ["release"] }),
-    );
-    expect(h.scheduler.value).toMatchObject({
-      modeId: "general",
-      sharing: { knowledge: { enabled: true, remote: true, ids: ["release"] } },
-    });
-    expect(h.codex.respond).not.toHaveBeenCalled();
-    h.scheduler.revoke("test complete");
   });
 });
 describe("P9 saved summary version preservation", () => {

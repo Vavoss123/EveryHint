@@ -11,7 +11,10 @@ import type { AssistantController } from "../ai/controller";
 import { isHelpRequest } from "../ai/context";
 import { detectQuestion } from "../intelligence/question";
 
-const lifetime = 60 * 60_000;
+// Sharing approved at Start lasts for the session; Stop, connection, mode
+// and provider changes still revoke it. The bound guards against a
+// forgotten session running for days.
+const lifetime = 24 * 60 * 60_000;
 interface Ports {
   capture(): SessionSnapshot;
   speech(): TranscriptionSnapshot;
@@ -345,7 +348,7 @@ export class ListenController {
     this.timer = setTimeout(
       () =>
         this.revoke(
-          "Sharing permission expired. Allow it again to ask ChatGPT.",
+          "Sharing permission expired after 24 hours. Allow it again to keep asking.",
         ),
       lifetime,
     );

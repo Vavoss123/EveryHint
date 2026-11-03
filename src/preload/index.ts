@@ -231,8 +231,6 @@ const bridge: EveryHintBridge = {
       >[0],
     ) => ipcRenderer.invoke("everyhint:meetings-post-cancel", input),
   }),
-  authoriseLive: (input) =>
-    ipcRenderer.invoke("everyhint:intelligence-authorise", input),
   listen: Object.freeze({
     get: () => ipcRenderer.invoke("everyhint:listen-get"),
     start: (input: import("../shared/listen").ListenStart) =>
@@ -254,29 +252,17 @@ const bridge: EveryHintBridge = {
       return () => ipcRenderer.removeListener("everyhint:listen", wrapped);
     },
   }),
-  pauseLive: () => ipcRenderer.invoke("everyhint:intelligence-pause"),
-  getIntelligence: () => ipcRenderer.invoke("everyhint:intelligence-get"),
-  setOperatingMode: (mode) =>
-    ipcRenderer.invoke("everyhint:intelligence-mode", mode),
-  saveIntelligenceSettings: (settings) =>
-    ipcRenderer.invoke("everyhint:intelligence-configure", settings),
-  contextualAction: (input) =>
-    ipcRenderer.invoke("everyhint:intelligence-action", input),
-  dismissSuggestion: (input) =>
-    ipcRenderer.invoke("everyhint:intelligence-dismiss", input),
-  onIntelligence: (listener) => {
-    const wrapped = (
-      _event: Electron.IpcRendererEvent,
-      value: import("../shared/intelligence").IntelligenceSnapshot,
-    ): void => listener(value);
-    ipcRenderer.on("everyhint:intelligence", wrapped);
-    return () => ipcRenderer.removeListener("everyhint:intelligence", wrapped);
-  },
   removeContext: (input) => ipcRenderer.invoke("everyhint:ai-remove", input),
   onAssist: (listener) => {
     const wrapped = (): void => listener();
     ipcRenderer.on("everyhint:assist", wrapped);
     return () => ipcRenderer.removeListener("everyhint:assist", wrapped);
+  },
+  onAnswerShortcut: (listener) => {
+    const wrapped = (): void => listener();
+    ipcRenderer.on("everyhint:answer-shortcut", wrapped);
+    return () =>
+      ipcRenderer.removeListener("everyhint:answer-shortcut", wrapped);
   },
   onAccountSettings: (listener) => {
     const wrapped = (): void => listener();

@@ -3,7 +3,6 @@ import {
   meetingId,
   parseMeetingQuery,
   type EvidenceText,
-  type MeetingDocument,
 } from "../../shared/meetings";
 import { parseMeetingEdit } from "../../shared/meeting-edits";
 import { exactKeys, record } from "../../shared/validation";
@@ -22,7 +21,6 @@ export function registerMeetingIPC(ports: {
   snapshotAI: () => import("../../shared/meeting-ai").MeetingAIState;
   stop: () => void;
   cancelContent: () => void;
-  revokeLive: () => void;
   changed: () => void;
   sourcesChanged?: () => Promise<void> | undefined;
 }): void {
@@ -296,11 +294,9 @@ export function registerMeetingIPC(ports: {
     post.revoke(
       "A reviewed meeting request was chosen instead of automatic post-meeting notes.",
     );
-    ports.revokeLive();
     return ai.prepare(value);
   });
   scoped("ai-ask", (value) => {
-    ports.revokeLive();
     return ai.ask(value);
   });
   scoped("ai-apply", async (value) => {
@@ -318,11 +314,4 @@ export function registerMeetingIPC(ports: {
     none(value);
     post.revoke();
   });
-}
-export function hasGeneratedContent(doc: MeetingDocument): boolean {
-  return Boolean(
-    doc.summary ||
-    doc.actions.some((item) => item.authorship === "ai") ||
-    doc.decisions.some((item) => item.authorship === "ai"),
-  );
 }

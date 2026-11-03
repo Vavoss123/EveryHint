@@ -20,7 +20,7 @@ try{
  check(!(await page.evaluate(()=>window.everyhint.update("check"))).ok,"Packaged update check refuses unconfigured feed");
  check(!(await page.evaluate(()=>window.everyhint.update("install"))).ok,"Packaged update install refuses unconfigured trust");
  const state=(await page.evaluate(()=>window.everyhint.getSnapshot())).value;check(state.session.state==="IDLE"&&state.session.consent===null,"Capture initially disabled");
- check((await page.evaluate(()=>window.everyhint.getIntelligence())).value.live===null,"Live initially unauthorised");
+ check(await page.evaluate(()=>typeof window.everyhint.getIntelligence==="undefined"),"No automatic AI API is exposed");
  check((await page.evaluate(s=>window.everyhint.saveSettings({...s,protectWindow:true}),state.settings)).ok,"Packaged settings writable");
  check((await page.evaluate(()=>window.everyhint.getSnapshot())).value.privacy.configured,"Packaged protection readback");
  check((await page.evaluate(()=>window.everyhint.getTranscription())).value.runtimeInstalled,"Packaged helper hash verified");

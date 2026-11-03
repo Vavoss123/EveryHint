@@ -89,13 +89,11 @@ export interface Settings {
     systemAudio: boolean;
     screen: boolean;
   };
-  preferredHelp?: import("./intelligence").OperatingMode;
   startHidden?: boolean;
   contextLimits?: Pick<
     import("./ai").ContextOptions,
     "recentSeconds" | "transcriptChars" | "totalChars" | "imageBytes"
   >;
-  intelligence?: import("./intelligence").IntelligenceSettings;
 }
 export interface WindowBounds {
   x: number;
@@ -134,29 +132,6 @@ export interface EveryHintBridge {
   workspace: import("./workspace").WorkspaceBridge;
   personal: import("./personal").PersonalBridge;
   meetings: import("./meeting-bridge").MeetingBridge;
-  authoriseLive(
-    input: import("./intelligence").LiveConsentInput,
-  ): Promise<Result<void>>;
-  pauseLive(): Promise<Result<void>>;
-  getIntelligence(): Promise<
-    Result<import("./intelligence").IntelligenceSnapshot>
-  >;
-  onIntelligence(
-    listener: (value: import("./intelligence").IntelligenceSnapshot) => void,
-  ): () => void;
-  setOperatingMode(
-    mode: import("./intelligence").OperatingMode,
-  ): Promise<Result<void>>;
-  saveIntelligenceSettings(
-    settings: import("./intelligence").IntelligenceSettings,
-  ): Promise<Result<void>>;
-  contextualAction(
-    input: import("./intelligence").ContextualActionInput,
-  ): Promise<Result<import("./intelligence").ActionOutcome>>;
-  dismissSuggestion(input: {
-    id: string;
-    similar: boolean;
-  }): Promise<Result<void>>;
   getAccountConnection(): Promise<
     Result<import("./accounts").AccountConnection>
   >;
@@ -180,6 +155,8 @@ export interface EveryHintBridge {
     index: number;
   }): Promise<Result<void>>;
   onAssist(listener: () => void): () => void;
+  /** The answer shortcut pressed while the overlay has focus. */
+  onAnswerShortcut(listener: () => void): () => void;
   onAccountSettings(listener: () => void): () => void;
   openMeetings(id?: string): Promise<Result<void>>;
   onMeetingNavigate(listener: (id?: string) => void): () => void;
@@ -259,25 +236,4 @@ export interface AudioCaptureManager {
   setMicrophoneMuted(muted: boolean): void;
   stop(): void;
 }
-export interface AudioCaptureProvider {
-  readonly kind: AudioSourceId;
-  start(
-    consent: { authorised: true },
-    onChunk: (frame: AudioFrame) => void,
-  ): Promise<void>;
-  stop(): Promise<void>;
-}
-export interface TranscriptionProvider {
-  start(
-    onTranscript: (
-      event: Extract<ContextEvent, { type: "transcript" }>,
-    ) => void,
-  ): Promise<void>;
-  acceptAudio(pcm: Float32Array): void;
-  stop(): Promise<void>;
-}
-export type ContextEvent =
-  | { type: "screen"; timestamp: number; frame: ScreenFrame }
-  | { type: "transcript"; timestamp: number; text: string; final: boolean }
-  | { type: "question"; timestamp: number; text: string };
 export type { AIProvider, AIRequest, AIResponse } from "./ai";

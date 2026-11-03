@@ -66,7 +66,7 @@ async function launch() {
   check(status.packaged && status.updates.state === "unconfigured", "Packaged identity and unconfigured updates");
   const initial = unwrap(await page.evaluate(() => window.everyhint.getSnapshot()));
   check(initial.session.state === "IDLE" && initial.session.consent === null, "Startup restores no capture permission");
-  check(unwrap(await page.evaluate(() => window.everyhint.getIntelligence())).live === null, "Startup restores no automatic AI grant");
+  check(await page.evaluate(() => typeof window.everyhint.getIntelligence === "undefined"), "No automatic AI API is exposed");
 }
 async function quit() {
   const target = child, started = performance.now();
@@ -179,16 +179,6 @@ try {
   }
   const capture = unwrap(await page.evaluate(() => window.everyhint.getSnapshot()));
   check(capture.session.sources.screen.state === "DISABLED", "Audio verification never captures the real desktop");
-  unwrap(await page.evaluate(() => window.everyhint.setOperatingMode("live")));
-  const deniedLive = await page.evaluate(async () => {
-    const current = (await window.everyhint.getIntelligence()).value;
-    return window.everyhint.authoriseLive({ acknowledged: true, expected: current.liveContext,
-      sharing: { microphone: true, systemAudio: false, screenshot: false, history: false },
-      limits: { sessionMinutes: current.settings.sessionMinutes, cooldownSeconds: current.settings.cooldownSeconds, requestLimit: current.settings.requestLimit } });
-  });
-  check(!deniedLive.ok && unwrap(await page.evaluate(() => window.everyhint.getIntelligence())).live === null,
-    "Packaged Live authorisation refuses a fixture account without plan/model permission");
-  unwrap(await page.evaluate(() => window.everyhint.setOperatingMode("manual")));
   const saved = unwrap(await meeting("saveSession", { title: "RC retained synthetic speech", sessionId: capture.session.sessionId, acknowledged: true }));
   unwrap(await page.evaluate(() => window.everyhint.session("stop")));
   await pause(800);

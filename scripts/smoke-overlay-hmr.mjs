@@ -70,8 +70,8 @@ try {
   const changed = original
     .toString("utf8")
     .replace(
-      "Type help, or ask a question…",
-      "Type help here, or ask a question…",
+      "Ask anything, or press Ctrl+Enter for help with what's happening…",
+      "Ask anything here, or press Ctrl+Enter for help with what's happening…",
     );
   assert.notEqual(changed, original.toString("utf8"));
   await writeFile(component, changed);
@@ -82,7 +82,8 @@ try {
     () =>
       document
         .querySelector('[aria-label="Your question"]')
-        ?.getAttribute("placeholder") === "Type help here, or ask a question…",
+        ?.getAttribute("placeholder") ===
+      "Ask anything here, or press Ctrl+Enter for help with what's happening…",
   );
   check(
     JSON.stringify(await ids()) === JSON.stringify(before),
@@ -112,7 +113,8 @@ try {
     () =>
       document
         .querySelector('[aria-label="Your question"]')
-        ?.getAttribute("placeholder") === "Type help, or ask a question…",
+        ?.getAttribute("placeholder") ===
+      "Ask anything, or press Ctrl+Enter for help with what's happening…",
   );
   check(
     (await floating

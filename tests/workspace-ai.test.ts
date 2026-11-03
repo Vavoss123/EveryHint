@@ -1,18 +1,12 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { AssistantController } from "../src/main/ai/controller";
 import { CaptureSessionController } from "../src/main/session";
-import { LiveScheduler } from "../src/main/intelligence/live";
 import {
   DEFAULT_CONTEXT,
   type AIRequest,
   type ProviderId,
   type ProviderEvent,
 } from "../src/shared/ai";
-import {
-  DEFAULT_INTELLIGENCE,
-  type LiveContext,
-  type DetectedQuestion,
-} from "../src/shared/intelligence";
 import { defaultConfig } from "../src/shared/modes";
 import {
   EMPTY_FACTS,
@@ -382,7 +376,7 @@ describe("P10 exact AI context and brief consent", () => {
         },
         true,
       ),
-    ).toThrow("scoped Live grant");
+    ).toThrow("cannot include knowledge or workspace");
   });
   it("rejects excluded people and refuses save/export without an event-bound completed brief", async () => {
     const h = await setup();
@@ -413,149 +407,5 @@ describe("P10 exact AI context and brief consent", () => {
     });
     await expect(prepare).rejects.toThrow("cancelled");
     expect(h.codex.respond).not.toHaveBeenCalled();
-  });
-});
-describe("P10 explicitly staged Live context", () => {
-  async function live() {
-    const h = await setup();
-    await h.command("stage-live-context", { ...h.selection, purpose: "live" });
-    const questions: DetectedQuestion[] = [];
-    const context: LiveContext = {
-      accountId: "test",
-      accountLabel: "Fixture",
-      model: "fixture",
-      captureSessionId: "capture",
-      captureEpoch: 1,
-      assistantSessionId: h.assistant.value.sessionId,
-      sourceId: null,
-      sourceName: null,
-      images: false,
-      transcribing: true,
-      available: { microphone: true, systemAudio: false, screenshot: false },
-      workspaceSources: h.controller.liveContext,
-    };
-    const scheduler = new LiveScheduler({
-      assistant: h.assistant,
-      context: () => ({
-        ...context,
-        workspaceSources: h.controller.liveContext,
-      }),
-      settings: () => DEFAULT_INTELLIGENCE,
-      questions: () => questions,
-      mode: () => "live",
-      diagnostics: {
-        analysedTranscripts: 0,
-        duplicateQuestions: 0,
-        unchangedFrames: 0,
-        sampledFrames: 0,
-        screenChanges: 0,
-        detectionMs: 0,
-        screenMs: 0,
-        suggestionsCreated: 0,
-        automaticAttempts: 0,
-        automaticCompletions: 0,
-        suppressedRequests: 0,
-        queueDepth: 0,
-        responseLatencyMs: null,
-      },
-      changed: vi.fn(),
-      status: vi.fn(),
-      event: vi.fn(),
-    });
-    cleanups.push(async () => {
-      scheduler.revoke("Fixture complete");
-    });
-    const input = (workspace?: {
-      enabled: boolean;
-      remote: boolean;
-      scopeId: string;
-      selection: WorkspaceSelection;
-    }) => ({
-      acknowledged: true,
-      expected: context,
-      sharing: {
-        microphone: true,
-        systemAudio: false,
-        screenshot: false,
-        history: false,
-        ...(workspace ? { workspace } : {}),
-      },
-      limits: { sessionMinutes: 30, cooldownSeconds: 30, requestLimit: 20 },
-    });
-    return {
-      ...h,
-      scheduler,
-      questions,
-      context,
-      input,
-      workspace: {
-        enabled: true,
-        remote: true,
-        scopeId: context.workspaceSources!.scopeId,
-        selection: context.workspaceSources!.selection,
-      },
-    };
-  }
-  it("keeps all P10 context disabled by default even after staging", async () => {
-    const h = await live();
-    await h.scheduler.authorise(h.input());
-    expect(h.scheduler.value?.sharing.workspace).toBeUndefined();
-    expect(h.retrieve).not.toHaveBeenCalled();
-  });
-  it("requires separate remote consent and exact staged IDs / purpose / profile", async () => {
-    const h = await live();
-    await expect(
-      h.scheduler.authorise(h.input({ ...h.workspace, remote: false })),
-    ).rejects.toThrow("separate");
-    await expect(
-      h.scheduler.authorise(
-        h.input({
-          ...h.workspace,
-          selection: { ...h.workspace.selection, personIds: ["foreign"] },
-        }),
-      ),
-    ).rejects.toThrow("staged");
-    expect(h.codex.respond).not.toHaveBeenCalled();
-  });
-  it("uses only the frozen grant, preserves cooldown and revokes on source change", async () => {
-    const h = await live();
-    await h.scheduler.authorise(h.input(h.workspace));
-    h.questions.push({
-      id: "q1",
-      sessionId: "capture",
-      transcriptId: "t1",
-      source: "microphone",
-      text: "When is the prototype release?",
-      at: Date.now(),
-      expiresAt: Date.now() + 30000,
-      confidence: 0.99,
-      relevance: 1,
-      automaticEligible: true,
-      reason: "fixture",
-      screen: null,
-      contextIds: [],
-    });
-    h.scheduler.tick();
-    await h.complete();
-    for (let i = 0; i < 20 && !h.codex.respond.mock.calls.length; i++)
-      await new Promise((r) => setTimeout(r, 2));
-    expect(h.retrieve).toHaveBeenCalledExactlyOnceWith(
-      "When is the prototype release?",
-      h.workspace.selection,
-    );
-    expect(h.codex.respond).toHaveBeenCalledTimes(1);
-    h.scheduler.assistantChanged(h.assistant.value);
-    h.questions.push({
-      ...h.questions[0]!,
-      id: "q2",
-      transcriptId: "t2",
-      text: "What is the checklist deadline?",
-    });
-    h.scheduler.tick();
-    expect(h.codex.respond).toHaveBeenCalledTimes(1);
-    expect(h.scheduler.value?.requests).toBe(1);
-    h.controller.invalidate();
-    h.scheduler.tick();
-    expect(h.scheduler.value).toBeNull();
   });
 });

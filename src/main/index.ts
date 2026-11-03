@@ -44,10 +44,6 @@ import { SpeechInstallation } from "./transcription/models";
 import { TranscriptionController } from "./transcription/controller";
 import { AssistantController } from "./ai/controller";
 import { ListenController } from "./listen/controller";
-import { IntelligenceController } from "./intelligence/controller";
-import { sampleScreen } from "./intelligence/native-screen";
-import { DEFAULT_INTELLIGENCE } from "../shared/intelligence";
-import { parseIntelligenceSettings } from "../shared/validation";
 import { ChatGptProvider } from "./ai/plan/provider";
 import { KeyringVault } from "./ai/plan/vault";
 import { ClaudeProvider } from "./ai/claude";
@@ -107,7 +103,6 @@ let transcriptionListening = false;
 let currentAccountLabel = "Selected ChatGPT account";
 let assistant: AssistantController | undefined;
 let listen: ListenController | undefined;
-let intelligence: IntelligenceController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
 let claude: ClaudeProvider | undefined;
@@ -192,7 +187,6 @@ function clearAssistantContext(): void {
 function stopCapture(): void {
   listen?.stop();
   cancelMeetingWork();
-  intelligence?.revoke("Session stopped. Renew remote sharing explicitly.");
   assistant?.cancel();
   assistant?.discardReview();
   controller?.stop();
@@ -292,6 +286,49 @@ function show(): void {
   window?.setSkipTaskbar(false);
   window?.focus();
 }
+const MOVE_STEP = 48;
+const MOVE_KEYS = {
+  "Control+Up": [0, -1],
+  "Control+Down": [0, 1],
+  "Control+Left": [-1, 0],
+  "Control+Right": [1, 0],
+} as const;
+// Ctrl+arrows move the overlay. They are registered only while it is visible
+// because they are word/paragraph navigation in other applications.
+function setMoveKeys(enabled: boolean): void {
+  for (const [accelerator, [dx, dy]] of Object.entries(MOVE_KEYS)) {
+    if (!enabled) {
+      globalShortcut.unregister(accelerator);
+      continue;
+    }
+    if (globalShortcut.isRegistered(accelerator)) continue;
+    try {
+      globalShortcut.register(accelerator, () => {
+        if (!overlay || overlay.isDestroyed() || !overlay.isVisible()) return;
+        const bounds = overlay.getBounds();
+        const area = screen.getDisplayMatching(bounds).workArea;
+        overlay.setPosition(
+          Math.max(
+            area.x,
+            Math.min(
+              bounds.x + dx * MOVE_STEP,
+              area.x + area.width - bounds.width,
+            ),
+          ),
+          Math.max(
+            area.y,
+            Math.min(
+              bounds.y + dy * MOVE_STEP,
+              area.y + area.height - bounds.height,
+            ),
+          ),
+        );
+      });
+    } catch {
+      // Another application owns the chord; dragging still works.
+    }
+  }
+}
 function showOverlay(): void {
   visibilityRequests++;
   if (!interfaceReady) {
@@ -367,20 +404,11 @@ function updateTray(): void {
         `${id === "systemAudio" ? "System" : id === "microphone" ? "Mic" : "Screen"} ${source.state.toLowerCase()}${source.muted ? " (muted)" : ""}`,
     )
     .join(" · ");
-  const sharing = intelligence?.indicator;
   const recording = meetings?.indicator.saving ?? false;
   const postEnabled = postNotes?.enabled ?? false;
-  const mode =
-    sharing?.mode === "live"
-      ? "Live Assist"
-      : sharing?.mode === "auto-hint"
-        ? "Auto-Hint"
-        : "Manual";
-  const remote = sharing?.enabled
-    ? `LIVE REMOTE ENABLED · ${sharing.requests}/${sharing.limit} attempts`
-    : `${mode} · live sharing off`;
+  const remote = `Answering with ${assistant?.value.selected === "claude" ? "Claude" : "ChatGPT"}`;
   const listening = listen?.value;
-  const key = `${state}:${summary}:${remote}:${sharing?.expiresAt ?? 0}:${recording}:${postEnabled}:${listening?.phase}:${listening?.sharing?.expiresAt ?? 0}`;
+  const key = `${state}:${summary}:${remote}:${recording}:${postEnabled}:${listening?.phase}:${listening?.sharing?.expiresAt ?? 0}`;
   if (key === lastTrayState) return;
   lastTrayState = key;
   tray.setImage(icon(state));
@@ -404,7 +432,7 @@ function updateTray(): void {
       },
       {
         label: listening?.sharing
-          ? "ChatGPT context allowed for your requests"
+          ? "Context allowed for your requests"
           : "Conversation sharing off",
         enabled: false,
       },
@@ -417,11 +445,10 @@ function updateTray(): void {
         },
       },
       {
-        label: "Revoke ChatGPT sharing",
-        enabled: !!listening?.sharing || !!sharing?.enabled || postEnabled,
+        label: "Revoke AI sharing",
+        enabled: !!listening?.sharing || postEnabled,
         click: () => {
           listen?.revoke();
-          intelligence?.revoke("Sharing revoked from tray.");
           postNotes?.revoke("Sharing revoked from tray.");
         },
       },
@@ -437,14 +464,6 @@ function updateTray(): void {
         click: () =>
           postNotes?.revoke(
             "Automatic post-meeting notes cancelled from the tray.",
-          ),
-      },
-      {
-        label: "Pause Live Assist",
-        enabled: sharing?.enabled ?? false,
-        click: () =>
-          intelligence?.revoke(
-            "Paused from the tray. Renew explicitly to resume automatic sharing.",
           ),
       },
       ...Object.entries(value.sources).map(([id, source]) => ({
@@ -485,15 +504,13 @@ function updateTray(): void {
   );
   if (window && !window.isDestroyed())
     window.setTitle(
-      `EveryHint · ${mode}${sharing?.enabled ? " · remote enabled" : ""}${postEnabled ? " · End notes enabled" : ""}${recording ? " · saving final text" : ""} · ${state}`,
+      `EveryHint${listening?.sharing ? " · AI context allowed" : ""}${postEnabled ? " · End notes enabled" : ""}${recording ? " · saving final text" : ""} · ${state}`,
     );
 }
 function publish(): void {
   if (speech && controller) speech.captureChanged(controller.value);
   if (assistant && controller) assistant.captureChanged(controller.value);
   listen?.observe();
-  if (intelligence && controller)
-    intelligence.update(controller.value, speech?.value.events ?? []);
   if (meetings && controller)
     meetings.observe(controller.metadata, speech?.value.events ?? []);
   publishMeetingAI();
@@ -524,7 +541,7 @@ function applyAppearance(): void {
   window.setOpacity(1);
   overlay?.setAlwaysOnTop(overlay.isVisible() && store.settings.alwaysOnTop);
   overlay?.setOpacity(store.settings.opacity ?? 1);
-  const requested = store.settings.protectWindow === true;
+  const requested = store.settings.protectWindow !== false;
   if (!privacy || privacy.requested !== requested) {
     privacy = configureWindowPrivacy(window, requested);
     if (overlay) {
@@ -660,7 +677,6 @@ async function initialise(): Promise<void> {
       transcriptionListening = value.state === "LISTENING";
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         broadcast("everyhint:transcription", value);
-      if (controller) intelligence?.update(controller.value, value.events);
       if (controller) meetings?.observe(controller.metadata, value.events);
       publishMeetingAI();
       listen?.observe();
@@ -712,7 +728,6 @@ async function initialise(): Promise<void> {
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
         broadcast("everyhint:assistant", value);
-      intelligence?.assistantChanged(value);
       meetingAI?.assistantChanged(value);
       listen?.observe();
       publishMeetingAI();
@@ -786,12 +801,7 @@ async function initialise(): Promise<void> {
           personal?.modeContext,
           assistant!.routing.model,
         ]),
-      interruptAutomatic: () => {
-        intelligence?.revoke(
-          "A deliberate conversation request replaced automatic assistance.",
-        );
-        cancelMeetingWork();
-      },
+      interruptAutomatic: () => cancelMeetingWork(),
     },
     assistant,
     (value) => {
@@ -799,38 +809,6 @@ async function initialise(): Promise<void> {
       updateTray();
     },
   );
-  intelligence = new IntelligenceController(
-    assistant,
-    (value) => {
-      if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
-        broadcast("everyhint:intelligence", value);
-      updateTray();
-    },
-    Date.now,
-    sampleScreen,
-    () => ({
-      accountId: accounts?.identity ?? null,
-      accountLabel: currentAccountLabel,
-      transcribing: transcriptionListening,
-      ...(workspace?.liveContext
-        ? { workspaceSources: workspace.liveContext }
-        : {}),
-      ...(personal
-        ? {
-            modeId: personal.modeContext.mode.id,
-            modeName: personal.modeContext.mode.name,
-            knowledgeSources: personal.value.documents
-              .filter(
-                (d) =>
-                  d.enabled &&
-                  personal!.modeContext.mode.knowledgeIds.includes(d.id),
-              )
-              .map((d) => ({ id: d.id, name: d.name })),
-          }
-        : {}),
-    }),
-  );
-  intelligence.configure(store.settings.intelligence ?? DEFAULT_INTELLIGENCE);
   const meetingRoot = process.env.EVERYHINT_TEST_USER_DATA
     ? join(app.getPath("userData"), "meetings")
     : join(
@@ -847,9 +825,6 @@ async function initialise(): Promise<void> {
     },
     () => {
       workspace?.invalidate();
-      intelligence?.revoke(
-        "AI mode or personal knowledge changed. Renew sharing explicitly.",
-      );
       cancelMeetingWork();
       assistant?.clear();
     },
@@ -933,10 +908,6 @@ async function initialise(): Promise<void> {
           broadcast("everyhint:workspace-state", value);
       },
       invalidate: () => {
-        if (intelligence?.value.live?.sharing.workspace?.enabled)
-          intelligence.revoke(
-            "Calendar, People or memory context changed. Renew sharing explicitly.",
-          );
         const current = assistant?.value;
         if (
           current?.review?.workspaceContext ||
@@ -1065,8 +1036,16 @@ async function initialise(): Promise<void> {
     },
   });
   overlay.setSkipTaskbar(true);
-  overlay.on("hide", () => overlay?.setAlwaysOnTop(false));
-  overlay.on("minimize", () => overlay?.setAlwaysOnTop(false));
+  overlay.on("show", () => setMoveKeys(true));
+  overlay.on("restore", () => setMoveKeys(true));
+  overlay.on("hide", () => {
+    overlay?.setAlwaysOnTop(false);
+    setMoveKeys(false);
+  });
+  overlay.on("minimize", () => {
+    overlay?.setAlwaysOnTop(false);
+    setMoveKeys(false);
+  });
   const rememberAssistant = (): void => {
     queueBounds();
   };
@@ -1198,6 +1177,11 @@ async function initialise(): Promise<void> {
         },
         clear: clearAssistantContext,
         answer: () => {
+          // While typing in the overlay, the shortcut sends the typed text.
+          if (overlay && !overlay.isDestroyed() && overlay.isFocused()) {
+            overlay.webContents.send("everyhint:answer-shortcut");
+            return;
+          }
           showOverlay();
           void listen!.ask({ question: "" }).catch(() => {});
         },
@@ -1249,7 +1233,6 @@ async function initialise(): Promise<void> {
   handle("everyhint:listen-context", () => listen!.context());
   handle("everyhint:listen-revoke", () => {
     listen!.revoke();
-    intelligence!.revoke("ChatGPT sharing was revoked.");
     postNotes?.revoke("ChatGPT sharing was revoked.");
   });
   updates = new UpdateController(
@@ -1320,46 +1303,14 @@ async function initialise(): Promise<void> {
     stop: () => controller.stop(),
     cancelContent: () => {
       cancelMeetingWork();
-      intelligence?.revoke("Local meeting content was cleared or deleted.");
       assistant?.clear();
     },
-    revokeLive: () => intelligence?.revoke("Meeting AI was chosen."),
     changed: () => {
       if (meetings && window && !window.isDestroyed())
         broadcast("everyhint:meetings-state", meetings.value);
       publishMeetingAI();
     },
   });
-  handle("everyhint:intelligence-get", () => intelligence!.value);
-  handle("everyhint:intelligence-authorise", (input) =>
-    intelligence!.authorise(input),
-  );
-  handle("everyhint:intelligence-pause", (input) => {
-    if (input !== undefined)
-      throw new Error("Pause Live Assist takes no parameters.");
-    intelligence!.revoke(
-      "Paused by you. Renew explicitly to resume automatic sharing.",
-    );
-  });
-  handle("everyhint:intelligence-mode", (input) => {
-    intelligence!.mode(input);
-  });
-  handle("everyhint:intelligence-configure", (input) => {
-    const settings = parseIntelligenceSettings(input);
-    store.save(
-      { ...store.settings, intelligence: settings },
-      window?.getNormalBounds(),
-    );
-    intelligence!.configure(settings);
-    assistant!.discardReview();
-    publish();
-  });
-  handle("everyhint:intelligence-action", (input) =>
-    intelligence!.action(input),
-  );
-  handle("everyhint:intelligence-dismiss", (input) =>
-    intelligence!.dismiss(input),
-  );
   handle("everyhint:account-get", () => accounts!.value);
   handle("everyhint:account-action", async (input) => {
     cancelMeetingWork();
@@ -1424,7 +1375,9 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-model-select", async (input) => {
     cancelMeetingWork();
-    if (assistant!.value.selected === "claude") claude!.selectModel(input);
+    // Model IDs identify their provider, so either list can be changed.
+    if (typeof input === "string" && input.startsWith("claude-"))
+      claude!.selectModel(input);
     else chatgpt!.selectModel(input);
     assistant!.clear();
     await assistant!.inspect();
@@ -1482,7 +1435,6 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-review", async (input) => {
     cancelMeetingWork();
-    intelligence!.revoke("Manual Assist was started.");
     if (Object.hasOwn(record(input), "preset")) {
       const parsed = parseReview(input);
       await personal!.command({
@@ -1494,7 +1446,6 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-remove", (input) => assistant!.removeContext(input));
   handle("everyhint:ai-ask", (input) => {
-    intelligence!.revoke("A manually reviewed request was chosen.");
     if (assistant!.value.review?.meetingContext) return meetingAI!.ask(input);
     return assistant!.ask(input);
   });
@@ -1505,9 +1456,6 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-action", (input) => {
     cancelMeetingWork();
-    intelligence!.revoke(
-      "The assistant was cancelled, cleared or manually edited.",
-    );
     if (input === "cancel") return assistant!.cancel();
     if (input === "clear") return assistant!.clear();
     if (input === "discard-review") return assistant!.discardReview();
@@ -1516,16 +1464,12 @@ async function initialise(): Promise<void> {
   handle("everyhint:transcription-get", () => speech!.value);
   handle("everyhint:transcription-action", (input) => {
     if (input === "enable") return speech!.enable();
-    if (input === "pause") {
-      intelligence!.revoke("Local transcription was paused.");
-      return speech!.pause();
-    }
+    if (input === "pause") return speech!.pause();
     if (input === "clear") {
       cancelMeetingWork();
       listen!.revoke(
         "Transcript cleared. Allow sharing again to use new conversation context.",
       );
-      intelligence!.clear();
       assistant!.discardReview();
       return speech!.clear();
     }
@@ -1535,10 +1479,9 @@ async function initialise(): Promise<void> {
   handle("everyhint:transcription-install", (input) =>
     installation.install(input),
   );
-  handle("everyhint:transcription-settings", (input) => {
-    intelligence!.revoke("Local transcription settings changed.");
-    return speech!.configure(input);
-  });
+  handle("everyhint:transcription-settings", (input) =>
+    speech!.configure(input),
+  );
   handle("everyhint:sources", (input) => controller.listSources(input));
   handle("everyhint:microphones", (input) => controller.listMicrophones(input));
   handle("everyhint:microphone-mute", (input) =>
@@ -1559,9 +1502,6 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:settings", (input) => {
     // Appearance is safe to edit during capture; interval changes apply on next start/resume.
-    const oldIntelligence = JSON.stringify(
-      store.settings.intelligence ?? DEFAULT_INTELLIGENCE,
-    );
     const oldShortcuts = [
       store.settings.answerShortcut,
       store.settings.assistShortcut,
@@ -1571,15 +1511,6 @@ async function initialise(): Promise<void> {
       store.settings.stopShortcut,
     ].join("|");
     store.save(input, window?.getNormalBounds());
-    if (
-      oldIntelligence !==
-      JSON.stringify(store.settings.intelligence ?? DEFAULT_INTELLIGENCE)
-    ) {
-      intelligence!.configure(
-        store.settings.intelligence ?? DEFAULT_INTELLIGENCE,
-      );
-      assistant!.discardReview();
-    }
     if (
       oldShortcuts !==
       [
@@ -1699,7 +1630,6 @@ app.on("before-quit", (event) => {
   accounts?.dispose();
   controller?.stop();
   speech?.dispose();
-  intelligence?.dispose();
   shortcuts?.dispose();
   if (saveTimer) clearTimeout(saveTimer);
   if (store) persistBounds();

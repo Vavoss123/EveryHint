@@ -156,6 +156,7 @@ try {
     "screen checkbox alone does not authorise capture",
   );
   await page.getByRole("checkbox", { name: /I authorise/ }).check();
+  await page.getByRole("radio", { name: /^ChatGPT/ }).check();
   check(
     await choose.isEnabled(),
     "explicit authorisation enables metadata picker",
@@ -239,6 +240,7 @@ try {
       .getByRole("checkbox", { name: /^System audio/ })
       .setChecked(systemAudio);
     await page.getByRole("checkbox", { name: /I authorise/ }).check();
+    await page.getByRole("radio", { name: /^ChatGPT/ }).check();
     if (microphone) {
       await page.getByRole("button", { name: "Refresh microphones" }).click();
       await page

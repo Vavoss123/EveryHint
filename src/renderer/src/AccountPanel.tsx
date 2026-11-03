@@ -1,14 +1,9 @@
 import { useEffect, useState } from "react";
 import type { AccountAction, AccountConnection } from "../../shared/accounts";
-import type { ProviderId } from "../../shared/ai";
 import { connectionLabel } from "../../shared/connection";
 import { useAssistantSnapshot } from "./useAssistantSnapshot";
 
-export function AccountPanel({
-  provider = "codex",
-}: {
-  provider?: ProviderId;
-}) {
+export function AccountPanel() {
   const assistant = useAssistantSnapshot();
   const [connection, setConnection] = useState<AccountConnection | null>(null);
   const [working, setWorking] = useState(false),
@@ -50,13 +45,6 @@ export function AccountPanel({
     working ||
     connection?.state === "signing-in" ||
     connection?.state === "signing-out";
-  if (provider === "claude")
-    return (
-      <p>
-        Claude subscription sign-in is unavailable. Its optional API integration
-        requires a separate billing opt-in in Advanced.
-      </p>
-    );
   return (
     <section
       className="account-panel panel-stack"

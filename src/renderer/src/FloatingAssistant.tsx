@@ -7,6 +7,16 @@ import { usePersonal, personalCommand } from "./PersonalState";
 import { ResponseText } from "./ResponseText";
 import "./overlay.css";
 
+// One-click requests over the shared session context.
+const QUICK_ACTIONS = [
+  ["What should I say?", "What should I say?"],
+  ["Follow-ups", "Suggest three sharp follow-up questions I could ask now."],
+  [
+    "Recap",
+    "Recap the conversation so far: key points, decisions and open questions.",
+  ],
+  ["Fact-check", "Fact-check the most recent claim in the conversation."],
+] as const;
 function unwrap<T>(result: Result<T>): T {
   if (!result.ok) throw new Error(result.error);
   return result.value;
@@ -74,6 +84,11 @@ export function FloatingAssistant() {
     () => window.everyhint.onAssist(() => composer.current?.focus()),
     [],
   );
+  const askLatest = useRef<() => void>(() => {});
+  useEffect(
+    () => window.everyhint.onAnswerShortcut(() => askLatest.current()),
+    [],
+  );
   useEffect(() => {
     const focus = () => {
       if (!generating) composer.current?.focus();
@@ -131,6 +146,7 @@ export function FloatingAssistant() {
       setView(false);
     });
   }
+  askLatest.current = ask;
   function openDashboard(account = false): void {
     setMenu(false);
     void run(async () =>
@@ -368,9 +384,6 @@ export function FloatingAssistant() {
                 Revoke sharing
               </button>
             )}
-            <button role="menuitem" onClick={() => openDashboard()}>
-              Permissions and session options
-            </button>
             <button
               role="menuitemcheckbox"
               aria-checked={app?.settings.alwaysOnTop ?? false}
@@ -395,10 +408,8 @@ export function FloatingAssistant() {
               aria-label={`Window protection: ${app?.privacy?.state ?? "off"}`}
             >
               {app?.privacy?.state === "configured"
-                ? "Window protection configured"
-                : "Window protection off or not confirmed"}
-              . Hiding is separate from capture exclusion; receiving-app checks
-              remain required.
+                ? "Hidden from screen recordings and shares."
+                : "Visible in screen recordings. Turn on hiding in Start or Settings."}
             </p>
           </div>
         )}
@@ -492,8 +503,8 @@ export function FloatingAssistant() {
                 </h1>
                 <p>
                   {active
-                    ? "Press Answer from conversation or type a question below."
-                    : "Start EveryHint from the dashboard to listen locally."}
+                    ? "Press Ctrl+Enter for help with what's happening, or type below."
+                    : "Start EveryHint from the dashboard to listen. Ctrl+Enter answers, Ctrl+\\ shows or hides this window."}
                 </p>
               </div>
             )}
@@ -529,13 +540,36 @@ export function FloatingAssistant() {
           ask();
         }}
       >
+        <div className="overlay-quick" role="group" aria-label="Quick actions">
+          {QUICK_ACTIONS.map(([label, request]) => (
+            <button
+              type="button"
+              key={label}
+              disabled={busy || generating || !listen?.sharing}
+              title={
+                listen?.sharing
+                  ? request
+                  : "Start EveryHint with sharing to use quick actions"
+              }
+              onClick={() =>
+                void run(async () =>
+                  unwrap(
+                    await window.everyhint.listen.ask({ question: request }),
+                  ),
+                )
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
         <label htmlFor="overlay-question">Ask EveryHint</label>
         <div className="overlay-input-row">
           <textarea
             id="overlay-question"
             ref={composer}
             aria-label="Your question"
-            placeholder="Type help, or ask a question…"
+            placeholder="Ask anything, or press Ctrl+Enter for help with what's happening…"
             value={question}
             maxLength={6000}
             rows={2}

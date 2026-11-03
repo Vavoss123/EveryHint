@@ -237,7 +237,7 @@ export function parseWorkspaceConfig(value: unknown): WorkspaceConfig {
   } as unknown as WorkspaceConfig;
 }
 export interface WorkspaceSelection {
-  purpose: "answer" | "brief" | "live";
+  purpose: "answer" | "brief";
   eventId: string | null;
   description: boolean;
   personIds: string[];
@@ -255,7 +255,7 @@ export function parseWorkspaceSelection(value: unknown): WorkspaceSelection {
     "meetingIds",
   ]);
   if (
-    !["answer", "brief", "live"].includes(input.purpose as string) ||
+    !["answer", "brief"].includes(input.purpose as string) ||
     typeof input.description !== "boolean"
   )
     throw new Error("Choose bounded workspace context categories.");

@@ -129,11 +129,6 @@ export class WorkspaceController {
   private interfaceReady = false;
   private contactsAPI?: ContactsAPI;
   private contactCandidates = new Map<string, ImportedContact>();
-  private stagedLive?: {
-    context: WorkspaceAIContext;
-    selection: WorkspaceSelection;
-    valid: () => boolean;
-  };
   constructor(
     private ports: WorkspacePorts,
     private resume: WorkspaceResume,
@@ -158,18 +153,7 @@ export class WorkspaceController {
   }
   invalidate(): void {
     this.epoch++;
-    this.stagedLive = undefined;
     this.ports.invalidate();
-  }
-  get liveContext(): import("../../shared/intelligence").LiveContext["workspaceSources"] {
-    const staged = this.stagedLive;
-    return staged?.valid()
-      ? {
-          scopeId: this.state.scopeId,
-          selection: structuredClone(staged.selection),
-          context: structuredClone(staged.context),
-        }
-      : undefined;
   }
   switchProfile(profile: string) {
     if (profile === this.profile) return;
@@ -1388,19 +1372,6 @@ export class WorkspaceController {
     if (command === "reconcile-sources") {
       await this.reconcileSources();
       return this.value;
-    }
-    if (command === "stage-live-context") {
-      const selection = parseWorkspaceSelection(value);
-      if (selection.purpose !== "live")
-        throw new Error("Choose a Live context selection.");
-      this.invalidate();
-      const built = await this.buildContext("", selection);
-      this.stagedLive = { ...built, selection };
-      return built.context;
-    }
-    if (command === "clear-live-context") {
-      this.invalidate();
-      return null;
     }
     if (command === "event-associations")
       return this.associated(localId(value));

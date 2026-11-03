@@ -1,4 +1,4 @@
-import type { Settings, WindowBounds } from "../shared/contracts";
+import type { WindowBounds } from "../shared/contracts";
 
 export type Presentation = "compact" | "assistant" | "dashboard";
 export function floatingBounds(
@@ -29,8 +29,6 @@ export function floatingBounds(
     ),
   };
 }
-export const presentation = (settings: Settings): Presentation =>
-  settings.compact ? "compact" : (settings.layout ?? "assistant");
 export function presentationBounds(
   mode: Presentation,
   current: WindowBounds,

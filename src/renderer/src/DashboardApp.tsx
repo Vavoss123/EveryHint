@@ -1,7 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { IntelligencePanel } from "./IntelligencePanel";
-import { useIntelligenceSnapshot } from "./useIntelligenceSnapshot";
-import { LiveStatus } from "./LiveConsent";
 import { SettingsPage, type SettingsSection } from "./SettingsPage";
 import { SetupWizard } from "./SetupWizard";
 import {
@@ -20,6 +17,7 @@ import type {
   Settings,
   MicrophoneDevice,
 } from "../../shared/contracts";
+import type { ProviderId } from "../../shared/ai";
 import "./styles.css";
 import "./ux.css";
 import { Icon } from "./components/Icon";
@@ -45,9 +43,11 @@ function unwrap<T>(result: Result<T>): T {
 
 export function DashboardApp() {
   const contextualWorkspace = useWorkspace();
-  const intelligence = useIntelligenceSnapshot();
   const listen = useListen();
   const [sessionSharing, setSessionSharing] = useState({ ...noSharing });
+  // Chosen on every Start so the answering AI is always a deliberate choice.
+  const [answerWith, setAnswerWith] = useState<ProviderId | null>(null);
+  const [hideFromCapture, setHideFromCapture] = useState(true);
   const assistant = useAssistantSnapshot();
   const meetings = useMeetings();
   const [requestedMeetingId, setRequestedMeetingId] = useState<string | null>(
@@ -202,8 +202,16 @@ export function DashboardApp() {
     setSettingsOpen(false);
     setPreparing(false);
   }
+  function providerReady(id: ProviderId): boolean {
+    const status = assistant?.providers.find((p) => p.id === id);
+    return id === "codex"
+      ? status?.auth === "chatgpt"
+      : status?.auth === "api-key" && !!assistant?.claudeApiBilling;
+  }
   function meetingCapture(): void {
-    setSessionSharing({ ...noSharing });
+    setSessionSharing({ transcript: true, screen: true, acknowledged: false });
+    setAnswerWith(null);
+    setHideFromCapture(app?.settings.protectWindow !== false);
     setSettingsOpen(false);
     setPreparing(true);
     setAcknowledged(false);
@@ -342,20 +350,18 @@ export function DashboardApp() {
   }
   function prepare(): void {
     void run(async () => {
+      if (!answerWith) throw new Error("Choose ChatGPT or Claude first.");
+      unwrap(await window.everyhint.selectProvider(answerWith));
       unwrap(
         await window.everyhint.saveSettings({
           ...app!.settings,
+          protectWindow: hideFromCapture,
           preferredSources: {
             screen: screenConsent,
             microphone: microphoneConsent,
             systemAudio: systemConsent,
           },
         }),
-      );
-      unwrap(
-        await window.everyhint.setOperatingMode(
-          app!.settings.preferredHelp ?? "manual",
-        ),
       );
       unwrap(
         await window.everyhint.listen.start({
@@ -527,7 +533,7 @@ export function DashboardApp() {
 
   return (
     <main
-      className={`app mode-${intelligence?.mode ?? "manual"} ${dashboard ? "is-dashboard" : "is-assistant"}`}
+      className={`app mode-manual ${dashboard ? "is-dashboard" : "is-assistant"}`}
     >
       <button
         className="skip-link"
@@ -617,23 +623,22 @@ export function DashboardApp() {
           <span
             className="privacy-indicator"
             title={app.privacy?.message}
-            aria-label={`Window protection: ${app.privacy?.state ?? "off"}`}
+            aria-label={`Screen recording visibility: ${app.privacy?.state ?? "off"}`}
           >
-            {`Window protection: ${app.privacy?.state === "configured" ? "configured" : app.privacy?.state === "error" ? "not confirmed" : app.privacy?.state === "unsupported" ? "unavailable" : "off"}`}
+            {app.privacy?.state === "configured"
+              ? "Hidden from screen recordings"
+              : app.privacy?.state === "error"
+                ? "Hiding not confirmed"
+                : app.privacy?.state === "unsupported"
+                  ? "Hiding unavailable"
+                  : "Visible in screen recordings"}
           </span>
           <span>{status}</span>
           <span className="status-detail">
-            {intelligence?.mode === "auto-hint"
-              ? "AUTO-HINT · LOCAL"
-              : intelligence?.mode === "live"
-                ? intelligence.live
-                  ? "LIVE · REMOTE ENABLED"
-                  : "LIVE · NOT AUTHORISED"
-                : "MANUAL"}
+            {assistant?.selected === "claude" ? "CLAUDE" : "CHATGPT"}
           </span>
         </div>
       )}
-      <LiveStatus snapshot={intelligence} />
       <MeetingStatus
         state={meetings.state}
         ai={meetings.ai}
@@ -647,11 +652,9 @@ export function DashboardApp() {
             {response.status === "sending"
               ? response.meetingPurpose
                 ? "Sending authorised meeting text"
-                : response.automatic
-                  ? "Sending authorised Live context"
-                  : listen?.managed
-                    ? "Sending approved conversation context"
-                    : "Sending reviewed context"
+                : listen?.managed
+                  ? "Sending approved conversation context"
+                  : "Sending reviewed context"
               : "Generating answer"}
           </span>
           <button
@@ -815,7 +818,6 @@ export function DashboardApp() {
                 app={app}
                 save={save}
                 meetings={meetings.state}
-                intelligence={intelligence}
                 diagnostics={diagnostics}
                 chooseSources={meetingCapture}
               />
@@ -832,10 +834,74 @@ export function DashboardApp() {
                   </button>
                   <h1>Start EveryHint</h1>
                 </div>
-                <p className="muted">
-                  Choose what EveryHint can see and hear. AI sharing is approved
-                  separately.
-                </p>
+                <fieldset className="answer-with">
+                  <legend>Answer with</legend>
+                  {(["codex", "claude"] as const).map((id) => {
+                    const status = assistant?.providers.find(
+                      (p) => p.id === id,
+                    );
+                    const connected =
+                      !!status &&
+                      (id === "codex"
+                        ? status.auth === "chatgpt"
+                        : status.auth === "api-key" &&
+                          !!assistant?.claudeApiBilling);
+                    return (
+                      <label className="consent-row" key={id}>
+                        <input
+                          type="radio"
+                          name="answer-with"
+                          checked={answerWith === id}
+                          onChange={() => setAnswerWith(id)}
+                        />
+                        <span>
+                          {id === "codex" ? "ChatGPT" : "Claude"}
+                          <small>
+                            {connected
+                              ? id === "codex"
+                                ? "Connected · uses your ChatGPT plan"
+                                : `Ready · ${status?.selectedModel ?? "Claude"} · billed to your Anthropic API account`
+                              : id === "codex"
+                                ? "Not connected"
+                                : "Add an Anthropic API key first"}
+                          </small>
+                        </span>
+                      </label>
+                    );
+                  })}
+                  {answerWith && !providerReady(answerWith) && (
+                    <button
+                      className="secondary full"
+                      onClick={() => {
+                        setPreparing(false);
+                        setSettingsSection("Account & AI");
+                        navigate("settings");
+                      }}
+                    >
+                      {answerWith === "codex"
+                        ? "Connect ChatGPT"
+                        : "Add Claude API key"}
+                    </button>
+                  )}
+                </fieldset>
+                <label className="consent-row">
+                  <input
+                    type="checkbox"
+                    checked={hideFromCapture}
+                    onChange={(event) =>
+                      setHideFromCapture(event.target.checked)
+                    }
+                  />
+                  <span>
+                    Hide EveryHint from screen recordings
+                    <small>
+                      Screen shares, recordings and screenshots on Windows skip
+                      EveryHint’s windows. A camera pointed at the screen still
+                      sees them.
+                    </small>
+                  </span>
+                </label>
+                <p className="muted">Choose what EveryHint can see and hear.</p>
                 <label className="consent-row">
                   <input
                     type="checkbox"
@@ -975,6 +1041,7 @@ export function DashboardApp() {
                 )}
                 {(microphoneConsent || systemConsent) && <SpeechSetup />}
                 <SharingFields
+                  provider={answerWith === "claude" ? "Claude" : "ChatGPT"}
                   audio={microphoneConsent || systemConsent}
                   screen={screenConsent}
                   value={sessionSharing}
@@ -989,6 +1056,7 @@ export function DashboardApp() {
                       !sessionSharing.acknowledged) ||
                     (!screenConsent && !microphoneConsent && !systemConsent) ||
                     (screenConsent && !sourceId) ||
+                    !answerWith ||
                     !acknowledged ||
                     busy
                   }
@@ -1017,11 +1085,6 @@ export function DashboardApp() {
                 <details className="session-options">
                   <summary>Session options</summary>
                   <SpeechControl capture={session} />
-                  <IntelligencePanel
-                    snapshot={intelligence}
-                    compact={false}
-                    openReview={() => openAssistant(true)}
-                  />
                   <MeetingSessionControls
                     state={meetings.state}
                     ai={meetings.ai}
@@ -1053,7 +1116,8 @@ export function DashboardApp() {
                     : "Starting local transcription"
                 : "Session active"
               : "Session paused"}{" "}
-            · {intelligence?.live ? "Automatic AI authorised" : "Manual AI"}
+            · Answering with{" "}
+            {assistant?.selected === "claude" ? "Claude" : "ChatGPT"}
           </span>
         )}
       </footer>

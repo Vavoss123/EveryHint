@@ -45,6 +45,7 @@ if ($Action -eq 'Focus' -or $Action -eq 'Foreground') {
     elseif ($part -eq 'Shift') { $keys += [byte]16 }
     elseif ($part -eq 'Space') { $keys += [byte]32 }
     elseif ($part -eq 'Enter') { $keys += [byte]13 }
+    elseif ($part -eq '\') { $keys += [byte]220 }
     elseif ($part -match '^[A-Z0-9]$') { $keys += [byte][char]$part }
     else { throw 'Unsupported test shortcut.' }
   }

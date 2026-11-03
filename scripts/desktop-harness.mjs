@@ -22,7 +22,6 @@ export async function finishSetup(page) {
     await page
       .getByRole("button", { name: "Continue · AI can be connected later" })
       .click();
-    await page.getByRole("button", { name: "Continue", exact: true }).click();
     await page
       .getByRole("button", { name: "Finish setup", exact: true })
       .click();

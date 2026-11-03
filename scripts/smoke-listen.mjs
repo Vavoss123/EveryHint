@@ -185,6 +185,7 @@ try {
   await page
     .getByRole("checkbox", { name: /I authorise the selected capture/ })
     .check();
+  await page.getByRole("radio", { name: /^ChatGPT/ }).check();
   await page.getByRole("button", { name: "Choose a screen or window" }).click();
   await page
     .locator("#source option")

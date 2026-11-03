@@ -1,4 +1,20 @@
-import type { ContextualAction } from "./intelligence";
+export type ContextualAction =
+  | "get-answer"
+  | "say-next"
+  | "follow-ups"
+  | "fact-check"
+  | "recap"
+  | "who"
+  | "dynamic";
+export const ACTION_LABELS: Record<ContextualAction, string> = {
+  "get-answer": "Get Answer",
+  "say-next": "What Should I Say Next?",
+  "follow-ups": "Suggest Follow-up Questions",
+  "fact-check": "Fact Check",
+  recap: "Recap",
+  who: "Who Am I Talking To?",
+  dynamic: "Dynamic Suggestion",
+};
 
 export const ACTION_GUIDELINES: Record<ContextualAction, string> = {
   "get-answer":
@@ -15,13 +31,3 @@ export const ACTION_GUIDELINES: Record<ContextualAction, string> = {
   dynamic:
     "Provide concise, directly useful assistance for the selected topic and available context. Do not imply unavailable tools or evidence.",
 };
-export function dynamicAction(
-  text: string,
-): Exclude<ContextualAction, "dynamic"> {
-  if (/\b(?:recap|summari[sz]e|summary)\b/i.test(text)) return "recap";
-  if (/\b(?:ask next|follow.up questions|questions to ask)\b/i.test(text))
-    return "follow-ups";
-  if (/\b(?:say next|respond|reply|say to|answer the customer)\b/i.test(text))
-    return "say-next";
-  return "get-answer";
-}

@@ -131,6 +131,10 @@ try {
     await page.getByText("Attach Context", { exact: true }).isVisible(),
     "everyday context choices use a compact sheet",
   );
+  // Review is now only for attached extra context.
+  await page
+    .locator("details.attach-context")
+    .evaluate((details) => (details.open = true));
   await page
     .getByRole("button", { name: "Review & send", exact: true })
     .click();
@@ -211,11 +215,11 @@ try {
   );
   await page.getByLabel("AI provider").selectOption("claude");
   await page
-    .getByText("Enable separately billed Claude API requests", { exact: false })
+    .getByText("Use ANTHROPIC_API_KEY from the environment", { exact: false })
     .waitFor();
   check(
     await page
-      .getByText("Enable separately billed Claude API requests", {
+      .getByText("Use ANTHROPIC_API_KEY from the environment", {
         exact: false,
       })
       .isVisible(),
@@ -226,6 +230,10 @@ try {
     .getByLabel("Your question")
     .fill("Explain this synthetic question.");
   const reviewStart = performance.now();
+  // Review is now only for attached extra context.
+  await page
+    .locator("details.attach-context")
+    .evaluate((details) => (details.open = true));
   await page
     .getByRole("button", { name: "Review & send", exact: true })
     .click();
@@ -267,7 +275,7 @@ try {
   );
   await providerControls(page);
   await page
-    .getByText("Enable separately billed Claude API requests", { exact: false })
+    .getByText("Use ANTHROPIC_API_KEY from the environment", { exact: false })
     .click();
   await wait((value) => value.claudeApiBilling);
   const enabled = await get();
@@ -277,6 +285,10 @@ try {
       "missing",
     "opt-in does not invent an API credential",
   );
+  // Review is now only for attached extra context.
+  await page
+    .locator("details.attach-context")
+    .evaluate((details) => (details.open = true));
   await page
     .getByRole("button", { name: "Review & send", exact: true })
     .click();

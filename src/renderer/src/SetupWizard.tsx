@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Settings } from "../../shared/contracts";
-import type { OperatingMode } from "../../shared/intelligence";
 import { AccountPanel } from "./AccountPanel";
+import { ClaudePanel } from "./ProviderSettings";
 
 export function SetupWizard({
   settings,
@@ -20,20 +20,20 @@ export function SetupWizard({
       screen: false,
     },
   );
-  const [help, setHelp] = useState<OperatingMode>(
-    settings.preferredHelp ?? "manual",
-  );
   return (
     <section className="setup-wizard panel-stack" aria-label="EveryHint setup">
-      <span className="eyebrow">WELCOME TO EVERYHINT · {step} OF 3</span>
-      <h1>
-        {step === 1
-          ? "Connect AI"
-          : step === 2
-            ? "Choose your sources"
-            : "How can EveryHint help?"}
-      </h1>
-      {step === 1 && <AccountPanel />}
+      <span className="eyebrow">WELCOME TO EVERYHINT · {step} OF 2</span>
+      <h1>{step === 1 ? "Connect AI" : "Choose your sources"}</h1>
+      {step === 1 && (
+        <>
+          <p className="muted">
+            Connect ChatGPT, add a Claude API key, or both. You choose which one
+            answers each time you start.
+          </p>
+          <AccountPanel />
+          <ClaudePanel />
+        </>
+      )}
       {step === 2 && (
         <>
           <p className="muted">
@@ -66,50 +66,6 @@ export function SetupWizard({
           ))}
         </>
       )}
-      {step === 3 && (
-        <>
-          <div className="help-choices">
-            {(
-              [
-                [
-                  "manual",
-                  "Ask manually",
-                  "Review and send each question yourself.",
-                ],
-                [
-                  "auto-hint",
-                  "Suggest answers",
-                  "Spot useful moments locally. Review before sending.",
-                ],
-                [
-                  "live",
-                  "Live assistance",
-                  "Make automatic remote AI requests only within your separately authorised, time-limited session.",
-                ],
-              ] as const
-            ).map(([id, title, text]) => (
-              <label
-                className={`consent-row ${help === id ? "selected" : ""}`}
-                key={id}
-              >
-                <input
-                  type="radio"
-                  name="help"
-                  checked={help === id}
-                  onChange={() => setHelp(id)}
-                />
-                <span>
-                  {title}
-                  <small>{text}</small>
-                </span>
-              </label>
-            ))}
-          </div>
-          <small>
-            These preferences grant no recording or remote-sharing permission.
-          </small>
-        </>
-      )}
       {error && <p role="alert">{error}</p>}
       <div className="button-row">
         {step > 1 && (
@@ -117,7 +73,7 @@ export function SetupWizard({
             Back
           </button>
         )}
-        {step < 3 ? (
+        {step < 2 ? (
           <button className="primary" onClick={() => setStep(step + 1)}>
             {step === 1 ? "Continue · AI can be connected later" : "Continue"}
           </button>
@@ -131,7 +87,6 @@ export function SetupWizard({
                 await complete({
                   setupComplete: true,
                   preferredSources: sources,
-                  preferredHelp: help,
                 });
               } catch (e) {
                 setError((e as Error).message);

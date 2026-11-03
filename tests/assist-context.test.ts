@@ -239,7 +239,8 @@ describe("P6 selected Assist context", () => {
   });
   it.each([
     "Control+Alt+P",
-    "Alt+Control+Space",
+    "Control+\\",
+    "Control+Up",
     "Control+Alt+Shift+X",
     "Control+Alt+Shift+C",
     "A",

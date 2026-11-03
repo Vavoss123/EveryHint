@@ -108,7 +108,7 @@ export class AssistantController {
     return !this.excludedTranscripts.has(id);
   }
   allowsAction(
-    action: import("../../shared/intelligence").ContextualAction,
+    action: import("../../shared/actions").ContextualAction,
   ): boolean {
     return this.modeContext?.().mode.actions.includes(action) ?? true;
   }
@@ -199,8 +199,6 @@ export class AssistantController {
     value: unknown,
     automatic = false,
     reference?: { context: MeetingAIContext; valid: () => boolean },
-    automaticKnowledgeIds?: string[],
-    automaticWorkspaceSelection?: import("../../shared/workspace").WorkspaceSelection,
     sessionPermission?: () => boolean,
   ): void | Promise<void> {
     if (this.closed) throw new Error("Assistant is shutting down.");
@@ -211,13 +209,11 @@ export class AssistantController {
         "A manual review is pending. Automatic preparation is unavailable.",
       );
     const input = parseReview(value);
-    if (automatic && input.workspaceSelection)
+    if (automatic && (input.workspaceSelection || input.knowledgeIds?.length))
       throw new Error(
-        "Automatic workspace context must come from the scoped Live grant.",
+        "Automatic requests cannot include knowledge or workspace context.",
       );
-    const workspaceSelection = automatic
-      ? automaticWorkspaceSelection
-      : input.workspaceSelection;
+    const workspaceSelection = input.workspaceSelection;
     if (workspaceSelection && !this.retrieveWorkspace)
       throw new Error("Workspace context is unavailable.");
     if (workspaceSelection?.purpose === "brief" && this.selected !== "codex")
@@ -229,13 +225,7 @@ export class AssistantController {
         }
       | undefined;
     const modeContext = this.modeContext?.();
-    if (automatic && input.knowledgeIds?.length)
-      throw new Error(
-        "Automatic knowledge must come from the scoped Live grant.",
-      );
-    const knowledgeIds = automatic
-      ? (automaticKnowledgeIds ?? [])
-      : (input.knowledgeIds ?? []);
+    const knowledgeIds = input.knowledgeIds ?? [];
     if (
       knowledgeIds.length &&
       (!this.retrieveKnowledge ||
@@ -540,7 +530,7 @@ export class AssistantController {
       throw new Error(
         "Finish or close the pending context review before asking from the conversation.",
       );
-    await this.prepare(value, false, undefined, undefined, undefined, valid);
+    await this.prepare(value, false, undefined, valid);
     const pending = this.review as ContextReview | null;
     if (!valid() || !pending || this.sessionReviewId !== pending.requestId) {
       this.discardReview();
@@ -588,7 +578,7 @@ export class AssistantController {
       (sessionScoped && !canSend)
     )
       throw new Error(
-        "Automatic reviews belong to Live Assist. Prepare a manual review to send manually.",
+        "Automatic reviews belong to their own permission. Prepare a manual review to send manually.",
       );
     const referenceGuard =
       this.referenceGuard?.requestId === request.requestId

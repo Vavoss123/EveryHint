@@ -133,7 +133,6 @@ try {
         app: await window.everyhint.getSnapshot(),
         ai: await window.everyhint.getAssistant(),
         speech: await window.everyhint.getTranscription(),
-        intelligence: await window.everyhint.getIntelligence(),
         meetingAI: await window.everyhint.meetings.getAI(),
       }));
       assert.ok(
@@ -231,10 +230,11 @@ try {
     ),
   };
   assert.equal(original.speech.events.length, 0);
-  const intelligence = unwrap(
-    await page.evaluate(() => window.everyhint.getIntelligence()),
+  assert.ok(
+    await page.evaluate(
+      () => typeof window.everyhint.getIntelligence === "undefined",
+    ),
   );
-  assert.equal(intelligence.live, null);
   await desktop.evaluate(({ shell }) => {
     shell.openExternal = async () => {
       throw Error("External handoff not authorised.");
@@ -579,11 +579,9 @@ try {
     report.genuineRequests = report.transport?.requests ?? 0;
     await page
       .evaluate(async () => {
-        await window.everyhint.pauseLive();
         await window.everyhint.session("stop");
         await window.everyhint.assistant("clear");
         await window.everyhint.transcription("clear");
-        await window.everyhint.setOperatingMode("manual");
       })
       .catch(() => {});
     try {

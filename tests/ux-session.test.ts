@@ -34,11 +34,11 @@ describe("UX session and preference boundaries", () => {
       expect(html).not.toContain(">Stop</button>");
     } else expect(html).toContain(">Stop</button>");
   });
-  it("defaults to a dark dashboard with overlay pinning off", () => {
+  it("defaults to a dark dashboard with the overlay pinned on top", () => {
     expect(DEFAULT_SETTINGS).toMatchObject({
       theme: "dark",
       layout: "dashboard",
-      alwaysOnTop: false,
+      alwaysOnTop: true,
     });
   });
   it("stores source choices without storing capture or remote permission", () => {
@@ -48,7 +48,9 @@ describe("UX session and preference boundaries", () => {
       preferredHelp: "live",
       preferredSources: { microphone: true, screen: false, systemAudio: true },
     });
-    expect(value).toMatchObject({ setupComplete: true, preferredHelp: "live" });
+    expect(value).toMatchObject({ setupComplete: true });
+    // The removed help-style preference is accepted from old files but dropped.
+    expect(value).not.toHaveProperty("preferredHelp");
     expect(value).not.toHaveProperty("consent");
     expect(value).not.toHaveProperty("live");
   });

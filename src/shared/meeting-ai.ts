@@ -1,7 +1,6 @@
 import type {
   MeetingAction,
   MeetingDecision,
-  MeetingDocument,
   MeetingSummary,
 } from "./meetings";
 import { boundedText, meetingId } from "./meetings";
@@ -172,6 +171,3 @@ export const MEETING_INSTRUCTIONS: Record<MeetingPurpose, string> = {
   "action-summary":
     "Summarise only actions explicitly agreed in the selected meeting excerpts. Cite excerpt refs. Show Unassigned and Not specified for missing owners/deadlines; distinguish proposals/uncertainty and never invent completion status or commitments.",
 };
-export function meetingTitle(doc: MeetingDocument): string {
-  return `${doc.title} · ${new Date(doc.createdAt).toISOString()}`;
-}

@@ -42,7 +42,10 @@ async function launch() {
 try {
   let page = await launch();
   let state = (await page.evaluate(() => window.everyhint.getSnapshot())).value;
-  check(state.privacy.state === "off", "Legacy default protection off");
+  check(
+    state.privacy.state === "configured",
+    "New installs hide from screen recordings by default",
+  );
   const status = await page.evaluate(() => window.everyhint.desktopStatus());
   check(
     status.ok &&
@@ -87,7 +90,7 @@ try {
   );
   check(
     (await page
-      .getByText("Window protection: configured", { exact: true })
+      .getByText("Hidden from screen recordings", { exact: true })
       .count()) === 1,
     "Persistent privacy indicator",
   );
@@ -140,8 +143,9 @@ try {
       "Restart never restores capture consent",
     );
     check(
-      (await page.evaluate(() => window.everyhint.getIntelligence())).value
-        .live === null,
+      await page.evaluate(
+        () => typeof window.everyhint.getIntelligence === "undefined",
+      ),
       "Restart never restores remote Live grant",
     );
     check(

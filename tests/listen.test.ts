@@ -634,8 +634,10 @@ describe("deliberate conversation requests reuse the ChatGPT Responses transport
   it("expires on elapsed time even after a backward wall-clock change", async () => {
     const s = setup();
     await s.start();
-    vi.setSystemTime(Date.now() - 3600000);
     s.setMonotonic(3600001);
+    expect(s.listen.value.sharing).not.toBeNull();
+    vi.setSystemTime(Date.now() - 86_400_000);
+    s.setMonotonic(86_400_001);
     expect(s.listen.value.sharing).toBeNull();
     await expect(s.listen.ask({ question: "help" })).rejects.toThrow();
     expect(s.requests).toHaveLength(0);

@@ -7,7 +7,6 @@ files:
   - out/**/*
   - package.json
   - '!**/*.map'
-  - '!node_modules/@openai/**/*'
 asar: true
 asarUnpack:
   - '**/*.node'

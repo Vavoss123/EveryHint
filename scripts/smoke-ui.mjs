@@ -131,6 +131,10 @@ try {
   await page
     .getByLabel("Your question", { exact: true })
     .fill("UI foundation synthetic draft");
+  // Review is now only for attached extra context.
+  await page
+    .locator("details.attach-context")
+    .evaluate((details) => (details.open = true));
   await page
     .getByRole("button", { name: "Review & send", exact: true })
     .click();

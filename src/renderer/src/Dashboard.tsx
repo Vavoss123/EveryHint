@@ -259,15 +259,25 @@ export function DashboardHome({
         )}
       </section>
       <small className="home-shortcut">
-        Show / hide overlay{" "}
+        Answer{" "}
         <kbd>
           {(
-            app.hotkeys.find((h) => h.action === "toggle")?.accelerator ??
-            "Control+Alt+Space"
+            app.hotkeys.find((h) => h.action === "answer")?.accelerator ??
+            DEFAULT_HOTKEYS.answer
           )
             .replace("Control", "Ctrl")
             .replaceAll("+", " + ")}
-        </kbd>
+        </kbd>{" "}
+        · Show / hide overlay{" "}
+        <kbd>
+          {(
+            app.hotkeys.find((h) => h.action === "toggle")?.accelerator ??
+            DEFAULT_HOTKEYS.toggle
+          )
+            .replace("Control", "Ctrl")
+            .replaceAll("+", " + ")}
+        </kbd>{" "}
+        · Move overlay <kbd>Ctrl + arrows</kbd>
         {app.hotkeys.find((h) => h.action === "toggle")?.registered === false &&
           " · Shortcut unavailable; use the tray"}
       </small>

@@ -94,6 +94,11 @@ try {
   await page.getByRole("checkbox", { name: /^Microphone/ }).check();
   await page.getByRole("checkbox", { name: /^System audio/ }).check();
   await page.getByRole("checkbox", { name: /I authorise/ }).check();
+  await page.getByRole("radio", { name: /^ChatGPT/ }).check();
+  // Local transcription only; nothing is shared with an AI provider.
+  await page
+    .getByLabel("Share recent transcript with ChatGPT", { exact: true })
+    .uncheck();
   await page.getByRole("button", { name: "Start EveryHint" }).click();
   await page.waitForFunction(
     async () =>

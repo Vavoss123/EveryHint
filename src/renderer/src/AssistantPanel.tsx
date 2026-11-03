@@ -8,9 +8,9 @@ import type { TranscriptEvent } from "../../shared/transcription";
 import { ListenControls, useListen } from "./ListenControls";
 import { DEFAULT_HOTKEYS } from "../../shared/shortcuts";
 import { ResponseText } from "./ResponseText";
-import { ACTION_LABELS } from "../../shared/intelligence";
+import { ACTION_LABELS } from "../../shared/actions";
 import { usePersonal } from "./PersonalPages";
-import { useWorkspace, workspaceCommand } from "./WorkspacePages";
+import { useWorkspace } from "./WorkspacePages";
 import {
   WorkspaceChoices,
   emptyWorkspaceSelection,
@@ -75,6 +75,9 @@ export function AssistantPanel({
   const operation = useRef(false);
   const reviewPanel = useRef<HTMLDivElement>(null);
   const [attachOpen, setAttachOpen] = useState(false);
+  // Ask sends straight away, with session context when it is shared and as
+  // text only otherwise. Only attached extra sources use the review step.
+  const direct = !attachOpen;
   const [events, setEvents] = useState<TranscriptEvent[]>([]);
   useEffect(() => {
     const off = window.everyhint.onTranscription((value) =>
@@ -303,12 +306,6 @@ export function AssistantPanel({
               {response.provider === "codex" ? "ChatGPT" : "Claude"} ·{" "}
               {labels[response.status]}
             </small>
-            {response.automatic && !response.meetingPurpose && (
-              <small>
-                Live Assist · automatically requested within your authorised
-                session
-              </small>
-            )}
             {response.contextNotices?.map((notice) => (
               <small className="warning-message" key={notice}>
                 {notice}
@@ -379,53 +376,51 @@ export function AssistantPanel({
             >
               Copy response
             </button>
-            {response === latest &&
-              !active &&
-              (!listen?.managed || attachOpen) && (
-                <>
-                  <button
-                    className="text-button"
-                    disabled={busy}
-                    onClick={() => {
-                      setQuestion("");
-                      document
-                        .querySelector<HTMLTextAreaElement>(
-                          '[aria-label="Your question"]',
-                        )
-                        ?.focus();
-                    }}
-                  >
-                    Ask follow-up
-                  </button>
-                  <button
-                    className="text-button"
-                    disabled={busy}
-                    onClick={() =>
-                      void run(async () => {
-                        const nextOptions = { ...DEFAULT_CONTEXT };
-                        setQuestion(response.question);
-                        setOptions(nextOptions);
-                        setAcknowledged(false);
-                        unwrap(
-                          await window.everyhint.reviewContext({
-                            question: response.question,
-                            options: nextOptions,
-                            action: response.action,
-                            regenerateId: response.requestId,
-                          }),
-                        );
-                        requestAnimationFrame(() =>
-                          document
-                            .querySelector('[aria-label="Context review"]')
-                            ?.scrollIntoView({ block: "start" }),
-                        );
-                      })
-                    }
-                  >
-                    Regenerate · review first
-                  </button>
-                </>
-              )}
+            {response === latest && !active && !direct && (
+              <>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() => {
+                    setQuestion("");
+                    document
+                      .querySelector<HTMLTextAreaElement>(
+                        '[aria-label="Your question"]',
+                      )
+                      ?.focus();
+                  }}
+                >
+                  Ask follow-up
+                </button>
+                <button
+                  className="text-button"
+                  disabled={busy}
+                  onClick={() =>
+                    void run(async () => {
+                      const nextOptions = { ...DEFAULT_CONTEXT };
+                      setQuestion(response.question);
+                      setOptions(nextOptions);
+                      setAcknowledged(false);
+                      unwrap(
+                        await window.everyhint.reviewContext({
+                          question: response.question,
+                          options: nextOptions,
+                          action: response.action,
+                          regenerateId: response.requestId,
+                        }),
+                      );
+                      requestAnimationFrame(() =>
+                        document
+                          .querySelector('[aria-label="Context review"]')
+                          ?.scrollIntoView({ block: "start" }),
+                      );
+                    })
+                  }
+                >
+                  Regenerate · review first
+                </button>
+              </>
+            )}
           </article>
         ))}
       </div>
@@ -434,8 +429,8 @@ export function AssistantPanel({
         {listen?.managed
           ? "Ask about this conversation"
           : latest
-            ? "Question or follow-up (optional)"
-            : "Your question (optional)"}
+            ? "Question or follow-up"
+            : "Your question"}
         <div className="composer-row">
           <textarea
             aria-label="Your question"
@@ -451,7 +446,7 @@ export function AssistantPanel({
                 !event.nativeEvent.isComposing
               ) {
                 event.preventDefault();
-                if (listen?.managed && !attachOpen) void askConversation();
+                if (direct) void askConversation();
                 else void prepareReview();
               }
             }}
@@ -460,7 +455,7 @@ export function AssistantPanel({
               setQuestion(event.target.value);
             }}
           />
-          {listen?.managed && !attachOpen && (
+          {direct && (
             <button
               className="primary"
               disabled={busy && !active}
@@ -567,16 +562,12 @@ export function AssistantPanel({
         <button
           className="secondary"
           disabled={busy || active}
-          hidden={!!listen?.managed && !attachOpen}
-          onClick={() =>
-            void (listen?.managed && !attachOpen
-              ? askConversation()
-              : prepareReview())
-          }
+          hidden={direct}
+          onClick={() => void prepareReview()}
         >
-          {listen?.managed && !attachOpen ? "Ask" : "Review & send"}
+          Review & send
         </button>
-        {active && (!listen?.managed || attachOpen) && (
+        {active && !direct && (
           <button
             className="danger"
             onClick={() =>
@@ -601,30 +592,6 @@ export function AssistantPanel({
               setWorkspaceSelection(v);
             }}
           />
-          <button
-            onClick={() =>
-              void run(async () => {
-                await workspaceCommand(workspace, "stage-live-context", {
-                  ...workspaceSelection,
-                  purpose: "live",
-                });
-                invalidate();
-              })
-            }
-          >
-            Review chosen sources for optional Live sharing
-          </button>
-          <button
-            onClick={() =>
-              void run(() => workspaceCommand(workspace, "clear-live-context"))
-            }
-          >
-            Clear staged Live context
-          </button>
-          <p>
-            Live needs its own session permission after staging these exact
-            sources.
-          </p>
         </details>
       )}
       {review && (

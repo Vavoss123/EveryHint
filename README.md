@@ -25,17 +25,17 @@ Dependency installation and Electron's first native binary download need interne
 
 ## Listen and ask
 
-Connect ChatGPT once, then **Start EveryHint → authorise local sources → optionally allow transcript/screen sharing for this session → Start**. If needed, Start offers an explicit local speech-model download. Continue talking and press **Ctrl+Alt+Enter**, or type **help** in the assistant and press **Enter**. After local Whisper and requested permissions are ready, both windows hide and the authorised session continues with Listening/Pause/Stop in the tray. Press Answer or choose tray Show assistant when needed. No transcription panel or per-request context checkboxes are needed within that scope.
+Connect ChatGPT or add a Claude API key once. Then **Start EveryHint → choose ChatGPT or Claude → pick sources → tick the sharing acknowledgement → Start**. Hiding from screen recordings is on by default in that dialog. Press **Ctrl+Enter** for help with what's happening (the latest question aimed at you, or what's on screen), use a quick action (*What should I say?*, *Follow-ups*, *Recap*, *Fact-check*), or type a question in the overlay. Ctrl+Enter while typing in the overlay sends what you typed. After Start, both windows hide and the session continues from the tray.
 
-Only bounded final speech from the last two minutes and a fresh approved image are sent on a deliberate request. Raw audio stays local. Local capture, session sharing and each request are separate choices; the sharing grant expires within one hour and is never restored. Live needs its own separate permission. [Exact behavior, actual Windows verification and remaining physical/genuine-provider limits](docs/LISTEN_ACCEPTANCE.md).
+Only bounded final speech from the last two minutes and a fresh approved image are sent, and only when you press the shortcut, a quick action or Ask. Raw audio stays local. Sharing approved at Start lasts until Stop (bounded to 24 hours) and is never restored after a restart. There are no automatic answers. [Exact behavior, actual Windows verification and remaining physical/genuine-provider limits](docs/LISTEN_ACCEPTANCE.md).
 
 ## Interface and product roadmap
 
 The **dashboard** is an ordinary Windows window. **Start EveryHint** opens fresh source/participant consent; idle shows no Stop. The separate floating assistant puts answers and input first. New installations have a brief setup wizard; upgrades preserve existing configuration and never restore recording permission.
 
 - Minimise keeps the taskbar entry. **Window menu → Hide to Tray** hides the dashboard; tray **Open EveryHint** restores it. **Show assistant** opens the same taskbar-excluded assistant independently. **Quit EveryHint** stops work and exits. Active Close offers background, Stop and quit, or Cancel.
-- **Ctrl+Alt+Enter — Answer from conversation** opens the floating assistant and streams one answer from approved session context. **Ctrl+Alt+Space** shows/hides it; **Ctrl+Alt+A** opens the dashboard’s explicit compose/review flow, **Ctrl+Alt+P** pauses/resumes and **Ctrl+Alt+Shift+X** stops. Configure and see actual registration in **Settings → Shortcuts**. Hiding never grants or stops capture by itself.
-- The **floating assistant** has a mode/listening header, Hide/overflow, latest answer with one scroll area and fixed Ask/Cancel input. Optional **View Context** is in overflow. Meeting/transcript configuration stays on the dashboard. The dashboard’s **Assistant** page provides answers, a message input, mode selection, Attach Context and a secondary conversation menu. Start automatically transcribes authorised audio locally. Separately allow transcript and/or screen sharing for this session, then press Answer or type **help** and **Enter** without repeated review. **Shift+Enter** adds a newline. **View Context** is optional; **Revoke sharing** is immediate. Extra attachments retain review. Session options preserve Auto-Hint, separate time-limited Live authorisation and meeting controls.
+- **Ctrl+Enter** answers from the conversation and screen. `Ctrl+\` shows or hides the overlay and **Ctrl+arrow keys** move it while it is visible. **Ctrl+Alt+A** opens the dashboard composer, **Ctrl+Alt+P** pauses/resumes and **Ctrl+Alt+Shift+X** stops. A global Ctrl+Enter replaces Ctrl+Enter in other apps (such as Slack or Teams 'send') while EveryHint runs; change it in **Settings → Shortcuts**. Hiding never grants or stops capture by itself.
+- The **floating assistant** has a mode/listening header, Hide/overflow, latest answer with one scroll area and fixed Ask/Cancel input. Optional **View Context** is in overflow. Meeting/transcript configuration stays on the dashboard. The dashboard’s **Assistant** page provides answers, a message input, mode selection, Attach Context and a secondary conversation menu. Start automatically transcribes authorised audio locally. Separately allow transcript and/or screen sharing for this session, then press Answer or type **help** and **Enter** without repeated review. **Shift+Enter** adds a newline. **View Context** is optional; **Revoke sharing** is immediate. Extra attachments retain review. Ask sends directly; only extra attachments use review. Automatic answers and local suggestions were removed. Session options keep speech and meeting controls.
 - Main navigation is Home, Assistant, Meetings, Knowledge, Calendar, People, Modes and one Settings entry. Settings has General, Audio & Screen, Shortcuts, Privacy & Data, Account & AI and Advanced sections.
 - New installs default to dark. Light/System and existing preferences remain. Pin/opacity apply only to the assistant. Poppins/Inter are bundled locally; no remote fonts are loaded.
 - History/search comes first. Existing encrypted history can reopen using its existing Windows-protected key; saving/automatic saving remain opt-in under Privacy & Data.
@@ -81,15 +81,9 @@ npm run personal:bench
 
 The genuine AI script is excluded from automated checks and needs a fresh explicit scoped authorisation. The completed test grants no permission for further requests.
 
-## Automatic conversation assistance (P7)
+## Automatic conversation assistance (removed)
 
-Every launch starts **Manual**, with automatic sharing off. In Settings choose the already consented local microphone/system/screen sources to analyse; then choose **Auto-Hint** for up to three local suggestions. Accept opens the existing transfer review; acknowledge and Ask to send. Local speech remains English-only. Screen changes only suggest reviewing the current source.
-
-**Live Assist** needs active authorised capture, local Whisper, a connected ChatGPT-plan account and an explicitly selected model. Its separate permission lists the exact sources, account/model, triggers and limits. Defaults: 30 minutes, at least 30 seconds between attempts and 20 attempts; the existing five-minute model cache may pause it sooner. Select microphone/system final text and optionally current image/history, then acknowledge **Authorise Live Assist**. Pause Live, capture Pause/Stop, Clear, expiry or account/source/model changes revoke it; Resume/restart never restore it. Root status and tray show remote-enabled state even between answers. There is no automatic Claude, raw audio upload, paid fallback or agent tool execution.
-
-One explicitly authorised automatic gpt-6.1-sol answer was verified through synthetic microphone audio and real local Whisper: one request, 8.995 seconds, scope ended at the one-attempt cap. This does not verify physical microphone/playback or real-call accuracy.
-
-Seven actions include talking points, follow-up questions, **unverified/context-only** Fact Check, selected-retained-window Recap and local user-provided participant information/unknown. Independent web fact verification and speaker identity are absent; P8 saved history and P9 local knowledge have separate opt-in controls. Detailed scope, measurements and manual checklist: [TESTING.md](docs/TESTING.md).
+Auto-Hint suggestions and Live automatic answers were removed on 2026-11-03, together with their engine, settings, IPC and tests. EveryHint answers only when you press the answer shortcut, use a quick action or type a question. Local question detection remains, so that a shortcut press can find the latest question in the transcript. Meeting "automatic End notes" are a separate Meetings feature and remain.
 
 ## Ask an assistant (P4.2)
 
@@ -160,7 +154,9 @@ The X hides the overlay to the tray. **Hiding does not stop capture.** The tray 
 
 | Shortcut           | Action                                   |
 | ------------------ | ---------------------------------------- |
-| `Ctrl+Alt+Space`   | Show / hide EveryHint                    |
+| `Ctrl+Enter`       | Answer from conversation and screen      |
+| `Ctrl+\`           | Show / hide the overlay                  |
+| `Ctrl+arrows`      | Move the overlay (while visible)         |
 | `Ctrl+Alt+P`       | Pause / resume the authorised session    |
 | `Ctrl+Alt+Shift+X` | Stop all capture, including while hidden |
 

@@ -11,11 +11,13 @@ export const noSharing: SharingChoices = {
   acknowledged: false,
 };
 export function SharingFields({
+  provider = "ChatGPT",
   audio,
   screen,
   value,
   change,
 }: {
+  provider?: string;
   audio: boolean;
   screen: boolean;
   value: SharingChoices;
@@ -23,16 +25,15 @@ export function SharingFields({
 }) {
   return (
     <fieldset className="session-sharing">
-      <legend>ChatGPT sharing for this session</legend>
+      <legend>{provider} sharing for this session</legend>
       <p>
-        Only when you press Answer or Ask. Permission ends when you stop, change
-        connection or mode, revoke it, or after one hour. Live Assist needs
-        separate permission.
+        Sent only when you press the answer shortcut, a quick action or Ask.
+        Lasts until you stop the session or revoke it.
       </p>
       <label className="ai-choice">
         <input
           type="checkbox"
-          aria-label="Share recent transcript with ChatGPT"
+          aria-label={`Share recent transcript with ${provider}`}
           disabled={!audio}
           checked={audio && value.transcript}
           onChange={(e) =>
@@ -48,7 +49,7 @@ export function SharingFields({
       <label className="ai-choice">
         <input
           type="checkbox"
-          aria-label="Share screen with ChatGPT"
+          aria-label={`Share screen with ${provider}`}
           disabled={!screen}
           checked={screen && value.screen}
           onChange={(e) =>
@@ -66,8 +67,8 @@ export function SharingFields({
               change({ ...value, acknowledged: e.target.checked })
             }
           />
-          I allow these types of context to be sent to ChatGPT for my requests
-          in this session.
+          I allow these types of context to be sent to {provider} for my
+          requests in this session.
         </label>
       )}
       <small>

@@ -461,7 +461,6 @@ async function ipcSetup(saved = true) {
     post: s.post,
     stop: s.stop,
     cancelContent: cancel,
-    revokeLive: vi.fn(),
     changed,
     sourcesChanged,
   });

@@ -1,4 +1,4 @@
-import { ACTION_LABELS, type ContextualAction } from "./intelligence";
+import { ACTION_LABELS, type ContextualAction } from "./actions";
 import { exactKeys, record } from "./validation";
 import {
   builtInTemplates,

@@ -555,13 +555,6 @@ try {
   unwrap(
     await page.evaluate(() => window.everyhint.assistant("discard-review")),
   );
-  await command("stage-live-context", { ...selection, purpose: "live" });
-  check(
-    (await page.evaluate(() => window.everyhint.getIntelligence())).value
-      .live === null,
-    "staging context never enables Live",
-  );
-  await command("clear-live-context");
   await nav("People");
   await page
     .getByRole("button", { name: "Review / search local memory", exact: true })

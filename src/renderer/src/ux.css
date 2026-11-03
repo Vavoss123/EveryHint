@@ -240,7 +240,8 @@
   flex-direction: column;
   gap: 8px;
 }
-.settings-section input:not([type="checkbox"], [type="range"]) {
+.settings-section input:not([type="checkbox"], [type="range"]),
+.account-panel input:not([type="checkbox"], [type="radio"]) {
   padding: 10px;
   border: 1px solid var(--color-control-border);
   background: var(--color-surface);
@@ -254,14 +255,6 @@
 }
 .setup-wizard h1 {
   font-size: 26px;
-}
-.help-choices {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-.help-choices .selected {
-  border-color: var(--color-brand-ink);
 }
 .modes-layout {
   display: grid;
@@ -403,8 +396,7 @@
   max-width: 880px;
   border-top: 1px solid var(--color-border);
 }
-.session-options .meeting-session,
-.session-options .intelligence-panel {
+.session-options .meeting-session {
   padding: 12px 0;
 }
 .dashboard-nav > .nav-item:last-of-type {

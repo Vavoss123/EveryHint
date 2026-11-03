@@ -1,7 +1,7 @@
 import { exactKeys, record } from "./validation";
 import type { AudioSourceId, ScreenFrame } from "./contracts";
-import type { ContextualAction } from "./intelligence";
-import { ACTION_LABELS } from "./intelligence";
+import type { ContextualAction } from "./actions";
+import { ACTION_LABELS } from "./actions";
 import {
   parseWorkspaceSelection,
   type WorkspaceSelection,

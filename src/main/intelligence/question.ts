@@ -26,14 +26,6 @@ export function terms(text: string): Set<string> {
       .slice(0, 80),
   );
 }
-export function similarity(left: string, right: string): number {
-  const a = terms(left),
-    b = terms(right);
-  if (!a.size || !b.size)
-    return normalizeQuestion(left) === normalizeQuestion(right) ? 1 : 0;
-  const shared = [...a].filter((word) => b.has(word)).length;
-  return shared / (a.size + b.size - shared);
-}
 const relevant =
   /\b(explain|function|code|variable|dictionary|list|loop|solution|approach|improv\w*|error|exception|compiler|compile|debug|comprehension|compare|difference|implement|algorithm|empty|design|task|project|plan|customer|client|budget|deadline|proposal|meeting|respond|reply|answer|decis\w*|suggest|clarify|summari[sz]e|recap|help|next|work|test|use|happen\w*)\b/;
 export function detectQuestion(

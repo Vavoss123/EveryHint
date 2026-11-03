@@ -64,7 +64,7 @@ describe("settings validation and storage", () => {
     writeFileSync(path, JSON.stringify({ version: 1, settings: prior }));
     const store = new SettingsStore(path, warning);
     expect(store.settings.assistShortcut).toBe("Control+Alt+Enter");
-    expect(store.settings.answerShortcut).toBe("Control+Alt+Shift+Enter");
+    expect(store.settings.answerShortcut).toBe("Control+Enter");
     expect(store.settings.theme).toBe("light");
     expect(warning).not.toHaveBeenCalled();
   });

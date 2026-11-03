@@ -38,6 +38,7 @@ export class SettingsStore {
             .map(([, value]) => parseShortcut(value)),
         );
         prior.answerShortcut = [
+          "Control+Enter",
           "Control+Alt+Enter",
           "Control+Alt+Shift+Enter",
           "Control+Alt+F12",

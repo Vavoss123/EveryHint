@@ -1,18 +1,15 @@
 import type { Consent, Settings, WindowBounds } from "./contracts";
-import { DEFAULT_HOTKEYS, parseShortcut } from "./shortcuts";
-import {
-  DEFAULT_INTELLIGENCE,
-  type IntelligenceSettings,
-} from "./intelligence";
+import { DEFAULT_HOTKEYS, LEGACY_HOTKEYS, parseShortcut } from "./shortcuts";
 
 export const DEFAULT_SETTINGS: Settings = {
-  alwaysOnTop: false,
+  // The overlay floats above meeting and coding apps by default.
+  alwaysOnTop: true,
   compact: false,
   captureIntervalMs: 3000,
   theme: "dark",
   layout: "dashboard",
   opacity: 1,
-  protectWindow: false,
+  protectWindow: true,
   assistShortcut: DEFAULT_HOTKEYS.assist,
   answerShortcut: DEFAULT_HOTKEYS.answer,
   clearShortcut: DEFAULT_HOTKEYS.clear,
@@ -125,8 +122,11 @@ export function parseSettings(value: unknown): Settings {
       ? DEFAULT_HOTKEYS.assist
       : input.assistShortcut,
   );
+  // Saved earlier defaults move to the current Cluely-style keys.
   const answerShortcut = parseShortcut(
-    input.answerShortcut ?? DEFAULT_HOTKEYS.answer,
+    input.answerShortcut === LEGACY_HOTKEYS.answer
+      ? DEFAULT_HOTKEYS.answer
+      : (input.answerShortcut ?? DEFAULT_HOTKEYS.answer),
   );
   const clearShortcut = parseShortcut(
     input.clearShortcut === undefined
@@ -134,7 +134,9 @@ export function parseSettings(value: unknown): Settings {
       : input.clearShortcut,
   );
   const toggleShortcut = parseShortcut(
-    input.toggleShortcut ?? DEFAULT_HOTKEYS.toggle,
+    input.toggleShortcut === LEGACY_HOTKEYS.toggle
+      ? DEFAULT_HOTKEYS.toggle
+      : (input.toggleShortcut ?? DEFAULT_HOTKEYS.toggle),
   );
   const pauseShortcut = parseShortcut(
     input.pauseShortcut ?? DEFAULT_HOTKEYS.pause,
@@ -147,11 +149,6 @@ export function parseSettings(value: unknown): Settings {
     typeof input.setupComplete !== "boolean"
   )
     throw new Error("Invalid setup preference.");
-  if (
-    input.preferredHelp !== undefined &&
-    !["manual", "auto-hint", "live"].includes(input.preferredHelp as string)
-  )
-    throw new Error("Choose how EveryHint helps.");
   let preferredSources: Settings["preferredSources"];
   if (input.startHidden !== undefined && typeof input.startHidden !== "boolean")
     throw new Error("Invalid startup preference.");
@@ -213,7 +210,7 @@ export function parseSettings(value: unknown): Settings {
     theme,
     layout,
     opacity,
-    protectWindow: input.protectWindow === true,
+    protectWindow: input.protectWindow !== false,
     assistShortcut,
     answerShortcut,
     clearShortcut,
@@ -224,60 +221,11 @@ export function parseSettings(value: unknown): Settings {
       ? {}
       : { setupComplete: input.setupComplete as boolean }),
     ...(preferredSources ? { preferredSources } : {}),
-    ...(input.preferredHelp === undefined
-      ? {}
-      : { preferredHelp: input.preferredHelp as Settings["preferredHelp"] }),
     ...(input.startHidden === undefined
       ? {}
       : { startHidden: input.startHidden as boolean }),
     ...(contextLimits ? { contextLimits } : {}),
-    ...(input.intelligence === undefined
-      ? {}
-      : { intelligence: parseIntelligenceSettings(input.intelligence) }),
   };
-}
-export function parseIntelligenceSettings(
-  value: unknown,
-): IntelligenceSettings {
-  const input = record(value);
-  exactKeys(input, Object.keys(DEFAULT_INTELLIGENCE));
-  const ranges: Record<string, [number, number]> = {
-    confidenceThreshold: [0.85, 0.99],
-    cooldownSeconds: [30, 600],
-    requestLimit: [1, 100],
-    sessionMinutes: [1, 60],
-    retentionMinutes: [1, 15],
-  };
-  for (const [key, [min, max]] of Object.entries(ranges))
-    if (
-      typeof input[key] !== "number" ||
-      !Number.isFinite(input[key]) ||
-      (input[key] as number) < min ||
-      (input[key] as number) > max ||
-      (key !== "confidenceThreshold" && !Number.isInteger(input[key]))
-    )
-      throw new Error(`Invalid intelligence setting: ${key}.`);
-  const sources = record(input.sources);
-  exactKeys(sources, ["microphone", "systemAudio", "screen"]);
-  for (const key of ["microphone", "systemAudio", "screen"])
-    if (typeof sources[key] !== "boolean")
-      throw new Error("Choose local analysis sources explicitly.");
-  if (
-    !Array.isArray(input.excludedSourceIds) ||
-    input.excludedSourceIds.length > 20 ||
-    input.excludedSourceIds.some(
-      (id) =>
-        typeof id !== "string" ||
-        id.length > 128 ||
-        !/^(?:window|screen):[\d:]+$/.test(id),
-    )
-  )
-    throw new Error("Invalid excluded capture sources.");
-  return {
-    ...input,
-    sources: { ...sources },
-    excludedSourceIds: [...new Set(input.excludedSourceIds)],
-  } as unknown as IntelligenceSettings;
 }
 export function parseBounds(value: unknown): WindowBounds {
   const input = record(value);

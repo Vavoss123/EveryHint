@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { presentation, presentationBounds } from "../src/main/presentation";
+import { presentationBounds } from "../src/main/presentation";
 import { DEFAULT_SETTINGS, parseSettings } from "../src/shared/validation";
+import { parseShortcut } from "../src/shared/shortcuts";
 import design from "../resources/design-tokens.json";
 import { readFileSync } from "node:fs";
 import { execFileSync } from "node:child_process";
@@ -32,11 +33,11 @@ describe("appearance and window presentation", () => {
       theme: "light",
       layout: "assistant",
       opacity: 1,
-      protectWindow: false,
+      protectWindow: true,
       assistShortcut: "Control+Alt+A",
-      answerShortcut: "Control+Alt+Enter",
+      answerShortcut: "Control+Enter",
       clearShortcut: "Control+Alt+Shift+C",
-      toggleShortcut: "Control+Alt+Space",
+      toggleShortcut: "Control+\\",
       pauseShortcut: "Control+Alt+P",
       stopShortcut: "Control+Alt+Shift+X",
     });
@@ -53,14 +54,6 @@ describe("appearance and window presentation", () => {
   ])("rejects invalid native appearance input %j", (patch) =>
     expect(() => parseSettings({ ...DEFAULT_SETTINGS, ...patch })).toThrow(),
   );
-  it("keeps compact precedence while preserving the chosen expanded layout", () => {
-    expect(
-      presentation({ ...DEFAULT_SETTINGS, compact: true, layout: "dashboard" }),
-    ).toBe("compact");
-    expect(presentation({ ...DEFAULT_SETTINGS, layout: "dashboard" })).toBe(
-      "dashboard",
-    );
-  });
   it("fits the dashboard to the current monitor, including negative monitor origins", () => {
     const bounds = presentationBounds(
       "dashboard",
@@ -119,5 +112,24 @@ describe("appearance and window presentation", () => {
     expect(css).not.toMatch(/#[a-f0-9]{3,8}\b/i);
     expect(css).toContain("prefers-reduced-motion");
     expect(css).toContain("focus-visible");
+  });
+});
+describe("Cluely-style shortcuts", () => {
+  it("accepts Control+Enter and Control+Backslash but not other Control-only keys", () => {
+    expect(parseShortcut("Ctrl+Enter")).toBe("Control+Enter");
+    expect(parseShortcut("Control+\\")).toBe("Control+\\");
+    expect(() => parseShortcut("Control+A")).toThrow();
+    expect(parseShortcut("Control+Alt+Enter")).toBe("Control+Alt+Enter");
+  });
+  it("upgrades saved earlier defaults to the new keys", () => {
+    const value = parseSettings({
+      alwaysOnTop: false,
+      compact: false,
+      captureIntervalMs: 5000,
+      answerShortcut: "Control+Alt+Enter",
+      toggleShortcut: "Control+Alt+Space",
+    });
+    expect(value.answerShortcut).toBe("Control+Enter");
+    expect(value.toggleShortcut).toBe("Control+\\");
   });
 });

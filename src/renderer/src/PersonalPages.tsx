@@ -9,7 +9,7 @@ import type { PersonalState } from "../../shared/personal";
 import {
   ACTION_LABELS,
   type ContextualAction,
-} from "../../shared/intelligence";
+} from "../../shared/actions";
 import { DEFAULT_CONTEXT } from "../../shared/ai";
 import type {
   KnowledgeExcerpt,
