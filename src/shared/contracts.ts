@@ -109,6 +109,11 @@ export interface HotkeyStatus {
   accelerator: string;
   registered: boolean;
 }
+export interface SessionNotesStatus {
+  message: string;
+  meetingId: string | null;
+  working: boolean;
+}
 export interface AppSnapshot {
   privacy?: import("./desktop").WindowPrivacy;
   revision: number;
@@ -117,6 +122,8 @@ export interface AppSnapshot {
   hotkeys: HotkeyStatus[];
   /** The overlay lets clicks through to the application underneath. */
   clickThrough?: boolean;
+  /** Outcome of saving the last session with AI notes. */
+  sessionNotes?: SessionNotesStatus | null;
   warnings: string[];
   systemAudioSupported: boolean;
 }
@@ -159,6 +166,8 @@ export interface EveryHintBridge {
   onAssist(listener: () => void): () => void;
   /** The answer shortcut pressed while the overlay has focus. */
   onAnswerShortcut(listener: () => void): () => void;
+  /** Chooses at Start whether this session is saved with AI notes. */
+  sessionNotesStart(save: boolean): Promise<Result<void>>;
   /** Scroll requests from the overlay scroll shortcuts. */
   onScrollAnswer(listener: (direction: "up" | "down") => void): () => void;
   onAccountSettings(listener: () => void): () => void;

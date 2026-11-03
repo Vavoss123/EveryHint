@@ -547,6 +547,41 @@ try {
     !(await page.evaluate(() => window.everyhint.listen.context())).value,
     "Stop clears the retained conversation-request context",
   );
+  // "Save this session with notes" is on by default at Start.
+  // Earlier steps held fixture answers to test in-flight Stop; let the
+  // notes request complete normally.
+  await desktop.evaluate(() => {
+    globalThis.__listenFixture.hold = false;
+    globalThis.__listenFixture.release?.();
+  });
+  const saved = await wait(
+    appState,
+    (s) => s.sessionNotes && !s.sessionNotes.working,
+    60000,
+  );
+  check(
+    saved.sessionNotes.message === "Session saved with notes." &&
+      !!saved.sessionNotes.meetingId,
+    `Ending the session saves it with AI notes: ${saved.sessionNotes.message}`,
+  );
+  const notesDoc = await page.evaluate(async (id) => {
+    const state = await window.everyhint.meetings.getState();
+    return window.everyhint.meetings.get({
+      scopeId: state.value.scopeId,
+      input: { id },
+    });
+  }, saved.sessionNotes.meetingId);
+  check(
+    notesDoc.ok &&
+      notesDoc.value.segmentCount > 0 &&
+      notesDoc.value.summary?.overview?.text ===
+        "Fixture overview of the session." &&
+      notesDoc.value.summary.overview.evidence[0].quote.length >= 12,
+    "The saved meeting holds the transcript and notes quoting it",
+  );
+  await page.getByRole("button", { name: "Open notes", exact: true }).click();
+  await page.getByRole("heading", { name: notesDoc.value.title }).waitFor();
+  check(true, "Open notes shows the saved meeting");
   await settingsSection(page, "Shortcuts");
   check(
     (await page
@@ -593,6 +628,7 @@ try {
     "Settings follows the rebound Answer binding",
   );
   await floating.evaluate(() => window.everyhint.window("hide"));
+  const callsBeforeRebound = (await calls()).length;
   native("-Action", "Focus", "-Handle", String(other.handle));
   hotkey("Control+Alt+Shift+Enter");
   check(
@@ -604,10 +640,11 @@ try {
     "Rebound Answer is received while the native test application has focus",
   );
   check(
-    (await calls()).length === 6,
+    (await calls()).length === callsBeforeRebound,
     "A rebound Answer cannot infer after Stop removed permission",
   );
   unwrap(await page.evaluate(() => window.everyhint.account("sign-out")));
+  const callsBeforeLocal = (await calls()).length;
   await page.evaluate(() => window.everyhint.window("dashboard"));
   await floating.evaluate(() => window.everyhint.window("hide"));
   unwrap(
@@ -635,7 +672,7 @@ try {
     "Incomplete ChatGPT sharing recovery remains visible instead of being hidden as successful setup",
   );
   check(
-    (await calls()).length === 6,
+    (await calls()).length === callsBeforeLocal,
     "A local session with incomplete sharing makes no inference request",
   );
   unwrap(await page.evaluate(() => window.everyhint.session("stop")));

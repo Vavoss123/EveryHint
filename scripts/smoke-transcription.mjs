@@ -157,6 +157,8 @@ try {
     "transcription does not start screen capture",
   );
   await mkdir("artifacts", { recursive: true });
+  // A successful Start runs in the background; restore the dashboard.
+  await page.evaluate(() => window.everyhint.window("dashboard"));
   await page.locator(".transcription-panel").scrollIntoViewIfNeeded();
   await page.screenshot({ path: "artifacts/everyhint-transcription.png" });
   await page

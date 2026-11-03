@@ -48,6 +48,7 @@ export function DashboardApp() {
   // Chosen on every Start so the answering AI is always a deliberate choice.
   const [answerWith, setAnswerWith] = useState<ProviderId | null>(null);
   const [hideFromCapture, setHideFromCapture] = useState(true);
+  const [saveNotes, setSaveNotes] = useState(true);
   const assistant = useAssistantSnapshot();
   const meetings = useMeetings();
   const [requestedMeetingId, setRequestedMeetingId] = useState<string | null>(
@@ -227,6 +228,7 @@ export function DashboardApp() {
     setSessionSharing({ transcript: true, screen: true, acknowledged: false });
     setAnswerWith(null);
     setHideFromCapture(app?.settings.protectWindow !== false);
+    setSaveNotes(true);
     setSettingsOpen(false);
     setPreparing(true);
     setAcknowledged(false);
@@ -371,6 +373,8 @@ export function DashboardApp() {
     void run(async () => {
       if (!answerWith) throw new Error("Choose ChatGPT or Claude first.");
       unwrap(await window.everyhint.selectProvider(answerWith));
+      // Must be chosen before capture starts so the transcript saves live.
+      unwrap(await window.everyhint.sessionNotesStart(saveNotes));
       unwrap(
         await window.everyhint.saveSettings({
           ...app!.settings,
@@ -658,6 +662,19 @@ export function DashboardApp() {
           </span>
         </div>
       )}
+      {app.sessionNotes && (
+        <div className="session-notes-status" role="status">
+          <span>{app.sessionNotes.message}</span>
+          {app.sessionNotes.meetingId && !app.sessionNotes.working && (
+            <button
+              className="secondary"
+              onClick={() => openMeetings(app.sessionNotes!.meetingId!)}
+            >
+              Open notes
+            </button>
+          )}
+        </div>
+      )}
       <MeetingStatus
         state={meetings.state}
         ai={meetings.ai}
@@ -903,6 +920,25 @@ export function DashboardApp() {
                     </button>
                   )}
                 </fieldset>
+                <label className="consent-row">
+                  <input
+                    type="checkbox"
+                    checked={saveNotes}
+                    onChange={(event) => setSaveNotes(event.target.checked)}
+                  />
+                  <span>
+                    Save this session with notes
+                    <small>
+                      The transcript is saved encrypted on this PC (kept{" "}
+                      {meetings.state?.preferences.retentionDays === null
+                        ? "until you delete it"
+                        : `${meetings.state?.preferences.retentionDays ?? 30} days`}
+                      ). When you end the session it is sent to{" "}
+                      {answerWith === "claude" ? "Claude" : "ChatGPT"} to write
+                      notes, saved in Meetings.
+                    </small>
+                  </span>
+                </label>
                 <label className="consent-row">
                   <input
                     type="checkbox"

@@ -266,6 +266,8 @@ const bridge: EveryHintBridge = {
     ipcRenderer.on("everyhint:scroll-answer", wrapped);
     return () => ipcRenderer.removeListener("everyhint:scroll-answer", wrapped);
   },
+  sessionNotesStart: (save) =>
+    ipcRenderer.invoke("everyhint:session-notes-start", save),
   onAnswerShortcut: (listener) => {
     const wrapped = (): void => listener();
     ipcRenderer.on("everyhint:answer-shortcut", wrapped);

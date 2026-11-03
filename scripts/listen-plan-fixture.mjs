@@ -103,8 +103,35 @@ export async function installListenPlanFixture({ shell }) {
         ],
       });
     if (url.href === resource + "/responses") {
-      fixture.requests.push(JSON.parse(options.body));
+      const body = JSON.parse(options.body);
+      fixture.requests.push(body);
       const number = fixture.requests.length;
+      // Meeting-notes requests get a structured draft quoting real excerpts.
+      const prompt = body.input?.[0]?.content?.[0]?.text ?? "";
+      const start = prompt.lastIndexOf('\n{"question"');
+      const reference = start >= 0 ? JSON.parse(prompt.slice(start + 1)) : null;
+      const excerpt = reference?.meetingContext?.excerpts?.find(
+        (e) => e.text.trim().length >= 12,
+      );
+      const claim = (text) => ({
+        text,
+        evidence: [
+          { ref: excerpt.ref, quote: excerpt.text.trim().slice(0, 40) },
+        ],
+        uncertainty: "explicit",
+      });
+      const answer = excerpt
+        ? JSON.stringify({
+            overview: claim("Fixture overview of the session."),
+            topics: [claim("Fixture topic.")],
+            points: [],
+            decisions: [],
+            actions: [],
+            outstanding: [],
+            nextSteps: [],
+          })
+        : `Fixture answer ${number}: grounded in supplied context.`;
+      if (excerpt) fixture.notes = (fixture.notes ?? 0) + 1;
       const encoder = new TextEncoder();
       return new Response(
         new ReadableStream({
@@ -115,13 +142,13 @@ export async function installListenPlanFixture({ shell }) {
               );
             send({
               type: "response.output_text.delta",
-              delta: `Fixture answer ${number}: `,
+              delta: excerpt ? answer : `Fixture answer ${number}: `,
             });
             const finish = () => {
               if (options.signal?.aborted) return;
               send({
                 type: "response.output_text.delta",
-                delta: "grounded in supplied context.",
+                delta: excerpt ? "" : "grounded in supplied context.",
               });
               send({
                 type: "response.completed",
@@ -134,7 +161,7 @@ export async function installListenPlanFixture({ shell }) {
                       content: [
                         {
                           type: "output_text",
-                          text: `Fixture answer ${number}: grounded in supplied context.`,
+                          text: answer,
                         },
                       ],
                     },

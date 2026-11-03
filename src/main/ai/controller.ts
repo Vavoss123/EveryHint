@@ -260,14 +260,13 @@ export class AssistantController {
     }
     if (
       reference &&
-      (this.selected !== "codex" ||
-        input.options.screenshot ||
+      (input.options.screenshot ||
         input.options.microphone ||
         input.options.systemAudio ||
         input.options.history)
     )
       throw new Error(
-        "Meeting AI uses only selected meeting text through ChatGPT plan inference.",
+        "Meeting AI uses only the selected meeting text.",
       );
     const status = this.statuses.find((status) => status.id === this.selected)!;
     if (input.options.screenshot && !status.capabilities.images)

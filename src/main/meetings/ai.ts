@@ -179,15 +179,11 @@ export class MeetingAIController {
     const selection = parseMeetingSelection(value),
       routing = this.assistant.routing,
       accountId = this.connection().accountId;
-    if (
-      routing.selected !== "codex" ||
-      routing.auth !== "chatgpt" ||
-      !routing.ready ||
-      !routing.model ||
-      !accountId
-    )
+    if (!routing.ready || !routing.model || !accountId)
       throw new Error(
-        "Connect ChatGPT plan usage, refresh models and explicitly choose an available model before meeting AI.",
+        routing.selected === "claude"
+          ? "Add your Claude API key in Account & AI before meeting AI."
+          : "Connect ChatGPT plan usage, refresh models and explicitly choose an available model before meeting AI.",
       );
     if (automatic && !permit)
       throw new Error(
@@ -208,7 +204,7 @@ export class MeetingAIController {
       generation === this.generation &&
       selected.valid() &&
       this.connection().accountId === accountId &&
-      this.assistant.routing.selected === "codex" &&
+      this.assistant.routing.selected === routing.selected &&
       this.assistant.routing.model === routing.model &&
       (!permit || permit());
     const question =

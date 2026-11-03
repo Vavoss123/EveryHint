@@ -52,6 +52,7 @@ import { ProviderError, providerError } from "./ai/errors";
 import { MeetingController } from "./meetings/controller";
 import { MeetingAIController } from "./meetings/ai";
 import { PostMeetingNotes } from "./meetings/post-notes";
+import { SessionNotes } from "./meetings/session-notes";
 import { HistoryWorker } from "./meetings/store";
 import { MeetingPreferencesStore } from "./meetings/preferences";
 import { historyProfile } from "./meetings/keys";
@@ -117,6 +118,7 @@ let visibilityRequests = 0;
 let initialisation: Promise<void> | undefined;
 let meetingAI: MeetingAIController | undefined;
 let postNotes: PostMeetingNotes | undefined;
+let sessionNotes: SessionNotes | undefined;
 let meetingProfile = "";
 let personal: PersonalController | undefined;
 let workspace: WorkspaceController | undefined;
@@ -241,6 +243,7 @@ function snapshot(): AppSnapshot {
     settings: { ...store.settings },
     hotkeys,
     clickThrough,
+    sessionNotes: sessionNotes?.status ?? null,
     warnings: [...warnings],
     systemAudioSupported: process.platform === "win32",
   };
@@ -538,6 +541,8 @@ function updateTray(): void {
 // dashboard so the next step (Start again, notes) is visible.
 function sessionEnded(): void {
   const state = controller?.value.state;
+  // Read before meetings.observe() clears it for the stopped session.
+  const meetingId = meetings?.value.activeMeetingId ?? null;
   const ended =
     (lastSessionState === "ACTIVE" || lastSessionState === "PAUSED") &&
     (state === "STOPPED" || state === "IDLE" || state === "ERROR");
@@ -552,6 +557,7 @@ function sessionEnded(): void {
   }
   hideOverlay();
   show();
+  void sessionNotes?.finish(meetingId);
 }
 function publish(): void {
   sessionEnded();
@@ -914,7 +920,13 @@ async function initialise(): Promise<void> {
       capture: controller.metadata,
       events: speech?.value.events ?? [],
     }),
-    () => ({ accountId: accounts?.identity ?? null }),
+    // Claude has no account sign-in; its saved API key is the owner.
+    () => ({
+      accountId:
+        assistant?.routing.selected === "claude"
+          ? "claude-api"
+          : (accounts?.identity ?? null),
+    }),
     publishMeetingAI,
     Date.now,
     (id) => personal!.template(id),
@@ -931,6 +943,7 @@ async function initialise(): Promise<void> {
     }),
     publishMeetingAI,
   );
+  sessionNotes = new SessionNotes(meetings, meetingAI, publish);
   workspace = new WorkspaceController(
     {
       store: (profile) =>
@@ -1253,6 +1266,9 @@ async function initialise(): Promise<void> {
 
   handle("everyhint:get", () => snapshot());
   handle("everyhint:listen-get", () => listen!.value);
+  handle("everyhint:session-notes-start", (input) =>
+    sessionNotes!.start(input),
+  );
   handle("everyhint:listen-start", async (input) => {
     const requestedAt = visibilityRequests;
     await listen!.start(input);
@@ -1674,6 +1690,7 @@ app.on("before-quit", (event) => {
   personal?.lock();
   const workspaceClosed = workspace?.dispose();
   postNotes?.dispose();
+  sessionNotes?.cancel();
   meetingAI?.cancel();
   accounts?.dispose();
   controller?.stop();
