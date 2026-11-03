@@ -89,6 +89,17 @@ export function FloatingAssistant() {
     () => window.everyhint.onAnswerShortcut(() => askLatest.current()),
     [],
   );
+  useEffect(
+    () =>
+      window.everyhint.onScrollAnswer((direction) => {
+        const area = answerArea.current;
+        if (!area) return;
+        const step = Math.max(80, area.clientHeight * 0.8);
+        area.scrollBy({ top: direction === "up" ? -step : step });
+        followAnswer.current = false;
+      }),
+    [],
+  );
   useEffect(() => {
     const focus = () => {
       if (!generating) composer.current?.focus();
@@ -265,6 +276,11 @@ export function FloatingAssistant() {
           >
             <span aria-hidden="true">●</span> {status}
           </span>
+          {app?.clickThrough && (
+            <span className="overlay-click-through" role="status">
+              Click-through · Ctrl+Alt+Space
+            </span>
+          )}
           {generating && (
             <span className="overlay-generating">
               {latest?.status === "sending" ? "Sending…" : "Answering…"}
@@ -384,6 +400,15 @@ export function FloatingAssistant() {
                 Revoke sharing
               </button>
             )}
+            <button
+              role="menuitem"
+              onClick={() => {
+                setMenu(false);
+                void window.everyhint.window("click-through");
+              }}
+            >
+              Click-through (Ctrl+Alt+Space to undo)
+            </button>
             <button
               role="menuitemcheckbox"
               aria-checked={app?.settings.alwaysOnTop ?? false}

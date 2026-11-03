@@ -25,7 +25,7 @@ Dependency installation and Electron's first native binary download need interne
 
 ## Listen and ask
 
-Connect ChatGPT or add a Claude API key once. Then **Start EveryHint → choose ChatGPT or Claude → pick sources → tick the sharing acknowledgement → Start**. Hiding from screen recordings is on by default in that dialog. Press **Ctrl+Enter** for help with what's happening (the latest question aimed at you, or what's on screen), use a quick action (*What should I say?*, *Follow-ups*, *Recap*, *Fact-check*), or type a question in the overlay. Ctrl+Enter while typing in the overlay sends what you typed. After Start, both windows hide and the session continues from the tray.
+Connect ChatGPT or add a Claude API key once. Then **Start EveryHint → choose ChatGPT or Claude → pick sources → tick the sharing acknowledgement → Start**. Hiding from screen recordings is on by default in that dialog. Screen, microphone and system audio are selected by default, and the whole screen is chosen automatically once you tick the capture authorisation; pick a single window from the dropdown if you prefer. **Ctrl+Alt+Space** makes the overlay see-through and lets every click reach the app underneath while the shortcuts keep working; press it again (or use the tray) to interact with the overlay. Press **Ctrl+Enter** for help with what's happening (the latest question aimed at you, or what's on screen), use a quick action (*What should I say?*, *Follow-ups*, *Recap*, *Fact-check*), or type a question in the overlay. Ctrl+Enter while typing in the overlay sends what you typed. After Start, both windows hide and the session continues from the tray.
 
 Only bounded final speech from the last two minutes and a fresh approved image are sent, and only when you press the shortcut, a quick action or Ask. Raw audio stays local. Sharing approved at Start lasts until Stop (bounded to 24 hours) and is never restored after a restart. There are no automatic answers. [Exact behavior, actual Windows verification and remaining physical/genuine-provider limits](docs/LISTEN_ACCEPTANCE.md).
 
@@ -157,6 +157,8 @@ The X hides the overlay to the tray. **Hiding does not stop capture.** The tray 
 | `Ctrl+Enter`       | Answer from conversation and screen      |
 | `Ctrl+\`           | Show / hide the overlay                  |
 | `Ctrl+arrows`      | Move the overlay (while visible)         |
+| `Ctrl+Shift+↑/↓`   | Scroll the answer (while visible)        |
+| `Ctrl+Alt+Space`   | Click-through on/off (while visible)     |
 | `Ctrl+Alt+P`       | Pause / resume the authorised session    |
 | `Ctrl+Alt+Shift+X` | Stop all capture, including while hidden |
 

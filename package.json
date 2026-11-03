@@ -21,6 +21,7 @@
     "smoke:ux": "node scripts/smoke-ux.mjs",
     "smoke:overlay": "node scripts/smoke-overlay.mjs",
     "smoke:overlay-hmr": "node scripts/smoke-overlay-hmr.mjs",
+    "smoke:overlay-keys": "node scripts/smoke-overlay-keys.mjs",
     "lint": "eslint . --max-warnings 0",
     "test": "vitest run",
     "test:watch": "vitest",

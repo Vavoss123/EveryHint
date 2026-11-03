@@ -36,7 +36,7 @@ if ($Action -eq 'Focus' -or $Action -eq 'Foreground') {
   $affinityRead = [EveryHintUxNative]::GetWindowDisplayAffinity($windowHandle, [ref]$affinity)
   [uint32]$cloaked = 0
   $cloakRead = [EveryHintUxNative]::DwmGetWindowAttribute($windowHandle, 14, [ref]$cloaked, 4) -eq 0
-  @{ topmost = ($style -band 8) -ne 0; toolWindow = ($style -band 128) -ne 0; appWindow = ($style -band 262144) -ne 0; noActivate = ($style -band 134217728) -ne 0; owner = [EveryHintUxNative]::GetWindow($windowHandle, 4).ToInt64(); affinity = $affinity; affinityRead = $affinityRead; cloaked = $cloaked; cloakRead = $cloakRead } | ConvertTo-Json -Compress
+  @{ topmost = ($style -band 8) -ne 0; mouseTransparent = ($style -band 32) -ne 0; toolWindow = ($style -band 128) -ne 0; appWindow = ($style -band 262144) -ne 0; noActivate = ($style -band 134217728) -ne 0; owner = [EveryHintUxNative]::GetWindow($windowHandle, 4).ToInt64(); affinity = $affinity; affinityRead = $affinityRead; cloaked = $cloaked; cloakRead = $cloakRead } | ConvertTo-Json -Compress
 } elseif ($Action -eq 'Shortcut') {
   $keys = @()
   foreach ($part in $Accelerator.Split('+')) {
@@ -45,6 +45,8 @@ if ($Action -eq 'Focus' -or $Action -eq 'Foreground') {
     elseif ($part -eq 'Shift') { $keys += [byte]16 }
     elseif ($part -eq 'Space') { $keys += [byte]32 }
     elseif ($part -eq 'Enter') { $keys += [byte]13 }
+    elseif ($part -eq 'Up') { $keys += [byte]38 }
+    elseif ($part -eq 'Down') { $keys += [byte]40 }
     elseif ($part -eq '\') { $keys += [byte]220 }
     elseif ($part -match '^[A-Z0-9]$') { $keys += [byte][char]$part }
     else { throw 'Unsupported test shortcut.' }

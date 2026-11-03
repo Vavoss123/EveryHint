@@ -258,6 +258,14 @@ const bridge: EveryHintBridge = {
     ipcRenderer.on("everyhint:assist", wrapped);
     return () => ipcRenderer.removeListener("everyhint:assist", wrapped);
   },
+  onScrollAnswer: (listener) => {
+    const wrapped = (
+      _event: Electron.IpcRendererEvent,
+      direction: "up" | "down",
+    ): void => listener(direction);
+    ipcRenderer.on("everyhint:scroll-answer", wrapped);
+    return () => ipcRenderer.removeListener("everyhint:scroll-answer", wrapped);
+  },
   onAnswerShortcut: (listener) => {
     const wrapped = (): void => listener();
     ipcRenderer.on("everyhint:answer-shortcut", wrapped);

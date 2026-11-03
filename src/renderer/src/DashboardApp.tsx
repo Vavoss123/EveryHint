@@ -87,6 +87,21 @@ export function DashboardApp() {
   const [acknowledged, setAcknowledged] = useState(false);
   const [sources, setSources] = useState<CaptureSource[]>([]);
   const [sourceId, setSourceId] = useState("");
+  // Once capture is authorised, select the whole screen by default; the
+  // dropdown can still switch to a single window.
+  useEffect(() => {
+    if (!preparing || !screenConsent || !acknowledged || sources.length) return;
+    let current = true;
+    void window.everyhint.listSources(consent()).then((result) => {
+      if (!current || !result.ok) return;
+      setSources(result.value);
+      const whole = result.value.find((source) => source.kind === "screen");
+      if (whole) setSourceId((chosen) => chosen || whole.id);
+    });
+    return () => {
+      current = false;
+    };
+  }, [preparing, screenConsent, acknowledged, sources.length]);
   const [destination, setDestination] = useState<Destination>("home");
   const focusComposer = useRef(false);
   const focusReview = useRef(false);
@@ -215,9 +230,13 @@ export function DashboardApp() {
     setSettingsOpen(false);
     setPreparing(true);
     setAcknowledged(false);
-    setScreenConsent(app?.settings.preferredSources?.screen ?? false);
-    setMicrophoneConsent(app?.settings.preferredSources?.microphone ?? false);
-    setSystemConsent(app?.settings.preferredSources?.systemAudio ?? false);
+    // Screen, microphone and system audio are on unless setup chose otherwise.
+    setScreenConsent(app?.settings.preferredSources?.screen ?? true);
+    setMicrophoneConsent(app?.settings.preferredSources?.microphone ?? true);
+    setSystemConsent(
+      (app?.settings.preferredSources?.systemAudio ?? true) &&
+        !!app?.systemAudioSupported,
+    );
     setSources([]);
     setSourceId("");
   }
@@ -1011,11 +1030,7 @@ export function DashboardApp() {
                       disabled={!screenConsent || !acknowledged || busy}
                       onClick={chooseSources}
                     >
-                      {busy
-                        ? "Working…"
-                        : sources.length
-                          ? "Refresh sources"
-                          : "Choose a screen or window"}
+                      {busy ? "Working…" : "Choose a screen or window"}
                     </button>
                     {sources.length > 0 && (
                       <>

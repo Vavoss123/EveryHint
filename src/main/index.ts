@@ -106,6 +106,8 @@ let listen: ListenController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
 let claude: ClaudeProvider | undefined;
+let clickThrough = false;
+const CLICK_THROUGH_KEY = "Control+Alt+Space";
 let meetings: MeetingController | undefined;
 let historyRoot = "";
 let interfaceReady = false;
@@ -237,6 +239,7 @@ function snapshot(): AppSnapshot {
     session: controller.value,
     settings: { ...store.settings },
     hotkeys,
+    clickThrough,
     warnings: [...warnings],
     systemAudioSupported: process.platform === "win32",
   };
@@ -287,47 +290,63 @@ function show(): void {
   window?.focus();
 }
 const MOVE_STEP = 48;
-const MOVE_KEYS = {
-  "Control+Up": [0, -1],
-  "Control+Down": [0, 1],
-  "Control+Left": [-1, 0],
-  "Control+Right": [1, 0],
-} as const;
-// Ctrl+arrows move the overlay. They are registered only while it is visible
-// because they are word/paragraph navigation in other applications.
-function setMoveKeys(enabled: boolean): void {
-  for (const [accelerator, [dx, dy]] of Object.entries(MOVE_KEYS)) {
+// Keys registered only while the overlay is visible, because they are text
+// navigation or selection in other applications.
+const OVERLAY_KEYS: Record<string, () => void> = {
+  "Control+Up": () => moveOverlay(0, -1),
+  "Control+Down": () => moveOverlay(0, 1),
+  "Control+Left": () => moveOverlay(-1, 0),
+  "Control+Right": () => moveOverlay(1, 0),
+  "Control+Shift+Up": () => scrollOverlay("up"),
+  "Control+Shift+Down": () => scrollOverlay("down"),
+  [CLICK_THROUGH_KEY]: () => setClickThrough(!clickThrough),
+};
+function moveOverlay(dx: number, dy: number): void {
+  if (!overlay || overlay.isDestroyed() || !overlay.isVisible()) return;
+  const bounds = overlay.getBounds();
+  const area = screen.getDisplayMatching(bounds).workArea;
+  overlay.setPosition(
+    Math.max(
+      area.x,
+      Math.min(bounds.x + dx * MOVE_STEP, area.x + area.width - bounds.width),
+    ),
+    Math.max(
+      area.y,
+      Math.min(bounds.y + dy * MOVE_STEP, area.y + area.height - bounds.height),
+    ),
+  );
+}
+function scrollOverlay(direction: "up" | "down"): void {
+  if (overlay && !overlay.isDestroyed() && overlay.isVisible())
+    overlay.webContents.send("everyhint:scroll-answer", direction);
+}
+function setOverlayKeys(enabled: boolean): void {
+  for (const [accelerator, action] of Object.entries(OVERLAY_KEYS)) {
     if (!enabled) {
       globalShortcut.unregister(accelerator);
       continue;
     }
     if (globalShortcut.isRegistered(accelerator)) continue;
     try {
-      globalShortcut.register(accelerator, () => {
-        if (!overlay || overlay.isDestroyed() || !overlay.isVisible()) return;
-        const bounds = overlay.getBounds();
-        const area = screen.getDisplayMatching(bounds).workArea;
-        overlay.setPosition(
-          Math.max(
-            area.x,
-            Math.min(
-              bounds.x + dx * MOVE_STEP,
-              area.x + area.width - bounds.width,
-            ),
-          ),
-          Math.max(
-            area.y,
-            Math.min(
-              bounds.y + dy * MOVE_STEP,
-              area.y + area.height - bounds.height,
-            ),
-          ),
-        );
-      });
+      globalShortcut.register(accelerator, action);
     } catch {
-      // Another application owns the chord; dragging still works.
+      // Another application owns the chord; the overlay controls still work.
     }
   }
+}
+function overlayOpacity(): number {
+  const chosen = store.settings.opacity ?? 1;
+  return clickThrough ? Math.min(chosen, 0.72) : chosen;
+}
+// Click-through lets every click reach the application underneath while the
+// overlay stays visible and keyboard shortcuts keep working.
+function setClickThrough(value: boolean): void {
+  clickThrough = value;
+  if (overlay && !overlay.isDestroyed()) {
+    overlay.setIgnoreMouseEvents(value);
+    overlay.setOpacity(overlayOpacity());
+  }
+  publish();
 }
 function showOverlay(): void {
   visibilityRequests++;
@@ -408,7 +427,7 @@ function updateTray(): void {
   const postEnabled = postNotes?.enabled ?? false;
   const remote = `Answering with ${assistant?.value.selected === "claude" ? "Claude" : "ChatGPT"}`;
   const listening = listen?.value;
-  const key = `${state}:${summary}:${remote}:${recording}:${postEnabled}:${listening?.phase}:${listening?.sharing?.expiresAt ?? 0}`;
+  const key = `${state}:${summary}:${remote}:${recording}:${postEnabled}:${listening?.phase}:${listening?.sharing?.expiresAt ?? 0}:${clickThrough}`;
   if (key === lastTrayState) return;
   lastTrayState = key;
   tray.setImage(icon(state));
@@ -477,6 +496,13 @@ function updateTray(): void {
         click: showOverlay,
       },
       {
+        label: "Click-through overlay",
+        type: "checkbox",
+        checked: clickThrough,
+        accelerator: CLICK_THROUGH_KEY,
+        click: () => setClickThrough(!clickThrough),
+      },
+      {
         label: "Hide to Tray",
         click: () =>
           safely(() => {
@@ -540,7 +566,7 @@ function applyAppearance(): void {
   window.setAlwaysOnTop(false);
   window.setOpacity(1);
   overlay?.setAlwaysOnTop(overlay.isVisible() && store.settings.alwaysOnTop);
-  overlay?.setOpacity(store.settings.opacity ?? 1);
+  overlay?.setOpacity(overlayOpacity());
   const requested = store.settings.protectWindow !== false;
   if (!privacy || privacy.requested !== requested) {
     privacy = configureWindowPrivacy(window, requested);
@@ -1036,15 +1062,15 @@ async function initialise(): Promise<void> {
     },
   });
   overlay.setSkipTaskbar(true);
-  overlay.on("show", () => setMoveKeys(true));
-  overlay.on("restore", () => setMoveKeys(true));
+  overlay.on("show", () => setOverlayKeys(true));
+  overlay.on("restore", () => setOverlayKeys(true));
   overlay.on("hide", () => {
     overlay?.setAlwaysOnTop(false);
-    setMoveKeys(false);
+    setOverlayKeys(false);
   });
   overlay.on("minimize", () => {
     overlay?.setAlwaysOnTop(false);
-    setMoveKeys(false);
+    setOverlayKeys(false);
   });
   const rememberAssistant = (): void => {
     queueBounds();
@@ -1541,6 +1567,7 @@ async function initialise(): Promise<void> {
       if (sender === overlay) hideOverlay();
       else return closeDashboard();
     } else if (input === "overlay") toggleOverlay();
+    else if (input === "click-through") setClickThrough(!clickThrough);
     else if (input === "dashboard") show();
     else if (input === "account") {
       show();

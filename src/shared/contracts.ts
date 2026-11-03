@@ -115,6 +115,8 @@ export interface AppSnapshot {
   session: SessionSnapshot;
   settings: Settings;
   hotkeys: HotkeyStatus[];
+  /** The overlay lets clicks through to the application underneath. */
+  clickThrough?: boolean;
   warnings: string[];
   systemAudioSupported: boolean;
 }
@@ -157,6 +159,8 @@ export interface EveryHintBridge {
   onAssist(listener: () => void): () => void;
   /** The answer shortcut pressed while the overlay has focus. */
   onAnswerShortcut(listener: () => void): () => void;
+  /** Scroll requests from the overlay scroll shortcuts. */
+  onScrollAnswer(listener: (direction: "up" | "down") => void): () => void;
   onAccountSettings(listener: () => void): () => void;
   openMeetings(id?: string): Promise<Result<void>>;
   onMeetingNavigate(listener: (id?: string) => void): () => void;
@@ -203,6 +207,7 @@ export interface EveryHintBridge {
       | "maximize"
       | "close"
       | "overlay"
+      | "click-through"
       | "dashboard"
       | "account"
       | "move-left"

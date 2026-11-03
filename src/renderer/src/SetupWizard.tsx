@@ -16,8 +16,8 @@ export function SetupWizard({
   const [sources, setSources] = useState(
     settings.preferredSources ?? {
       microphone: true,
-      systemAudio: false,
-      screen: false,
+      systemAudio: true,
+      screen: true,
     },
   );
   return (

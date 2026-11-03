@@ -91,6 +91,10 @@ try {
   await page
     .getByRole("button", { name: "Start EveryHint", exact: true })
     .click();
+  // Audio-only session: screen capture is on by default, so turn it off.
+  await page
+    .getByRole("checkbox", { name: /^Screen or application/ })
+    .uncheck();
   await page.getByRole("checkbox", { name: /^Microphone/ }).check();
   await page.getByRole("checkbox", { name: /^System audio/ }).check();
   await page.getByRole("checkbox", { name: /I authorise/ }).check();
