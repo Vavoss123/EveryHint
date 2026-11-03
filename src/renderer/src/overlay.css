@@ -75,7 +75,7 @@ body,
 }
 .overlay-topline {
   display: grid;
-  grid-template-columns: 28px minmax(0, 1fr) auto 34px;
+  grid-template-columns: 28px minmax(0, 1fr) minmax(0, 104px) auto 34px;
   gap: 8px;
   align-items: center;
 }

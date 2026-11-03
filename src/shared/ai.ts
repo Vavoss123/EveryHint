@@ -33,17 +33,17 @@ export const ASSIST_PRESETS = {
   general: {
     name: "General Assist",
     instruction:
-      "Give concise, useful help based only on the selected context.",
+      "Give concise, directly useful help. Use the selected context to understand the situation and your own knowledge to answer.",
   },
   code: {
     name: "Code Assist",
     instruction:
-      "Explain visible code, identify possible errors and suggest improvements as text. State uncertainty when code is missing or unreadable.",
+      "Solve the visible coding task or explain the code: give working code, the key idea, and time/space complexity where relevant. Point out bugs with the exact fix. State uncertainty briefly when code is missing or unreadable.",
   },
   conversation: {
     name: "Conversation Assist",
     instruction:
-      "Use selected conversation excerpts to suggest a relevant response or explanation. Audio source labels do not establish speaker identities.",
+      "Use the conversation to suggest what the user should say next, in natural first-person spoken words, followed by a short reason only if useful.",
   },
 } as const;
 export type AssistPreset = keyof typeof ASSIST_PRESETS;

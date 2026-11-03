@@ -70,15 +70,15 @@ export function detectQuestion(
     )
       continue;
     const wh =
-      /^(?:(?:why|how|where|when)\s+(?:do|does|did|is|are|can|could|would|should|will|has|have|might)\b|what(?:'s| is| are| does| do| did| happens| if| would| should| can| could| will)\b|which\s+\w+\s+(?:is|are|would|should|do|does)\b|who\s+(?:is|are|can|should|will)\b)/.test(
+      /^(?:(?:why|how|where|when)\s+(?:do|does|did|is|are|was|were|can|could|would|should|will|has|have|might)\b|how\s+(?:many|much|long|often|far|big)\b|what(?:'s| is| are| does| do| did| happens| if| would| should| can| could| will)\b|which\s+\w+\s+(?:is|are|would|should|do|does)\b|who\s+(?:is|are|can|should|will)\b)/.test(
         normal,
       );
     const auxiliary =
-      /^(?:can|could|would|will|should|do|does|did|is|are|have|has)\s+(?:you|we|i|this|that|it|there|the)\b/.test(
+      /^(?:can|could|would|will|should|do|does|did|is|are|was|were|have|has)\s+(?:you|we|i|this|that|it|there|the)\b/.test(
         normal,
       );
     const help =
-      /^(?:help me|explain|please explain|i (?:need|would like) (?:some )?help|i(?:'m| am) stuck|i(?:'d| would) like to know)\b/.test(
+      /^(?:help me|explain|please explain|i (?:need|would like) (?:some )?help|i(?:'m| am) stuck|i(?:'d| would) like to know|tell (?:me|us) (?:about|how|why|what|more)|walk (?:me|us) through|talk (?:me|us) through|describe|give (?:me|us) an example|share an example)\b/.test(
         normal,
       );
     if (!wh && !auxiliary && !help) continue;

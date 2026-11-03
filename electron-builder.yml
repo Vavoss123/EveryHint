@@ -11,7 +11,6 @@ files:
 asar: true
 asarUnpack:
   - '**/*.node'
-  - '**/claude-agent-sdk-win32-x64/**'
 extraResources:
   - from: artifacts/release-speech/runtime
     to: speech
@@ -19,8 +18,7 @@ extraResources:
       - everyhint-transcriber.exe
       - whisper-LICENSE
 electronFuses:
-  # The optional Claude adapter retains a bundled-Node compatibility path.
-  runAsNode: true
+  runAsNode: false
   enableNodeOptionsEnvironmentVariable: false
   enableNodeCliInspectArguments: false
   enableEmbeddedAsarIntegrityValidation: true

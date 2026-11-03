@@ -314,6 +314,7 @@ const bridge: EveryHintBridge = {
     ipcRenderer.invoke("everyhint:ai-select", provider),
   setClaudeApiBilling: (enabled) =>
     ipcRenderer.invoke("everyhint:ai-billing", enabled),
+  setClaudeKey: (key) => ipcRenderer.invoke("everyhint:claude-key", key),
   reviewContext: (input) => ipcRenderer.invoke("everyhint:ai-review", input),
   ask: (input) => ipcRenderer.invoke("everyhint:ai-ask", input),
   copyResponse: (text) => ipcRenderer.invoke("everyhint:ai-copy", text),

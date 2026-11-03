@@ -1,5 +1,11 @@
 # EveryHint product specification
 
+## Answer quality and Claude contract — 2026-11-03
+
+Prompts favour useful answers: the model uses its own knowledge, with the supplied context showing what the user needs, and leads with the answer or the exact words to say. Situation-specific facts (what was said, participants, commitments, product claims) must still not be invented, and every untrusted-data and no-tools rule is retained. Transcripts are sent as readable lines with relative times and probable speakers ("You (microphone)", "Them (system audio)"). Typed "help" or an empty request finds the latest question aimed at the user; a heuristic detected question is no longer substituted for the user's request. Listen requests include the bounded previous question/answer history (four pairs / 12,000 characters / 15-minute expiry), so follow-ups work. A typed question without a sharing grant is sent as text only, with no transcript or screen. Unedited built-in modes upgrade to the new instructions; user edits are kept. Question detection also recognises interview prompts such as "Tell me about…", "Walk me through…" and "How many…".
+
+Claude is a selectable provider beside ChatGPT, through the official `@anthropic-ai/sdk` streaming Messages API (no tools, adaptive thinking at medium effort, server-side refusal fallback except Haiku). Models: Claude Opus 5.5 (default), Sonnet 5.5 and Haiku 5.5. The API key is stored in Windows Credential Manager; saving it is the remembered billing opt-in, while `ANTHROPIC_API_KEY` keeps the per-session opt-in. Listen & Ask and the overlay work with either provider. The Claude Agent SDK subprocess adapter was removed and the packaged `runAsNode` fuse is now disabled.
+
 ## Current overlay and background contract — 2026-10-29
 
 FIX.1–FIX.4 on `66215d8` replaces the shared floating App with an independent minimal renderer and scoped CSS. One locked primary process owns one ordinary dashboard, one taskbar-excluded focusable assistant and one tray. Successful authorised Start waits for local Whisper and requested sharing completion, then hides both windows while continuing the existing session. Incomplete permissions stay visible. Tray Open EveryHint/Show assistant/Pause/Resume/Stop/Quit and native shortcuts recover or stop work.

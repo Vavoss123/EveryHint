@@ -3,7 +3,7 @@
   "productName": "EveryHint",
   "version": "0.5.0",
   "private": true,
-  "description": "EveryHint \u2014 Intelligence when you need it.",
+  "description": "EveryHint — Intelligence when you need it.",
   "type": "module",
   "main": "./out/main/index.js",
   "engines": {
@@ -34,7 +34,6 @@
     "speech:model": "node scripts/install-model.mjs",
     "speech:test": "node --experimental-transform-types scripts/test-inference.mjs",
     "smoke:speech": "node scripts/smoke-transcription.mjs",
-    "test:ai-sdk": "vitest run --config vitest.sdk.config.ts",
     "smoke:ai": "node scripts/smoke-ai.mjs",
     "test:plan": "vitest run --config vitest.plan.config.ts",
     "test:meetings": "node scripts/test-meeting-storage.mjs",
@@ -50,7 +49,7 @@
     "smoke:listen": "node scripts/smoke-listen.mjs"
   },
   "dependencies": {
-    "@anthropic-ai/claude-agent-sdk": "0.3.311",
+    "@anthropic-ai/sdk": "1.3.0",
     "@napi-rs/keyring": "2.1.2",
     "@openai/codex-sdk": "0.164.0",
     "electron-updater": "6.8.11",

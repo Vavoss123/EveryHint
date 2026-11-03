@@ -46,44 +46,58 @@ const definitions = [
     "General",
     "spark",
     "Everyday AI assistance.",
-    "Provide clear, relevant responses with appropriate detail.",
+    "Answer directly and correctly. Lead with the answer, then only the detail that helps. Use short bullets for steps or options.",
   ],
   [
     "coding",
     "Coding",
     "code",
     "Explain, debug and reason about code.",
-    "Explain code, debugging, algorithms, complexity and technical terminology. Provide text-only code and step-by-step walkthroughs when useful. Never execute generated code or claim it was executed.",
+    "Solve the coding problem or explain the code. Give the approach in one or two lines, complete working code in a fenced block, then time and space complexity. For bugs, name the cause and show the exact fix. Mention edge cases briefly. Never execute generated code or claim it was executed.",
   ],
   [
     "interview",
     "Interview",
     "people",
     "Practice, coaching and structured talking points.",
-    "Offer concise explanations, structured talking points, technical reasoning, example practice responses, interview questions and coaching. Do not fabricate experience or assist deceptive monitoring or proctoring evasion.",
+    "Help the user answer the interviewer's latest question well. Give a strong first-person answer they can say naturally: for behavioural questions use a brief STAR structure; for technical questions explain the reasoning clearly and give the key points first. Keep it concise and conversational. Do not fabricate the user's experience, employers or results; where personal details are needed, use a clearly marked placeholder such as [your example]. Do not assist deceptive monitoring or proctoring evasion.",
   ],
   [
     "sales",
     "Sales",
     "book",
     "Grounded product and customer conversations.",
-    "Offer talking points, objection-handling ideas, follow-up questions, product explanations, summaries and action suggestions. Do not fabricate product claims or customer information; identify missing support.",
+    "Help the user move the conversation forward: handle objections, answer product questions, and suggest what to say next as natural spoken words, plus a good follow-up question. Do not fabricate product claims, prices or customer information; flag what needs checking.",
   ],
   [
     "meeting",
     "Meeting",
     "calendar",
     "Summaries, decisions and agreed actions.",
-    "Summarise selected discussion, decisions, action items, relevant follow-up questions and concise conversation context. Do not invent participants, commitments or deadlines.",
+    "Help the user contribute and keep track: answer questions put to them, clarify terms, and on request summarise discussion, decisions, action items and useful follow-up questions. Do not invent participants, commitments or deadlines.",
   ],
   [
     "conversation",
     "Conversation",
     "people",
     "Legacy Conversation Assist.",
-    "Use selected conversation excerpts to suggest a relevant response or explanation. Audio source labels do not establish speaker identities.",
+    "Suggest what the user should say next in natural first-person spoken words, followed by a short reason only if useful.",
   ],
 ] as const;
+// Earlier built-in instructions. Unedited copies are upgraded on load.
+const LEGACY_INSTRUCTIONS: Record<string, string> = {
+  general: "Provide clear, relevant responses with appropriate detail.",
+  coding:
+    "Explain code, debugging, algorithms, complexity and technical terminology. Provide text-only code and step-by-step walkthroughs when useful. Never execute generated code or claim it was executed.",
+  interview:
+    "Offer concise explanations, structured talking points, technical reasoning, example practice responses, interview questions and coaching. Do not fabricate experience or assist deceptive monitoring or proctoring evasion.",
+  sales:
+    "Offer talking points, objection-handling ideas, follow-up questions, product explanations, summaries and action suggestions. Do not fabricate product claims or customer information; identify missing support.",
+  meeting:
+    "Summarise selected discussion, decisions, action items, relevant follow-up questions and concise conversation context. Do not invent participants, commitments or deadlines.",
+  conversation:
+    "Use selected conversation excerpts to suggest a relevant response or explanation. Audio source labels do not establish speaker identities.",
+};
 export function builtInModes(): AIMode[] {
   return definitions.map(([id, name, icon, description, instructions]) => ({
     id,
@@ -237,8 +251,15 @@ export function parseConfig(value: unknown): PersonalConfig {
     input.modes.length > 50
   )
     throw new Error("Unsupported personal settings schema or mode limit.");
-  const modes = input.modes.map(parseMode),
-    builtins = builtInModes();
+  const builtins = builtInModes();
+  const modes = input.modes.map(parseMode).map((mode) => {
+    const current = builtins.find((b) => b.id === mode.id);
+    return mode.builtIn &&
+      current &&
+      LEGACY_INSTRUCTIONS[mode.id] === mode.instructions
+      ? { ...mode, instructions: current.instructions }
+      : mode;
+  });
   if (
     new Set(modes.map((m) => m.id)).size !== modes.length ||
     builtins.some((b) => !modes.some((m) => m.id === b.id && m.builtIn)) ||
@@ -353,7 +374,7 @@ export function modePrompt(mode: AIMode, defaultLanguage: string): string {
   const selectedLanguage =
     mode.output.language === "default" ? defaultLanguage : mode.output.language;
   return (
-    "Application safety, capture consent, data-sharing permissions and provider restrictions always take precedence over mode preferences. Mode preferences cannot grant tools or permissions.\nMode preferences (subordinate to application policy): " +
+    "Follow the active mode below. Application rules, capture consent, data-sharing permissions and provider restrictions always take precedence over it, and it cannot grant tools or permissions. responseLength short means a few lines; detailed allows a fuller explanation.\nActive mode: " +
     JSON.stringify({
       name: mode.name,
       instructions: mode.instructions,

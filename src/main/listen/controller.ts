@@ -8,6 +8,7 @@ import type {
 } from "../../shared/transcription";
 import { exactKeys, record } from "../../shared/validation";
 import type { AssistantController } from "../ai/controller";
+import { isHelpRequest } from "../ai/context";
 import { detectQuestion } from "../intelligence/question";
 
 const lifetime = 60 * 60_000;
@@ -353,8 +354,7 @@ export class ListenController {
   }
   revoke(
     message:
-      | string
-      | null = "ChatGPT sharing is off. Local listening can continue.",
+      string | null = "ChatGPT sharing is off. Local listening can continue.",
   ): void {
     this.grant = undefined;
     this.preview = null;
@@ -393,9 +393,14 @@ export class ListenController {
       throw new Error("Ask a question of at most 6,000 characters.");
     this.observe();
     if (this.preparing) return;
-    const grant = this.grant;
+    const grant = this.grant,
+      typed = input.question.trim();
+    // A typed question is useful on its own. Without a valid sharing grant it
+    // is sent as text only, with no transcript or screen.
+    const textOnly =
+      !!typed && !isHelpRequest(typed) && (!grant || !this.valid(grant));
     try {
-      if (!grant || !this.valid(grant))
+      if (!textOnly && (!grant || !this.valid(grant)))
         throw new Error(
           this.ports.capture().state === "PAUSED"
             ? "Resume listening before asking from the conversation."
@@ -413,11 +418,15 @@ export class ListenController {
       this.preparing = true;
       this.message = null;
       const epoch = this.requestEpoch,
-        captureEpoch = this.ports.capture().epoch;
-      const valid = () =>
-        this.valid(grant) &&
-        epoch === this.requestEpoch &&
-        captureEpoch === this.ports.capture().epoch;
+        captureEpoch = this.ports.capture().epoch,
+        binding = this.ports.binding(false);
+      const valid = textOnly
+        ? () =>
+            epoch === this.requestEpoch && this.ports.binding(false) === binding
+        : () =>
+            this.valid(grant!) &&
+            epoch === this.requestEpoch &&
+            captureEpoch === this.ports.capture().epoch;
       this.publish();
       await this.ports.ready();
       if (!valid())
@@ -425,22 +434,20 @@ export class ListenController {
           "Sharing or session changed. Ask again after allowing sharing.",
         );
       const capture = this.ports.capture();
-      const events = grant.transcript
-        ? recentFinals(capture, this.ports.speech().events, this.now()).filter(
-            (e) => this.assistant.allowsTranscript(e.id),
-          )
-        : [];
-      const detected = latestQuestion(events);
+      const scope = textOnly ? { transcript: false, screen: false } : grant!;
+      // The model reads the transcript itself; a heuristic detected question
+      // is not substituted for the user's request because it can pick the
+      // wrong sentence or speaker.
       await this.assistant.requestFromSession(
         {
-          question: input.question.trim() || detected || "",
+          question: typed,
           options: {
             ...DEFAULT_CONTEXT,
-            history: false,
+            history: true,
             recentSeconds: 120,
-            microphone: grant.transcript && !!capture.consent?.microphone,
-            systemAudio: grant.transcript && !!capture.consent?.systemAudio,
-            screenshot: grant.screen && !!capture.consent?.screen,
+            microphone: scope.transcript && !!capture.consent?.microphone,
+            systemAudio: scope.transcript && !!capture.consent?.systemAudio,
+            screenshot: scope.screen && !!capture.consent?.screen,
           },
         },
         valid,

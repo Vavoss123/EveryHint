@@ -14,10 +14,10 @@ for(const path of entries.filter(p=>p.startsWith("/out/"))){const native=join(..
 for(const needle of developerPaths)assert.ok(!helper.includes(needle));
 assert.deepEqual((await readdir(join(root,"resources/speech"))).sort(),["everyhint-transcriber.exe","whisper-LICENSE"]);
 const fuses=await getCurrentFuseWire(join(root,"EveryHint.exe"));
-for(const id of [F.EnableNodeOptionsEnvironmentVariable,F.EnableNodeCliInspectArguments,F.GrantFileProtocolExtraPrivileges])assert.equal(fuses[id],48);
+for(const id of [F.RunAsNode,F.EnableNodeOptionsEnvironmentVariable,F.EnableNodeCliInspectArguments,F.GrantFileProtocolExtraPrivileges])assert.equal(fuses[id],48);
 for(const id of [F.EnableEmbeddedAsarIntegrityValidation,F.OnlyLoadAppFromAsar])assert.equal(fuses[id],49);
 const installer="release/EveryHint-0.5.0-x64-private-unsigned-setup.exe",bytes=await readFile(installer);
 for(const compiled of [bytes,await readFile(join(root,"EveryHint.exe"))])for(const needle of developerPaths)assert.ok(!compiled.includes(needle),"Developer home path in Windows executable");
 await assert.rejects(verifyPublisher(installer,["CN=Controlled fixture publisher"]),/valid trusted Windows publisher/);
-const report={status:"passed",archiveEntries:entries.length,asarBytes:(await stat(archive)).size,helper:manifest,fuses,developerHomePathsFound:0,modelsBundled:false,installer:{path:installer,bytes:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex")},signing:"unsigned private test build; not trusted for distribution",unsignedInstallerRejectedByUpdateVerifier:true,runAsNode:"retained for optional Claude adapter compatibility"};
+const report={status:"passed",archiveEntries:entries.length,asarBytes:(await stat(archive)).size,helper:manifest,fuses,developerHomePathsFound:0,modelsBundled:false,installer:{path:installer,bytes:bytes.length,sha256:createHash("sha256").update(bytes).digest("hex")},signing:"unsigned private test build; not trusted for distribution",unsignedInstallerRejectedByUpdateVerifier:true,runAsNode:"disabled"};
 await writeFile("artifacts/p11-package-audit.json",JSON.stringify(report,null,2));console.log(JSON.stringify(report));

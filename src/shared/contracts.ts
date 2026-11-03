@@ -1,10 +1,5 @@
 export type SessionState =
-  | "IDLE"
-  | "READY"
-  | "ACTIVE"
-  | "PAUSED"
-  | "STOPPED"
-  | "ERROR";
+  "IDLE" | "READY" | "ACTIVE" | "PAUSED" | "STOPPED" | "ERROR";
 export type SourceKind = "screen" | "window";
 export interface CaptureSource {
   id: string;
@@ -109,12 +104,7 @@ export interface WindowBounds {
   height: number;
 }
 export type HotkeyAction =
-  | "toggle"
-  | "pause"
-  | "stop"
-  | "assist"
-  | "clear"
-  | "answer";
+  "toggle" | "pause" | "stop" | "assist" | "clear" | "answer";
 export type HotkeyBindings = Record<HotkeyAction, string>;
 export interface HotkeyStatus {
   action: HotkeyAction;
@@ -181,6 +171,8 @@ export interface EveryHintBridge {
   inspectProviders(): Promise<Result<void>>;
   selectProvider(provider: import("./ai").ProviderId): Promise<Result<void>>;
   setClaudeApiBilling(enabled: boolean): Promise<Result<void>>;
+  /** Saves the Anthropic API key securely, or clears it with null. */
+  setClaudeKey(key: string | null): Promise<Result<void>>;
   reviewContext(input: import("./ai").ReviewInput): Promise<Result<void>>;
   removeContext(input: {
     reviewId: string;

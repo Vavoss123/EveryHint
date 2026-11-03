@@ -17,6 +17,7 @@ import {
   contextPrompt,
   imageHash,
   validateScreenshot,
+  isHelpRequest,
 } from "./context";
 import { providerError, ProviderError } from "./errors";
 import type { MeetingAIContext } from "../../shared/meeting-ai";
@@ -50,8 +51,7 @@ export class AssistantController {
   private captureSession: string | null = null;
   private preparation = 0;
   private referenceGuard:
-    | { requestId: string; valid: () => boolean }
-    | undefined;
+    { requestId: string; valid: () => boolean } | undefined;
   constructor(
     private readonly providers: readonly AIProvider[],
     private readonly sources: () => {
@@ -410,11 +410,12 @@ export class AssistantController {
           );
       }
       if (sessionPermission) {
-        if (!review.transcripts.length && !review.screenshot)
+        const context = review.transcripts.length > 0 || !!review.screenshot;
+        if (!context && (!review.question || isHelpRequest(review.question)))
           throw new Error(
             "No recent conversation or approved screenshot is available yet. Wait for speech to finish, or allow screen sharing.",
           );
-        review.conversationRequest = true;
+        review.conversationRequest = context;
         review.prompt = contextPrompt(review);
         review.textChars = review.prompt.length;
         if (review.textChars > input.options.totalChars)

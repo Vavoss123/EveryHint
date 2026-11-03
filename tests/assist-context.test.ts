@@ -48,7 +48,7 @@ describe("P6 selected Assist context", () => {
       );
       expect(review.question).toBe("");
       expect(review.preset).toBe(preset);
-      expect(review.prompt).toContain("Analyse only");
+      expect(review.prompt).toContain("No specific question was typed");
       expect(review.prompt).toContain("microphone text");
       expect(() =>
         buildReview(

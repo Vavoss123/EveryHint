@@ -348,8 +348,8 @@ try {
     text = JSON.stringify(first);
   check(
     text.includes("country") &&
-      text.includes("microphone") &&
-      text.includes("systemAudio"),
+      text.includes("You (microphone)") &&
+      text.includes("Them (system audio)"),
     "The actual hotkey request contains recent source-labelled final transcript",
   );
   check(

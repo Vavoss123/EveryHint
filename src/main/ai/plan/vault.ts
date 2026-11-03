@@ -40,10 +40,13 @@ function manifest(value: number[] | null): Manifest | null {
 export class KeyringVault implements CredentialVault {
   private queue: Promise<unknown> = Promise.resolve();
   constructor(private readonly entry: (slot: string) => SecretEntry) {}
-  static forInstallation(home: string): KeyringVault {
+  static forInstallation(
+    home: string,
+    service = "EveryHint.ChatGPTPlan.v1",
+  ): KeyringVault {
     const owner = createHash("sha256").update(home).digest("hex");
     return new KeyringVault(
-      (slot) => new AsyncEntry("EveryHint.ChatGPTPlan.v1", `${owner}/${slot}`),
+      (slot) => new AsyncEntry(service, `${owner}/${slot}`),
     );
   }
   private serial<T>(action: () => Promise<T>): Promise<T> {

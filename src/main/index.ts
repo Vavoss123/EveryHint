@@ -49,6 +49,7 @@ import { sampleScreen } from "./intelligence/native-screen";
 import { DEFAULT_INTELLIGENCE } from "../shared/intelligence";
 import { parseIntelligenceSettings } from "../shared/validation";
 import { ChatGptProvider } from "./ai/plan/provider";
+import { KeyringVault } from "./ai/plan/vault";
 import { ClaudeProvider } from "./ai/claude";
 import { ChatGptAccounts } from "./ai/plan/accounts";
 import { ProviderError, providerError } from "./ai/errors";
@@ -109,6 +110,7 @@ let listen: ListenController | undefined;
 let intelligence: IntelligenceController | undefined;
 let accounts: ChatGptAccounts | undefined;
 let chatgpt: ChatGptProvider | undefined;
+let claude: ClaudeProvider | undefined;
 let meetings: MeetingController | undefined;
 let historyRoot = "";
 let interfaceReady = false;
@@ -698,8 +700,14 @@ async function initialise(): Promise<void> {
     (url) => shell.openExternal(url),
   );
   chatgpt = new ChatGptProvider(accounts);
+  claude = new ClaudeProvider(
+    KeyringVault.forInstallation(
+      join(app.getPath("userData"), "claude-api"),
+      "EveryHint.ClaudeAPI.v1",
+    ),
+  );
   assistant = new AssistantController(
-    [chatgpt, new ClaudeProvider()],
+    [chatgpt, claude],
     () => ({ capture: controller.value, events: speech?.value.events ?? [] }),
     (value) => {
       if (window && !window.isDestroyed() && !window.webContents.isDestroyed())
@@ -720,6 +728,11 @@ async function initialise(): Promise<void> {
     (query, ids) => personal!.knowledgeContext(query, ids),
     (query, selection) => workspace!.buildContext(query, selection),
   );
+  // A key saved in EveryHint is the remembered Claude billing opt-in.
+  void claude
+    .hasSavedKey()
+    .then((saved) => (saved ? assistant?.billing(true) : undefined))
+    .catch(() => {});
   listen = new ListenController(
     {
       capture: () => controller.metadata,
@@ -740,13 +753,17 @@ async function initialise(): Promise<void> {
           provider: assistant!.routing.selected,
           session: assistant!.routing.sessionId,
           mode: personal?.modeContext,
-          ...(includeModel ? { model: chatgpt!.selectedModel } : {}),
+          ...(includeModel ? { model: assistant!.routing.model } : {}),
         }),
       ready: async () => {
-        if (assistant!.routing.selected !== "codex")
-          throw new Error(
-            "Choose ChatGPT in Account & AI to ask from the conversation.",
-          );
+        if (assistant!.routing.selected === "claude") {
+          await assistant!.inspect();
+          if (!assistant!.routing.ready)
+            throw new Error(
+              "Claude is not ready. Add your Anthropic API key in Account & AI.",
+            );
+          return;
+        }
         if (!accounts!.identity || !accounts!.value.planUsage)
           throw new Error(
             "Connect ChatGPT and allow plan usage before sharing this session.",
@@ -767,7 +784,7 @@ async function initialise(): Promise<void> {
           accounts!.value.planUsage,
           assistant!.routing.selected,
           personal?.modeContext,
-          chatgpt!.selectedModel,
+          assistant!.routing.model,
         ]),
       interruptAutomatic: () => {
         intelligence?.revoke(
@@ -1407,7 +1424,8 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:ai-model-select", async (input) => {
     cancelMeetingWork();
-    chatgpt!.selectModel(input);
+    if (assistant!.value.selected === "claude") claude!.selectModel(input);
+    else chatgpt!.selectModel(input);
     assistant!.clear();
     await assistant!.inspect();
   });
@@ -1450,6 +1468,17 @@ async function initialise(): Promise<void> {
   handle("everyhint:ai-billing", (input) => {
     cancelMeetingWork();
     return assistant!.billing(input);
+  });
+  handle("everyhint:claude-key", async (input) => {
+    cancelMeetingWork();
+    // Saving a key is the explicit, remembered Claude API billing opt-in.
+    if (input === null) {
+      await claude!.clearKey();
+      await assistant!.billing(false);
+    } else {
+      await claude!.saveKey(input);
+      await assistant!.billing(true);
+    }
   });
   handle("everyhint:ai-review", async (input) => {
     cancelMeetingWork();

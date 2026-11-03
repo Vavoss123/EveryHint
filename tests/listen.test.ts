@@ -112,12 +112,10 @@ function setup() {
     respond: vi.fn(),
     dispose: () => {},
   };
-  const fresh = vi.fn(
-    async (): Promise<SessionSnapshot> => ({
-      ...capture,
-      frame: { ...frame, capturedAt: Date.now() },
-    }),
-  );
+  const fresh = vi.fn(async (): Promise<SessionSnapshot> => ({
+    ...capture,
+    frame: { ...frame, capturedAt: Date.now() },
+  }));
   // The assistant callback closes over the controller created below.
   const onAssistant = vi.fn();
   // eslint-disable-next-line prefer-const
@@ -385,8 +383,8 @@ describe("deliberate conversation requests reuse the ChatGPT Responses transport
     expect(s.requests).toHaveLength(1);
     const body = JSON.stringify(s.requests[0]);
     expect(body).toContain("How should we fix this code?");
-    expect(body).toContain("microphone");
-    expect(body).toContain("systemAudio");
+    expect(body).toContain("You (microphone)");
+    expect(body).toContain("Them (system audio)");
     expect(body).toContain("input_image");
     expect(body).toContain('store":false');
     expect(s.fresh).toHaveBeenCalledTimes(1);
@@ -679,5 +677,44 @@ describe("deliberate conversation requests reuse the ChatGPT Responses transport
       ]),
     ).toBe("What does this code do");
     expect(s.ports.interruptAutomatic).not.toHaveBeenCalled();
+  });
+  it.each([
+    "Tell me about a time you handled a difficult customer",
+    "Walk me through your approach to this design",
+    "How many requests per second does the service handle",
+  ])("detects the interview prompt '%s'", (text) => {
+    const s = setup();
+    expect(latestQuestion([s.event(text, "systemAudio")])).toBe(text);
+  });
+  it("includes the previous answer so follow-ups such as 'shorter' work", async () => {
+    const s = setup();
+    await s.start();
+    s.speech.events = [s.event()];
+    await s.listen.ask({ question: "Explain this code" });
+    await flush();
+    await s.listen.ask({ question: "Make that shorter" });
+    await flush();
+    expect(s.requests).toHaveLength(2);
+    expect(s.listen.context()?.history).toEqual([
+      {
+        requestId: expect.any(String),
+        question: "Explain this code",
+        answer: "Grounded fixture answer",
+      },
+    ]);
+    expect(JSON.stringify(s.requests[1])).toContain("Grounded fixture answer");
+  });
+  it("sends a typed question as text only when sharing is off", async () => {
+    const s = setup();
+    await s.start({ transcript: false, screen: false, acknowledged: false });
+    s.speech.events = [s.event("Private conversation text")];
+    await s.listen.ask({ question: "What is a binary search tree?" });
+    await flush();
+    expect(s.requests).toHaveLength(1);
+    const body = JSON.stringify(s.requests[0]);
+    expect(body).toContain("What is a binary search tree?");
+    expect(body).not.toContain("Private conversation text");
+    expect(body).not.toContain("input_image");
+    expect(s.fresh).not.toHaveBeenCalled();
   });
 });

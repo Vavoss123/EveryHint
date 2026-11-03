@@ -5,6 +5,7 @@ import {
   defaultConfig,
   migratePreset,
   modePrompt,
+  parseConfig,
   parseMode,
 } from "../src/shared/modes";
 import { PersonalDatabase } from "../src/main/personal/database";
@@ -123,6 +124,30 @@ describe("P9 modes", () => {
     );
     expect(prompt).toContain("always take precedence");
     expect(prompt).toContain('"language":"French"');
+  });
+  it("upgrades unedited built-in instructions but keeps user edits", () => {
+    const config = defaultConfig();
+    const saved = {
+      ...config,
+      modes: config.modes.map((mode) =>
+        mode.id === "general"
+          ? {
+              ...mode,
+              instructions:
+                "Provide clear, relevant responses with appropriate detail.",
+            }
+          : mode.id === "coding"
+            ? { ...mode, instructions: "My own coding rules" }
+            : mode,
+      ),
+    };
+    const loaded = parseConfig(saved);
+    expect(loaded.modes.find((m) => m.id === "general")!.instructions).toBe(
+      config.modes.find((m) => m.id === "general")!.instructions,
+    );
+    expect(loaded.modes.find((m) => m.id === "coding")!.instructions).toBe(
+      "My own coding rules",
+    );
   });
   it("mode language overrides global preferences", () =>
     expect(

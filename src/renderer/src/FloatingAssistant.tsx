@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import type { AppSnapshot, Result } from "../../shared/contracts";
-import type { ContextReview } from "../../shared/ai";
+import type { ContextReview, ProviderId } from "../../shared/ai";
 import { useAssistantSnapshot } from "./useAssistantSnapshot";
 import { useListen } from "./useListen";
 import { usePersonal, personalCommand } from "./PersonalState";
@@ -211,6 +211,22 @@ export function FloatingAssistant() {
             ) : (
               <option value="">EveryHint</option>
             )}
+          </select>
+          <select
+            className="overlay-provider"
+            aria-label="Answer with"
+            title="Answer with"
+            value={assistant?.selected ?? "codex"}
+            disabled={!assistant || busy || generating}
+            onChange={(event) => {
+              const id = event.target.value as ProviderId;
+              void run(async () =>
+                unwrap(await window.everyhint.selectProvider(id)),
+              );
+            }}
+          >
+            <option value="codex">ChatGPT</option>
+            <option value="claude">Claude</option>
           </select>
           <button className="overlay-hide" onClick={hide}>
             Hide
@@ -496,9 +512,11 @@ export function FloatingAssistant() {
                 className="overlay-link"
                 onClick={() => openDashboard(true)}
               >
-                {selected.auth === "missing"
-                  ? "Connect ChatGPT"
-                  : "Open Account & AI"}
+                {selected.auth !== "missing"
+                  ? "Open Account & AI"
+                  : selected.id === "claude"
+                    ? "Add Claude API key"
+                    : "Connect ChatGPT"}
               </button>
             )}
           </>
