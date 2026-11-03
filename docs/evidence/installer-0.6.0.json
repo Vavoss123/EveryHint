@@ -1,0 +1,209 @@
+{
+  "date": "2026-11-03T17:08:37.433998+00:00",
+  "version": "0.6.0",
+  "sourceBaseline": "8fa213bc6775624636d72366ea1f1f152976d443",
+  "purpose": "Unsigned Windows x64 installer prepared for GitHub Releases",
+  "github": {
+    "repository": "Vavoss123/EveryHint",
+    "uploaded": false,
+    "workflow": ".github/workflows/windows-installer.yml",
+    "triggers": [
+      "workflow_dispatch",
+      "release published"
+    ],
+    "yamlValidated": true,
+    "hostedWorkflowRun": false,
+    "assets": [
+      "EveryHint-Setup-0.6.0.exe",
+      "EveryHint-Setup-0.6.0.exe.sha256"
+    ]
+  },
+  "installer": {
+    "path": "release/EveryHint-Setup-0.6.0.exe",
+    "bytes": 138781171,
+    "sha256": "0b91727bc1466f6a89dad159e53a80c7fe6a84a2e2c1e8e0f1724a338a50fb3c"
+  },
+  "checksumFile": "release\\EveryHint-Setup-0.6.0.exe.sha256",
+  "sourceChecks": {
+    "command": "npm run check",
+    "passed": true,
+    "tests": 702,
+    "files": 58
+  },
+  "planFixtures": {
+    "command": "npm run test:plan",
+    "passed": true,
+    "tests": 5
+  },
+  "packageAudit": {
+    "status": "passed",
+    "version": "0.6.0",
+    "archiveEntries": 3069,
+    "asarBytes": 40125084,
+    "helper": {
+      "schema": 1,
+      "arch": "x64",
+      "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+      "bytes": 2184192,
+      "sha256": "42e42856f4dd32c604435450edffb0e37b4f3c6e085cf76024f2e686099ca1e0"
+    },
+    "vcRuntime": {
+      "version": "14.50.35719.0",
+      "signer": "CN=Microsoft Windows, O=Microsoft Corporation, L=Redmond, S=Washington, C=US",
+      "schema": 1,
+      "sha256": "184146852727a9db4eea06178716bec3cdbb1015c911f6b0f915b184ad7775b2",
+      "license": "https://visualstudio.microsoft.com/license-terms/vs2026-ga-visualcpp-v14-redist-runtime/",
+      "file": "vcruntime140.dll"
+    },
+    "fuses": {
+      "0": 48,
+      "1": 48,
+      "2": 48,
+      "3": 48,
+      "4": 49,
+      "5": 49,
+      "6": 48,
+      "7": 48,
+      "8": 49,
+      "version": "1"
+    },
+    "developerHomePathsFound": 0,
+    "modelsBundled": false,
+    "installer": {
+      "path": "release/EveryHint-Setup-0.6.0.exe",
+      "bytes": 138781171,
+      "sha256": "0b91727bc1466f6a89dad159e53a80c7fe6a84a2e2c1e8e0f1724a338a50fb3c"
+    },
+    "signing": "unsigned; unknown-publisher/SmartScreen warnings possible",
+    "unsignedInstallerRejectedByUpdateVerifier": true,
+    "runAsNode": "disabled"
+  },
+  "payload": {
+    "comparisons": [
+      {
+        "file": "EveryHint.exe",
+        "sha256": "a719a2f1aadb5c3543cdc987404720a28cc8766526074e8e51a6c17532f4cac8",
+        "match": true
+      },
+      {
+        "file": "vcruntime140.dll",
+        "sha256": "184146852727a9db4eea06178716bec3cdbb1015c911f6b0f915b184ad7775b2",
+        "match": true
+      },
+      {
+        "file": "resources/vc-runtime-manifest.json",
+        "sha256": "bce25c5f90168159061e196e28a1622b41aa3b08398b30cad3b904c5d39e11e2",
+        "match": true
+      },
+      {
+        "file": "resources/VC-RUNTIME-NOTICES.txt",
+        "sha256": "22cc3eddc02d6bea9fb4bf807bef91b80499241edecd477162d59b03d06c72ce",
+        "match": true
+      },
+      {
+        "file": "resources/app.asar",
+        "sha256": "50e58a0d6acb63c52089ab3cc04aaddc93eafd505c332376a742f2a2562a9a46",
+        "match": true
+      },
+      {
+        "file": "resources/speech/everyhint-transcriber.exe",
+        "sha256": "42e42856f4dd32c604435450edffb0e37b4f3c6e085cf76024f2e686099ca1e0",
+        "match": true
+      },
+      {
+        "file": "resources/app.asar.unpacked/node_modules/@napi-rs/canvas-win32-x64-msvc/skia.win32-x64-msvc.node",
+        "sha256": "5d00cf716176a32c2a289f48cad19637131fe7de394c4fed58ae48043325943a",
+        "match": true
+      },
+      {
+        "file": "resources/app.asar.unpacked/node_modules/@napi-rs/keyring-win32-x64-msvc/keyring.win32-x64-msvc.node",
+        "sha256": "52b16658275b7848f8081a6542fee3448f1b1c5d3a36487107ae0e7cec95ac6f",
+        "match": true
+      }
+    ],
+    "layout": "embedded app archive",
+    "passed": true
+  },
+  "nativeSpeech": {
+    "helperImports": [
+      "KERNEL32.dll",
+      "ADVAPI32.dll"
+    ],
+    "importInspection": "MSVC dumpbin /DEPENDENTS on the rebuilt helper",
+    "staticMsvcRuntime": true,
+    "sourceRevision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+    "syntheticInference": {
+      "fixture": "upstream JFK",
+      "model": "tiny.en",
+      "threads": 4,
+      "loadMs": 168.896,
+      "initialMemoryBytes": 129445888,
+      "results": [
+        {
+          "source": "microphone",
+          "text": " And so my fellow Americans ask not what your country can do for you, ask what you can do for your country.",
+          "latencyMs": 571.846,
+          "cpuPercent": 377.068,
+          "memoryBytes": 171933696
+        },
+        {
+          "source": "systemAudio",
+          "text": " And so my fellow Americans ask not what your country can do for you, ask what you can do for your country.",
+          "latencyMs": 552.086,
+          "cpuPercent": 387.734,
+          "memoryBytes": 171945984
+        }
+      ]
+    },
+    "physicalCapture": false
+  },
+  "packagedSmoke": {
+    "assertions": 13,
+    "errors": [],
+    "version": "0.6.0",
+    "nativeCredentialRuntimeLoadedFrom": "C:\\WINDOWS\\SYSTEM32\\VCRUNTIME140.dll",
+    "appLocalFallbackPresent": true,
+    "captureStarted": false,
+    "genuineInferenceRequests": 0
+  },
+  "installerLifecycle": {
+    "assertions": 16,
+    "checks": [
+      "Installer exits successfully without elevation",
+      "Installer writes the actual application executable",
+      "Exactly one current-user uninstall record has the correct version",
+      "Uninstall registration points only to the isolated test directory",
+      "Native credential runtime is installed beside the app",
+      "Speech helper is installed",
+      "Start menu shortcut is created",
+      "Start menu shortcut targets the installed application",
+      "Installed application passes the real packaged-renderer smoke",
+      "Installer exits successfully without elevation",
+      "Installer writes the actual application executable",
+      "Reinstall updates the existing current-user registration without duplication",
+      "Uninstaller removes the installed application",
+      "Uninstaller removes its registration",
+      "Uninstaller removes its Start menu shortcut",
+      "No test desktop shortcut remains"
+    ],
+    "install": true,
+    "reinstall": true,
+    "installedLaunch": true,
+    "uninstall": true,
+    "completed": true,
+    "currentUser": true,
+    "existingInstallationGuard": true,
+    "cleanVM": false
+  },
+  "updates": {
+    "enabled": false,
+    "signatureVerifierPassed": true
+  },
+  "notes": [
+    "Static MSVC speech helper; credential addon still requires VCRUNTIME140, so a signed Microsoft release x64 DLL is bundled beside EveryHint.exe.",
+    "This development host preloaded its system VC runtime; a no-VC-runtime clean VM has not been tested.",
+    "Actual silent installer lifecycle tested on Windows 11. Interactive checkbox/finish behavior is configured, not a clean-VM GUI certification.",
+    "No signing certificate, automatic update feed or GitHub publication was configured.",
+    "No personal profile, model or credentials are bundled; no genuine AI request or physical audio capture was made."
+  ]
+}

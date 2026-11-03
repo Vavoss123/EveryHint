@@ -21,7 +21,7 @@
     Pop $0
     ${NSD_CreateCheckbox} 0 44u 100% 14u "Create a desktop shortcut"
     Pop $EveryHintDesktopChoice
-    ${NSD_Uncheck} $EveryHintDesktopChoice
+    ${NSD_Check} $EveryHintDesktopChoice
     nsDialogs::Show
   FunctionEnd
   Function EveryHintOptionsLeave

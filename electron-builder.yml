@@ -10,12 +10,21 @@ files:
 asar: true
 asarUnpack:
   - '**/*.node'
+extraFiles:
+  - from: artifacts/release-vc-runtime
+    to: .
+    filter:
+      - vcruntime140.dll
 extraResources:
   - from: artifacts/release-speech/runtime
     to: speech
     filter:
       - everyhint-transcriber.exe
       - whisper-LICENSE
+  - from: artifacts/release-vc-runtime/manifest.json
+    to: vc-runtime-manifest.json
+  - from: build/VC-RUNTIME-NOTICES.txt
+    to: VC-RUNTIME-NOTICES.txt
 electronFuses:
   runAsNode: false
   enableNodeOptionsEnvironmentVariable: false
@@ -41,6 +50,6 @@ nsis:
   createStartMenuShortcut: true
   shortcutName: EveryHint
   deleteAppDataOnUninstall: false
-  runAfterFinish: false
-  artifactName: EveryHint-${version}-x64-private-unsigned-setup.${ext}
+  runAfterFinish: true
+  artifactName: EveryHint-Setup-${version}.${ext}
 publish: null

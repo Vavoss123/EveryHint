@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
 project(everyhint_transcriber LANGUAGES C CXX)
 include(FetchContent)
+# Link the C/C++ runtime statically so the helper runs on PCs without the
+# Visual C++ Redistributable installed.
+set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
 set(BUILD_SHARED_LIBS OFF CACHE BOOL "" FORCE)
 set(WHISPER_BUILD_TESTS OFF CACHE BOOL "" FORCE)
 set(WHISPER_BUILD_EXAMPLES OFF CACHE BOOL "" FORCE)

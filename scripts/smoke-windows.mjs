@@ -1,10 +1,13 @@
 import { dashboardPage, settingsSection } from "./desktop-harness.mjs";
 import assert from "node:assert/strict";
-import { mkdtemp, mkdir, rm, writeFile } from "node:fs/promises";
+import { mkdtemp, mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join, resolve, dirname, basename } from "node:path";
 import electron from "electron";
 import { _electron } from "playwright-core";
+const packageVersion = JSON.parse(
+  await readFile("package.json", "utf8"),
+).version;
 const root = await mkdtemp(join(tmpdir(), "everyhint-p11-desktop-")),
   env = {
     ...process.env,
@@ -49,7 +52,7 @@ try {
   const status = await page.evaluate(() => window.everyhint.desktopStatus());
   check(
     status.ok &&
-      status.value.version === "0.5.0" &&
+      status.value.version === packageVersion &&
       status.value.updates.state === "unconfigured",
     "Version and disabled update foundation",
   );

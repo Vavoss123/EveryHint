@@ -1,0 +1,77 @@
+name: Windows installer
+
+on:
+  workflow_dispatch:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 35
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+          cache: npm
+      - name: Read version
+        id: version
+        shell: pwsh
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: |
+          $version = (Get-Content package.json -Raw | ConvertFrom-Json).version
+          if ($env:RELEASE_TAG -and $env:RELEASE_TAG -ne "v$version") { throw 'Release tag must match package.json (vX.Y.Z).' }
+          "value=$version" >> $env:GITHUB_OUTPUT
+      - run: npm ci
+      - run: npm run check
+      - name: Build bundled speech helper
+        shell: pwsh
+        run: npm run speech:build -- -SpeechHome "$env:GITHUB_WORKSPACE\artifacts\release-speech"
+      - run: npm run dist:win
+      - name: Verify installer and packaged app
+        shell: pwsh
+        run: |
+          npm run package:audit
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run package:verify
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          npm run smoke:packaged
+          exit $LASTEXITCODE
+      - name: Verify actual installation and uninstall
+        run: npm run test:installer
+      - name: Write release checksum
+        run: npm run package:checksum
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+        with:
+          name: EveryHint-Windows-${{ steps.version.outputs.value }}
+          path: |
+            release/EveryHint-Setup-*.exe
+            release/EveryHint-Setup-*.exe.sha256
+          compression-level: 0
+          if-no-files-found: error
+      - name: Attach installer to GitHub Release
+        if: github.event_name == 'release'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          PACKAGE_VERSION: ${{ steps.version.outputs.value }}
+        run: |
+          $existing = gh release view $env:RELEASE_TAG --repo $env:GITHUB_REPOSITORY --json assets | ConvertFrom-Json
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          $installer = "EveryHint-Setup-$env:PACKAGE_VERSION.exe"
+          $hasInstaller = $existing.assets.name -contains $installer
+          $hasChecksum = $existing.assets.name -contains "$installer.sha256"
+          if ($hasInstaller -or $hasChecksum) {
+            if ($hasInstaller -and $hasChecksum) { exit 0 }
+            throw 'The release has only one file of the installer/checksum pair. Upload its matching partner or remove the partial upload before rerunning.'
+          }
+          gh release upload $env:RELEASE_TAG "release/$installer" "release/$installer.sha256" --repo $env:GITHUB_REPOSITORY
+          exit $LASTEXITCODE

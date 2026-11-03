@@ -2,11 +2,17 @@
 
 **Intelligence when you need it.**
 
-EveryHint is a Windows-first, local-first desktop assistant. P1 provides the overlay and screen capture; P2 provides independent microphone and Windows playback capture; P3 adds offline local English transcription through whisper.cpp. P4.2 provides the official Sign in with ChatGPT and Responses transport; the Listen & Ask milestone adds deliberate requests within a separately approved session context scope. A genuine gpt-6.1-sol answer using the app's ChatGPT plan grant was verified on 2026-10-28. Claude remains disabled by default and no paid Claude test was authorised. Capture and transcription need no paid service. The current UI foundation uses the verified EverySession design system, with an ordinary dashboard and a separate floating assistant.
+EveryHint is a Windows desktop assistant with local Whisper transcription, separate microphone/system-audio sources, screen context and on-demand AI answers. It has a normal dashboard and a compact floating assistant. Connect your own supported AI account or API key; local capture and transcription do not require a paid AI service.
 
-## Install and run
+## Download for Windows
 
-Development targets Windows 10/11 with Node.js **24 LTS** and npm; the P11 private installer targets AVX2-capable x64. This host's Windows 11 build was tested with controlled fixtures; Windows 10/ARM64/clean-machine acceptance remains pending:
+Open [GitHub Releases](https://github.com/Vavoss123/EveryHint/releases) and download **EveryHint-Setup-0.6.0.exe** from Assets. Run it, finish setup and open EveryHint from the Start menu or the optional desktop shortcut. Recipients do not need Node.js, npm, Visual Studio or a separate VC++ runtime installation.
+
+This is an **unsigned Windows x64 build**; Windows may show an unknown-publisher/SmartScreen warning. The bundled local speech helper requires an AVX2-capable CPU. The speech model downloads separately when you approve it in setup. AI connections use your own account/key. Automatic updates are disabled; install newer GitHub releases manually. [Install/release notes and build/upload instructions](docs/RELEASE_0.6.0.md).
+
+## Build from source
+
+Development uses Windows x64, Node.js **24 LTS** and npm:
 
 ```powershell
 cd C:\path\to\EveryHint
@@ -21,7 +27,7 @@ npm run build
 npm start
 ```
 
-Dependency installation and Electron's first native binary download need internet access. Application capture stays local. P11 adds opt-in Windows window-content protection, private per-user NSIS packaging and a [manual new-version update flow](docs/UPDATES.md). Updates stay unconfigured by user choice until real signing, hosting and trusted keys are ready; no update request is made now. [Build instructions, measurements, acceptance matrix and release blockers](docs/P11_ACCEPTANCE.md) distinguish controlled automation from real devices. No screen-sharing receiver scenario is certified; the user kept those and physical hardware checks pending. Enterprise is permanently removed; mobile is unstarted. No public release was made.
+Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Installer builds also need Visual Studio C++ Build Tools/CMake and its x64 redist component; see [the release guide](docs/RELEASE_0.6.0.md). Automatic updates stay unconfigured; use the GitHub installer for manual upgrades. Earlier [P11](docs/P11_ACCEPTANCE.md) and [RC](docs/RC_ACCEPTANCE.md) documents retain their historical hardware/privacy acceptance scope.
 
 ## Listen and ask
 
@@ -39,7 +45,7 @@ The **dashboard** is an ordinary Windows window. **Start EveryHint** opens fresh
 - Main navigation is Home, Assistant, Meetings, Knowledge, Calendar, People, Modes and one Settings entry. Settings has General, Audio & Screen, Shortcuts, Privacy & Data, Account & AI and Advanced sections.
 - New installs default to dark. Light/System and existing preferences remain. Pin/opacity apply only to the assistant. Poppins/Inter are bundled locally; no remote fonts are loaded.
 - History/search comes first. Existing encrypted history can reopen using its existing Windows-protected key; saving/automatic saving remain opt-in under Privacy & Data.
-- After rebuilding, quit an existing EveryHint instance before starting the new build. [UX report, exact test counts, screenshots and outstanding manual/release checks](docs/UX_ACCEPTANCE.md). Version remains 0.5.0; no replacement installer was built or published. [Overlay fix report, actual screenshots and native/visual evidence](docs/OVERLAY_FIX_ACCEPTANCE.md) covers the current behavior and remaining manual taskbar/DPI/hardware/privacy gates.
+- After rebuilding, quit an existing EveryHint instance before starting the new build. [UX report, exact test counts, screenshots and outstanding manual/release checks](docs/UX_ACCEPTANCE.md). The current installer source is 0.6.0; the earlier UX reports refer to 0.5.0. [Overlay fix report, actual screenshots and native/visual evidence](docs/OVERLAY_FIX_ACCEPTANCE.md) covers the current behavior and remaining manual taskbar/DPI/hardware/privacy gates.
 
 Read the [product specification](docs/PRODUCT_SPEC.md), [103-feature coverage matrix](docs/FEATURE_MATRIX.md), [verified design sources](docs/DESIGN_SYSTEM.md) and [P1-P13 roadmap](docs/BACKLOG.md). P6 adds manual screen-aware Assist; P7 adds local Auto-Hint and separately authorised Live Assist. P8 provides encrypted meeting history; P9 provides modes, knowledge, languages and templates. P10 adds Calendar, People, memory and preparation; enterprise/mobile remain deferred. Human Windows visual/hardware acceptance remains open.
 

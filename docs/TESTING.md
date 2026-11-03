@@ -1,5 +1,11 @@
 # Windows RC verification — 2026-10-29
 
+## Windows installer 0.6.0 — 2026-11-03
+
+The current source gate passes **702 tests / 58 files**. Plan fixtures pass **5 tests**. The release helper transcribes the cached synthetic fixture successfully twice. The new installer passes the package/native signature/fuse audit and **8 payload hash comparisons**. The actual installed executable passes **13 packaged-renderer/native-module assertions**. Current-user install/reinstall/Start menu registration/installed launch/uninstall pass **16 checks**. The lifecycle test refuses an existing EveryHint installation/process/shortcut; it uses a unique workspace test directory and an isolated app profile. No genuine AI or physical audio was used.
+
+[Installer guide and reproducible commands](RELEASE_0.6.0.md), [structured artifact receipt](evidence/installer-0.6.0.json). This is current-host Windows 11 evidence; a separate clean VM, physical audio and receiving-app privacy acceptance remain unperformed. The GitHub workflow YAML/actions were validated locally; a hosted workflow run has not been executed. Earlier reports below describe their original source versions and counts.
+
 ## Current overlay fix verification — 2026-10-29
 
 Baseline `66215d8`, version **0.5.0**. `npm run check`: **771 tests / 61 files**, retaining all 765 baseline cases; theme/spec/type/lint/build pass. Plan/SDK **5 + 6 tests** and actual compiled encrypted storage/native key **12 assertions** pass. All 11 retained Electron suites pass **399 assertions**, including 44 Listen cases. `npm run smoke:overlay` adds **219 assertions / 30 actual Electron screenshots** at 100/125/150% app scale and 360/480 DIP widths. `npm run smoke:overlay-hmr` adds **5 actual React/CSS hot-update assertions** with source restoration. Total **618 Electron assertions + 5 HMR**.
