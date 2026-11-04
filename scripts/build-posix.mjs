@@ -9,15 +9,18 @@ if (
   );
 if (process.platform === "linux" && process.arch !== "x64")
   throw Error("This Linux package currently targets x64.");
+const environment = {
+  ...process.env,
+  CSC_IDENTITY_AUTO_DISCOVERY: "false",
+};
+// An empty certificate link resolves to the working directory on macOS.
+// Remove inherited certificate links so the configured ad-hoc signing is used.
+delete environment.CSC_LINK;
+delete environment.WIN_CSC_LINK;
 const run = (args) =>
   execFileSync(process.execPath, args, {
     stdio: "inherit",
-    env: {
-      ...process.env,
-      CSC_IDENTITY_AUTO_DISCOVERY: "false",
-      CSC_LINK: "",
-      WIN_CSC_LINK: "",
-    },
+    env: environment,
   });
 run(["node_modules/electron-vite/bin/electron-vite.js", "build"]);
 run(["scripts/prepare-posix.mjs"]);
