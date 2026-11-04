@@ -1,199 +1,82 @@
 # EveryHint
 
-**Intelligence when you need it.**
+A desktop app for live transcripts, meeting notes and quick answers. It has a main window for your sessions and a small floating window you can keep nearby while working.
 
-EveryHint is a Windows desktop assistant with local Whisper transcription, separate microphone/system-audio sources, screen context and on-demand AI answers. It has a normal dashboard and a compact floating assistant. Connect your own supported AI account or API key; local capture and transcription do not require a paid AI service.
+## Download
 
-## Download for Windows
+**[Download EveryHint 0.6.0 for Windows](https://github.com/Vavoss123/EveryHint/releases/download/v0.6.0/EveryHint-Setup-0.6.0.exe)**
 
-Open [GitHub Releases](https://github.com/Vavoss123/EveryHint/releases) and download **EveryHint-Setup-0.6.0.exe** from Assets. Run it, finish setup and open EveryHint from the Start menu or the optional desktop shortcut. Recipients do not need Node.js, npm, Visual Studio or a separate VC++ runtime installation.
+Run the installer and follow the steps. You don't need Node.js or any coding tools to use the app.
 
-This is an **unsigned Windows x64 build**; Windows may show an unknown-publisher/SmartScreen warning. The bundled local speech helper requires an AVX2-capable CPU. The speech model downloads separately when you approve it in setup. AI connections use your own account/key. Automatic updates are disabled; install newer GitHub releases manually. [Install/release notes and build/upload instructions](docs/RELEASE_0.6.0.md).
+- This release is for 64-bit Windows. Local transcription needs a processor with AVX2 support.
+- The installer isn't signed, so Windows may show an unknown-publisher warning.
+- Mac and Linux support is being worked on in the [main branch](https://github.com/Vavoss123/EveryHint/tree/main).
 
-## Build from source
+The [release page](https://github.com/Vavoss123/EveryHint/releases/tag/v0.6.0) also has a checksum file and installation notes.
 
-Development uses Windows x64, Node.js **24 LTS** and npm:
+## Getting started
 
-```powershell
-cd C:\path\to\EveryHint
+1. Open EveryHint and go through the setup.
+2. Connect an account or add a key in Settings if you want answers and generated notes. These use the service you connect, so its account limits and charges may apply.
+3. Download the speech model when prompted. Once installed, transcription runs on your computer.
+4. Click **Start EveryHint**, choose your screen and audio sources, then confirm you're allowed to record and share them.
+5. Use the floating window to ask a question, check the transcript or get a quick recap.
+
+**Save this session with notes** is selected by default. Untick it before starting if you don't want to keep the session. Saved sessions are in **Meetings**.
+
+## What you can do
+
+- Read a live transcript from your microphone, computer audio, or both.
+- Ask about a conversation or the screen you've chosen to share.
+- Keep meeting transcripts, notes and follow-up tasks together.
+- Add documents to your local library and use them as context.
+- Move or hide the floating window while you work.
+
+## Shortcuts
+
+| Shortcut | What it does |
+| --- | --- |
+| `Ctrl+Enter` | Get an answer, or send what you've typed in the floating window |
+| `Ctrl+\` | Show or hide the floating window |
+| `Ctrl+Alt+Space` | Let clicks pass through the floating window |
+| `Ctrl+Alt+P` | Pause or resume the session |
+| `Ctrl+Alt+Shift+X` | Stop the session |
+
+You can change these in Settings if they clash with another app. Hiding the window doesn't stop recording; use **Stop** when you're finished.
+
+## Your data
+
+Speech is transcribed locally. Answers and generated notes use your connected service, with the text and screen content you approve. Raw audio stays on your computer.
+
+Saved history is encrypted locally. Only record or share content you have permission to use. Window hiding and screen-recording protection aren't a guarantee that another app won't capture the window.
+
+## Run it from source
+
+You'll need Node.js 24 and npm.
+
+```sh
+git clone https://github.com/Vavoss123/EveryHint.git
+cd EveryHint
 npm ci
 npm run dev
 ```
 
-To run the compiled application:
+To build and start the app:
 
-```powershell
+```sh
 npm run build
 npm start
 ```
 
-Dependency installation and Electron's first native binary download need internet access. Application capture stays local. Installer builds also need Visual Studio C++ Build Tools/CMake and its x64 redist component; see [the release guide](docs/RELEASE_0.6.0.md). Automatic updates stay unconfigured; use the GitHub installer for manual upgrades. Earlier [P11](docs/P11_ACCEPTANCE.md) and [RC](docs/RC_ACCEPTANCE.md) documents retain their historical hardware/privacy acceptance scope.
+The local speech helper also needs Git, CMake 3.24+ and a C++ compiler. See the [Windows build guide](docs/RELEASE_0.6.0.md) for the tools and installer commands.
 
-## Listen and ask
-
-Connect ChatGPT or add a Claude API key once. Then **Start EveryHint → choose ChatGPT or Claude → pick sources → tick the sharing acknowledgement → Start**. Hiding from screen recordings is on by default in that dialog. Each saved session opens on a **Summary** page with an AI title, a short overview and bulleted Topics, Key points, Decisions, Action items, Open questions and Next steps (↗ jumps to the moment in the transcript; **Copy notes** copies Markdown). Beside it, **Ask about this meeting** answers questions instantly from the full transcript and saved notes, with suggested questions, follow-ups that remember the chat, and drafts such as a follow-up email. **Save this session with notes** is ticked by default: the transcript is saved live to the encrypted local history, and when the session ends (Stop, the Stop shortcut, the tray or an error) the chosen AI writes notes into that meeting. A banner on the dashboard reports the result and links to the notes. Untick it for a session you do not want kept. Screen, microphone and system audio are selected by default, and the whole screen is chosen automatically once you tick the capture authorisation; pick a single window from the dropdown if you prefer. **Ctrl+Alt+Space** makes the overlay see-through and lets every click reach the app underneath while the shortcuts keep working; press it again (or use the tray) to interact with the overlay. Press **Ctrl+Enter** for help with what's happening (the latest question aimed at you, or what's on screen), use a quick action (*What should I say?*, *Follow-ups*, *Recap*, *Fact-check*), or type a question in the overlay. Ctrl+Enter while typing in the overlay sends what you typed. Pressing the answer shortcut first finishes transcribing what was just said (up to about four seconds), so the newest question is answered. The overlay's **Transcript** toggle shows the last few lines being heard. After Start, both windows hide and the session continues from the tray.
-
-Only bounded final speech from the last two minutes and a fresh approved image are sent, and only when you press the shortcut, a quick action or Ask. Raw audio stays local. Sharing approved at Start lasts until Stop (bounded to 24 hours) and is never restored after a restart. There are no automatic answers. [Exact behavior, actual Windows verification and remaining physical/genuine-provider limits](docs/LISTEN_ACCEPTANCE.md).
-
-## Interface and product roadmap
-
-The **dashboard** is an ordinary Windows window. **Start EveryHint** opens fresh source/participant consent; idle shows no Stop. The separate floating assistant puts answers and input first. New installations have a brief setup wizard; upgrades preserve existing configuration and never restore recording permission.
-
-- Minimise keeps the taskbar entry. **Window menu → Hide to Tray** hides the dashboard; tray **Open EveryHint** restores it. **Show assistant** opens the same taskbar-excluded assistant independently. **Quit EveryHint** stops work and exits. Active Close offers background, Stop and quit, or Cancel.
-- **Ctrl+Enter** answers from the conversation and screen. `Ctrl+\` shows or hides the overlay and **Ctrl+arrow keys** move it while it is visible. **Ctrl+Alt+A** opens the dashboard composer, **Ctrl+Alt+P** pauses/resumes and **Ctrl+Alt+Shift+X** stops. A global Ctrl+Enter replaces Ctrl+Enter in other apps (such as Slack or Teams 'send') while EveryHint runs; change it in **Settings → Shortcuts**. Hiding never grants or stops capture by itself.
-- The **floating assistant** has a mode/listening header, Hide/overflow, latest answer with one scroll area and fixed Ask/Cancel input. Optional **View Context** is in overflow. Meeting/transcript configuration stays on the dashboard. The dashboard’s **Assistant** page provides answers, a message input, mode selection, Attach Context and a secondary conversation menu. Start automatically transcribes authorised audio locally. Separately allow transcript and/or screen sharing for this session, then press Answer or type **help** and **Enter** without repeated review. **Shift+Enter** adds a newline. **View Context** is optional; **Revoke sharing** is immediate. Extra attachments retain review. Ask sends directly; only extra attachments use review. Automatic answers and local suggestions were removed. Session options keep speech and meeting controls.
-- Main navigation is Home, Assistant, Meetings, Knowledge, Calendar, People, Modes and one Settings entry. Settings has General, Audio & Screen, Shortcuts, Privacy & Data, Account & AI and Advanced sections.
-- New installs default to dark. Light/System and existing preferences remain. Pin/opacity apply only to the assistant. Poppins/Inter are bundled locally; no remote fonts are loaded.
-- History/search comes first. Existing encrypted history can reopen using its existing Windows-protected key; saving/automatic saving remain opt-in under Privacy & Data.
-- After rebuilding, quit an existing EveryHint instance before starting the new build. [UX report, exact test counts, screenshots and outstanding manual/release checks](docs/UX_ACCEPTANCE.md). The current installer source is 0.6.0; the earlier UX reports refer to 0.5.0. [Overlay fix report, actual screenshots and native/visual evidence](docs/OVERLAY_FIX_ACCEPTANCE.md) covers the current behavior and remaining manual taskbar/DPI/hardware/privacy gates.
-
-Read the [product specification](docs/PRODUCT_SPEC.md), [103-feature coverage matrix](docs/FEATURE_MATRIX.md), [verified design sources](docs/DESIGN_SYSTEM.md) and [P1-P13 roadmap](docs/BACKLOG.md). P6 adds manual screen-aware Assist; P7 adds local Auto-Hint and separately authorised Live Assist. P8 provides encrypted meeting history; P9 provides modes, knowledge, languages and templates. P10 adds Calendar, People, memory and preparation; enterprise/mobile remain deferred. Human Windows visual/hardware acceptance remains open.
-
-## Calendar, People and memory (P10)
-
-Unlock local context in Settings or Calendar/People. Configure a **Google Cloud Desktop OAuth client**, enable Calendar/People APIs and consent/test users, save the public client ID, then authorise Calendar or Contacts separately in your browser. [Setup/distribution requirements](docs/ARCHITECTURE.md#p10-google-setup-and-distribution) cover applicable Google verification. Genuine Google testing remains pending configuration/permission; production approval is not claimed. ChatGPT sign-in stays independent.
-
-Calendar shows selected read-only calendars in a past-7/future-90-day complete window: day/seven-day/upcoming search, time zones, event details and explicit meeting links. This is bounded refresh, not Calendar incremental sync. Optional reminders/background sync/restart restore default off. People offers manual records/notes/saved-meeting links and optional selected Contacts import; full-book deltas require another acknowledgement. Matching uses exact verified/confirmed email, never a voice or guessed alias. External professional research is deferred.
-
-Enable memory separately and choose retention, then use **People → Long-term memory** to select ended saved meetings/enabled Knowledge documents and rebuild. Extracted records start pending with literal evidence/ref/revision. Review/edit/delete/filter/exclude/rebuild stay local. Approved memory still requires explicit source selection and remote review. Original documents and independent saved meetings remain separate.
-
-Open an event and **Prepare brief · review first**. Choose people, reviewed memory, previous notes and optional active-mode Knowledge; inspect/remove exact excerpts and freshly acknowledge the ChatGPT request. Drafts are ephemeral. Encrypted saving requires a chosen retention policy and explicit Save; Copy/plaintext Export/Open meeting are deliberate. Ordinary Assistant requests can choose P10 context; Live additionally requires staging exact sources, separate remote permission and the existing bounded session grant. Google sign-in, reminders and hints never start capture, join or enable inference.
-
-```powershell
-npm run smoke:context
-npm run context:bench
-node scripts/verify-context-ai.mjs --dry-run
-```
-
-The smoke uses actual Electron/preload/encrypted workers/native vault with explicit Google HTTP/browser/notification fixtures. Dry-run makes **zero** model requests. The genuine one-request script is excluded from routine checks and requires a fresh scoped grant; P9 grants are consumed. See [evidence/manual checklist](docs/TESTING.md), [privacy/retention](docs/ARCHITECTURE.md) and [delivery manifest](docs/DELIVERY.md).
-
-One separately authorised genuine P10 `gpt-6.1-sol` brief passed in **14.124 seconds** (978 input / 723 output tokens), preserving the Thursday/Wednesday details and a supplied source citation while excluding unrelated test context. It used only a synthetic event/person and approved memory from a new encrypted synthetic saved note. Temporary records were removed and preferences untouched; the grant is consumed. Genuine Google testing stays pending by user choice, and automatic Live with P10 context remains unverified.
-
-## Personal modes, knowledge and templates (P9)
-
-Open Modes or Knowledge and **Unlock local library**. General, Coding, Interview, Sales and Meeting plus legacy Conversation share one mode selector across all layouts. Create/edit/rename/duplicate/delete custom modes, reset protected built-ins, choose instructions/length/format/language/context/actions, and associate documents/templates. Editing stays local; **Preview / test** prepares the normal review and only acknowledged Ask sends inference. Changes cannot grant capture, sharing, tools or billing.
-
-Knowledge imports **PDF, DOCX, UTF-8 TXT and Markdown** through the native picker and a bounded cancellable local parser. Limits: 8 MiB, 400k extracted characters, 200 PDF pages, 100 documents/profile. Inspect/search/rename/disable/associate/delete; only extracted text and metadata are encrypted in app storage. Originals remain untouched. No OCR or automatic cloud upload exists. Explicitly select documents for a request and review exact excerpts before sharing: at most four excerpts/4,800 text characters. Citations identify supplied sources and require claim-by-claim checking.
-
-Settings provides default mode/output language and four built-in/custom meeting templates. A mode can override language/template. Named output languages are best effort for the selected provider; tiny.en/base.en remain **English-only**. Select an ordered template in Meeting AI; generation stays a fresh draft until Apply, preserving manual notes and bounded prior saved summary versions. Live knowledge remains off until retrieval, remote sharing and exact sources are separately authorised for that session.
-
-Two expressly authorised genuine gpt-6.1-sol tests passed: a custom-mode answer with an exact source citation and a custom-template summary from synthetic microphone/real tiny.en. See [P9 architecture](docs/DECISIONS/P9-personalisation.md), [Testing](docs/TESTING.md) and [Delivery/changed files](docs/DELIVERY.md) for evidence, limits and open Windows acceptance.
-
-```powershell
-npm run check
-npm run smoke:personal
-npm run personal:bench
-```
-
-The genuine AI script is excluded from automated checks and needs a fresh explicit scoped authorisation. The completed test grants no permission for further requests.
-
-## Automatic conversation assistance (removed)
-
-Auto-Hint suggestions and Live automatic answers were removed on 2026-11-03, together with their engine, settings, IPC and tests. EveryHint answers only when you press the answer shortcut, use a quick action or type a question. Local question detection remains, so that a shortcut press can find the latest question in the transcript. Meeting "automatic End notes" are a separate Meetings feature and remain.
-
-## Ask an assistant (P4.2)
-
-1. Choose **ChatGPT · plan usage**, then **Continue with ChatGPT**. Complete OpenAI sign-in and consent in your normal browser. EveryHint creates its own registered connection; your unrelated Codex/IDE login is not imported. Credentials stay in the OS credential store. Identity-only sign-in requires the separate **Grant ChatGPT plan permission** action.
-2. Choose **Refresh ChatGPT models** to authorise a model-list request to OpenAI, then select a model. The list is account-specific, held in memory for five minutes, and cleared on account changes. Listing does not guarantee access; only a completed response verifies that request. No fixed model or API-key fallback is assumed. Screenshots stay disabled when current model metadata does not explicitly confirm image input.
-3. Choose an AI mode in the shared header selector; legacy General/Code/Conversation preset inputs remain compatible. Enter an optional question and independently select recent final microphone/system text (30/60/180/300 seconds), a fresh authorised screenshot and previous question/answer text. An empty question requires actual selected context. No raw audio is sent. **Get Answer · review context** freezes the exact selected text/image and model for two minutes. Pause full-screen capture to inspect a frozen image without recursive capture. Remove individual excerpts/exchanges or the image before approval; every removal resets acknowledgement. Draft/preset edits discard review; account/model/provider changes clear conversation/review.
-4. Inspect the preview, acknowledge this remote transfer and choose **Ask ChatGPT**. Only Ask submits inference. Responses stream as safe Markdown/code, with cancellation and bounded usage/timing information. Requests use the official public Responses endpoint with storage disabled and no tools. The model cannot execute commands, browse files, edit the workspace or control the computer.
-5. **Cancel request** stops the stream. **Clear conversation** removes local history/review/draft; neither recalls transmitted data nor deletes provider records. Old results cannot enter a newer conversation. **Copy response** explicitly copies bounded plain text. Compact mode keeps status/cancellation available.
-6. Select **Add account** to connect another registration, or choose a saved registration to reconnect it. **Sign out of ChatGPT** clears that registration's OS-protected tokens and attempts remote revocation, while retaining its client binding for the next sign-in. Remote revocation failures are reported. Sign-in has a five-minute deadline and can be cancelled. OS-store failure never enables plaintext credentials.
-
-Local Whisper transcription is distinct from remote AI inference. Signing in, checking the local connection, preparing capture or reviewing context never submits a question. Refresh explicitly requests metadata; an expiring token may refresh during that action or Ask. Manual review never submits automatically. P7 question detection and separately authorised Live Assist have their own controls; provider switching and separately billed OpenAI API fallback never occur automatically. Permission, account/workspace/region eligibility, unavailable models and usage limits produce clear errors. Read [the P4.2 decision](docs/DECISIONS/P4.2-chatgpt-plan.md) for official sources and implementation details.
-
-The UI does not use the Codex runtime for ChatGPT answers: the SDK's lack of a supported deny-all tool policy was the original blocker. The official direct Responses route avoids exposing agent tools. The internal provider ID remains `codex` for compatibility only. App credentials use native OS storage through `@napi-rs/keyring`; `jose` validates signatures. The public installation ID is the only auth file under `%APPDATA%\EveryHint\chatgpt-plan`. Old Codex authentication is left untouched.
-
-**Claude:** Claude can answer instead of ChatGPT. In **Account & AI**, choose *Claude · API billing*, paste an Anthropic API key (stored in Windows Credential Manager) and pick Claude Opus 5.5 (default), Sonnet 5.5 or Haiku 5.5. Saving the key is the remembered opt-in; requests are billed to that Anthropic API account. `ANTHROPIC_API_KEY` still works with the per-session billing checkbox. Switch between ChatGPT and Claude from the overlay header. Requests use the official `@anthropic-ai/sdk` streaming Messages API with no tools, and declined requests use server-side model fallback. Claude subscription sign-in is not supported. No paid Claude request was made during development; tests use a loopback fixture.
-
-History is bounded to four completed question/answer pairs and 12,000 characters; eight bounded responses are displayed, with 15-minute idle expiry. Previous transcript excerpts/images are not automatically included in follow-up history. Requests have a 90-second deadline and 32,000-character response limit. Claude separately limits one turn/4,096 output tokens and uses a $1 estimated budget threshold, which is not a guaranteed spending cap. ChatGPT limits come from your plan/app grant; the app invents no quota or price.
-
-**Distribution and acceptance:** this private-use prototype is designed for eventual distribution. Real browser sign-in, OS-backed reconnection, model discovery and one genuine gpt-6.1-sol plan-backed response are verified. An initial MIME-check failure was corrected and a separately authorised second attempt returned **EveryHint is connected.** with response.completed. P6 also verified a real VS Code screenshot explanation and text-only dictionary follow-up with gpt-6.1-sol, under separate two-request authorisation. Other models/sources, real audio, broad account lifecycle and hardware/long-run acceptance remain open. Commercial approval is not claimed. See [current evidence](docs/TESTING.md). P5–P7 software is delivered. P7 automatic-test evidence and remaining human Windows checks are in TESTING.md; P8/P9 software is delivered; P10 software and verification boundaries are documented above; P11 onward remains deferred.
-
-## Set up local speech transcription
-
-Install Visual Studio 2022/2026 C++ Build Tools with the Windows SDK and CMake (3.24+), plus Git. Then explicitly build the CPU helper and install the default model:
-
-```powershell
+```sh
 npm run speech:build
 npm run speech:model -- tiny.en
 ```
 
-The build fetches pinned official whisper.cpp source, never a model. Model installation downloads **77.7 MB** for tiny.en and verifies its pinned SHA-256. The optional base.en model is **148.0 MB**, selectable/installable in EveryHint settings or with `npm run speech:model -- base.en`. Models never download automatically. The tiny.en model and runtime have already been installed locally during P3 verification with the user's authorisation.
+Built with Electron, React, TypeScript and whisper.cpp. More technical details are in [Architecture](docs/ARCHITECTURE.md), and you can run the checks with `npm run check`.
 
-Files live under `%LOCALAPPDATA%\EveryHint\speech`: `runtime/`, `models/`, `build/` and speech settings. Set `EVERYHINT_SPEECH_HOME` to choose another local directory; pass the same path using `-SpeechHome` when invoking `scripts/build-transcriber.ps1` directly. Model binaries are excluded from Git. The tested x64 CPU build uses AVX2/FMA/F16C/BMI2; ARM64 builds and older CPU configurations need separate acceptance. No GPU is required. See [the architecture decision](docs/DECISIONS/P3-transcription.md).
+## Found a problem?
 
-After capture has started, choose **Enable transcription**. It cannot activate audio itself. The live panel shows source labels, audio timestamps, provisional replacements and final text. Models load once per enabled run. Partial results are chunk-based inference, not token streaming. The system source can contain several people; EveryHint does not identify speakers.
-
-**Pause transcription** leaves authorised capture running. Pausing/stopping capture cancels inference too. After capture resumes, explicitly resume transcription. **Clear transcript** cancels pending work and removes text, then leaves transcription paused until re-enabled. Final text otherwise remains in memory until cleared, expired or a new capture session is prepared. Settings control model, sensitivity, silence, segment length, overlap and retention. Settings changes pause transcription. Compact mode shows the latest line/status.
-
-Clear transcript also discards any pending AI context review. AI answers and data already sent to a provider are separate: use Clear conversation to clear local AI history. Pausing capture clears the live frame but deliberately preserves a screenshot you explicitly froze in an AI review, allowing inspection; Stop discards that review too.
-
-Once the helper and a verified model are installed, transcription runs offline. A missing/invalid model or worker failure produces a visible error; no remote service is used as a fallback.
-
-## Save and review meetings (P8)
-
-Temporary is the default. In Meetings or Settings, explicitly enable local history and acknowledge 7/30/90-day or indefinite retention (30 days by default). Future-session auto-save is separately optional and off. Opening Meetings never starts capture or opens a database until Unlock/save.
-
-1. Start consented capture and local transcription using the existing controls. Save this meeting session with a title and separate persistence acknowledgement; only final text and source metadata are saved. After Stop, available retained temporary text can also be explicitly saved. No raw audio or screenshots are stored.
-2. Open Meetings to browse real records, search text/tags/dates/status, or create a manual-note record. Overview/Transcript/Notes/AI provide source references, explicit speaker corrections, tasks/status, save/revert and protected manual edits. Transcript/search pages are bounded; Continue scans more. Resume only arms a fresh segment and opens capture consent.
-3. In AI, choose mic/system/user-note sources and a summary, selected-meeting question, follow-up or action summary. Review the exact excerpts/account/model and acknowledge before sending to OpenAI. Results remain unsaved until Apply. Unknown people/deadlines remain unassigned/unspecified; check every claim against its source. This reuses the ChatGPT plan connection with no paid fallback.
-4. Optional automatic End notes need a separate current-run/account/model/source grant with 1–60-minute expiry and one attempt. Default is off. Only deliberate End triggers it; general Stop/Pause revokes it. Drafts still require review/Apply.
-5. Export TXT/Markdown/JSON/readable summary through a native save dialog, or copy summary/actions/transcript, after acknowledging an unencrypted copy. Choose a new filename; existing files are preserved. Follow-up drafts leave recipients blank; separately approve the exact edited draft before email-client handoff. Longer mailto drafts must be copied. EveryHint never sends mail; hosted links/Gmail remain deferred.
-
-Sensitive SQLite content is AES-256-GCM encrypted before SQL writes, with profile keys in Windows Credential Manager. IDs/status/times/counts/file size remain visible. History is locked on restart/account/lifecycle changes. Keys are not configuration, and missing keys/corruption preserve encrypted files rather than resetting. Local deletion cannot remove exports, provider retention or guarantee physical SSD erasure. This does not protect against malicious software running as the same Windows user. See [P8 boundaries](docs/DECISIONS/P8-meetings.md).
-
-The authorised synthetic-speech/real-Whisper/gpt-6.1-sol summary test passed generation, evidence validation and Apply in 11.028 seconds; it is not physical-hardware or broad accuracy acceptance. Tests: npm run test:meetings (actual worker/native keyring), npm run smoke:meetings (isolated Windows UI/files; mocked external ports), and npm run check. Remaining human Windows/real-call/endurance checks are in [Testing](docs/TESTING.md).
-
-## Capture a session
-
-1. Choose **Prepare session**. Explicitly enable Screen, Microphone, System audio, or any combination. All sources start disabled on every application launch.
-2. Acknowledge authorisation, participant consent and applicable meeting rules. System audio can contain other people's voices and unrelated applications.
-3. If Screen is selected, choose a screen or external window. If Microphone is selected, use Windows default or **Refresh microphones** and select an input. Metadata enumeration does not start a recording. Device names may depend on Windows permissions.
-4. Choose **Prepare selected sources**, then **Start capture**. Each source shows its actual status, including starting and capturing.
-5. Scroll to **Live audio** to inspect independent levels, device names and mute/error status. **Mute microphone** affects EveryHint's input only; its mute setting survives pause/resume. Silent input is labelled silent, because hardware or other apps' mute states are not always exposed to EveryHint.
-6. **Pause** releases capture resources, clears screenshots and audio buffers, and zeroes the meters. **Resume** creates new sources using the existing consent and device choices, with permissions checked again. **Stop** additionally revokes consent and clears source selection.
-
-EveryHint windows cannot be selected for screen capture. External application windows have live screenshot previews. Whole-screen preview images stay hidden to prevent recursive screenshots; frame counts remain available. **Paused screenshots are now cleared**, replacing P1's retained-preview behaviour.
-
-The X hides the overlay to the tray. **Hiding does not stop capture.** The tray tooltip/menu report each source, even while hidden. Coral indicates Active Mode, amber paused, purple off, and orange error. Pin EveryHint's tray icon from Windows' overflow area for persistent visibility. If the tray is unavailable, hiding is disabled and minimisation stops capture. Use **Quit EveryHint** to exit and release all sources.
-
-| Shortcut           | Action                                   |
-| ------------------ | ---------------------------------------- |
-| `Ctrl+Enter`       | Answer from conversation and screen      |
-| `Ctrl+\`           | Show / hide the overlay                  |
-| `Ctrl+arrows`      | Move the overlay (while visible)         |
-| `Ctrl+Shift+↑/↓`   | Scroll the answer (while visible)        |
-| `Ctrl+Alt+Space`   | Click-through on/off (while visible)     |
-| `Ctrl+Alt+P`       | Pause / resume the authorised session    |
-| `Ctrl+Alt+Shift+X` | Stop all capture, including while hidden |
-
-Shortcut conflicts appear as warnings. Overlay and tray controls remain available.
-
-## Privacy and Windows limits
-
-- No raw captured audio, screenshots, conversations, capture consent or device choices are persisted. Window preferences, interval and bounds live under `%APPDATA%\EveryHint`; speech configuration and installed public model files live under local application data. ChatGPT authentication is intentionally remembered in the OS credential store using EveryHint's registered connection; the renderer never receives passwords/tokens and EveryHint never hardcodes them.
-- P2 PCM caches remain bounded to two seconds, 32 packets and 768,000 bytes per source. Explicitly enabled transcription forwards validated PCM locally to main and one native helper. Separate segmentation buffers cap speech at 10–15 seconds; at most four recognition jobs wait. Transcript retention is bounded by age, line count and 50,000 characters. Manual/Auto-Hint transfer requires a reviewed request and acknowledgement; Live requires its separate expiring source/account/model grant. Raw audio stays local.
-- Windows system audio uses Electron's supported unmuted loopback option. It captures supported playback mix, rather than selecting one application's audio. Discord, Teams, Zoom and browsers depend on their output routing, Windows permissions and content restrictions; real-call compatibility is unverified.
-- Chromium requires an accompanying display track for loopback. EveryHint releases it immediately without reading its images or starting screen analysis. Speakers continue playing.
-- Device disconnection, observed playback changes, permission revocation and capture errors stop the session and require fresh preparation. Windows/driver mute and routing behaviour varies; restart the session after changing output devices even if Windows does not report a change.
-- A headset reduces acoustic duplication. Microphone echo cancellation/noise suppression are requested, with no guarantee of removing audio already mixed by Windows or other apps. EveryHint plays no capture-monitoring sounds.
-- Screen snapshots retain P1's native thumbnail limitations, described in [Architecture](docs/ARCHITECTURE.md).
-
-## Verify
-
-```powershell
-npm run check
-npm run smoke:ui
-npm run smoke:intelligence
-npm run test:ai-sdk
-npm run test:plan
-npm run smoke
-npm run smoke:ai
-npm run speech:test -- --install-fixture
-npm run smoke:speech
-```
-
-`check` runs strict TypeScript, lint, unit tests and production build. `smoke` uses synthetic media and needs no speech runtime. The additional speech checks need the installed tiny.en model/helper. `speech:test -- --install-fixture` explicitly downloads a checksum-verified public upstream speech fixture once; subsequent tests are offline. `smoke:speech` sends that fixture through both synthetic P2 sources, real PCM conversion and real whisper.cpp inference. No hardware audio or desktop capture is performed. Known-fixture reports and app-only screenshots are written to ignored `artifacts/`.
-
-The P3 baseline was 157 unit tests. P4.2 adds OAuth/JWT, model, native-vault and actual loopback HTTP/SSE coverage; `test:plan` uses synthetic credentials in an isolated OS-vault namespace and always removes them. These are fixtures, not live provider replies. P4 verification and remaining limitations are recorded in [Testing](docs/TESTING.md), [Architecture](docs/ARCHITECTURE.md), [Backlog](docs/BACKLOG.md) and the [delivery/file manifest](docs/DELIVERY.md). Run `npm run test:ai-sdk` for actual SDK execution against synthetic loopback fixtures and `npm run smoke:ai` for Electron assistant checks; neither is a live provider test or a paid request. P1/P2 hardware and P3 real-device/15-minute acceptance remain pending. P4.2 text and P6 image/follow-up checks passed for one ChatGPT account/model; Claude, real audio and broader account/hardware acceptance remain open. P5–P7 software is delivered. P7 automatic-test evidence and remaining human Windows checks are in TESTING.md; P8/P9 software is delivered; P10 software and verification boundaries are documented above; P11 onward remains deferred.
+It's still a work in progress. [Open an issue](https://github.com/Vavoss123/EveryHint/issues) with your operating system, what you tried and what happened. Leave out private recordings, account details and keys.
