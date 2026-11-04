@@ -6,6 +6,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { chromium } from "playwright-core";
 import { posixPaths } from "./posix-paths.mjs";
+import { rendererCdp } from "./renderer-cdp.mjs";
 
 const paths = posixPaths(),
   profile = await mkdtemp(join(tmpdir(), "everyhint-portable-"));
@@ -27,7 +28,7 @@ const socket = createServer();
 await new Promise((r) => socket.listen(0, "127.0.0.1", r));
 const port = socket.address().port;
 await new Promise((r) => socket.close(r));
-let child, browser;
+let child, browser, floating;
 let startupLog = "";
 const checks = [];
 const check = (value, label) => {
@@ -114,38 +115,29 @@ try {
   );
   const shown = await page.evaluate(() => window.everyhint.window("overlay"));
   check(shown.ok, "Native assistant show action accepted");
-  // The dashboard can accept IPC before the separate assistant finishes
-  // loading. Wait for its document instead of racing its first navigation.
+  floating = await rendererCdp(port, (url) => url.includes("overlay=1"));
   const assistantDeadline = Date.now() + 15000;
-  let floating;
-  while (!floating && Date.now() < assistantDeadline) {
-    floating = browser
-      .contexts()
-      .flatMap((current) => current.pages())
-      .find((p) => p.url().includes("overlay=1"));
-    if (!floating) await new Promise((resolve) => setTimeout(resolve, 100));
-  }
-  if (!floating) {
-    const debug = await browser.newBrowserCDPSession();
-    console.error(
-      JSON.stringify({
-        pages: browser.contexts().flatMap((current) =>
-          current.pages().map((candidate) => candidate.url()),
-        ),
-        targets: await debug.send("Target.getTargets"),
-        warnings: (await page.evaluate(() => window.everyhint.getSnapshot()))
-          .value.warnings,
-      }),
+  let roots = 0;
+  while (roots === 0 && Date.now() < assistantDeadline) {
+    roots = await floating.evaluate(
+      'document.querySelectorAll(".floating-assistant").length',
     );
-    await debug.detach();
+    if (roots === 0) await new Promise((resolve) => setTimeout(resolve, 100));
   }
-  assert.ok(floating, "Native assistant document loaded");
-  await floating.locator(".floating-assistant").waitFor();
   check(
-    (await floating.locator(".floating-assistant").count()) === 1,
+    roots === 1,
     "One native assistant renderer",
   );
-  await floating.getByRole("button", { name: "Hide", exact: true }).click();
+  check(
+    await floating.evaluate(`(() => {
+      const hide = [...document.querySelectorAll('button')]
+        .find(button => button.textContent.trim() === 'Hide');
+      if (!hide) return false;
+      hide.click();
+      return true;
+    })()`),
+    "Native assistant Hide control responds",
+  );
   check(
     (await page.evaluate(() => window.everyhint.getSnapshot())).value.session
       .state === "IDLE",
@@ -184,6 +176,7 @@ try {
   if (startupLog) console.error(startupLog);
   throw error;
 } finally {
+  floating?.close();
   if (browser) await browser.close().catch(() => {});
   if (child && child.exitCode === null) child.kill("SIGKILL");
   await rm(profile, {
