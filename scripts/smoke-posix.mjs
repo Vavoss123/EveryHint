@@ -28,6 +28,7 @@ await new Promise((r) => socket.listen(0, "127.0.0.1", r));
 const port = socket.address().port;
 await new Promise((r) => socket.close(r));
 let child, browser;
+let startupLog = "";
 const checks = [];
 const check = (value, label) => {
   assert.ok(value, label);
@@ -37,8 +38,12 @@ try {
   child = spawn(
     paths.executable,
     [`--remote-debugging-port=${port}`, "--remote-debugging-address=127.0.0.1"],
-    { env, stdio: "ignore" },
+    { env, stdio: ["ignore", "pipe", "pipe"] },
   );
+  for (const stream of [child.stdout, child.stderr])
+    stream.on("data", (chunk) => {
+      startupLog = (startupLog + chunk.toString()).slice(-64000);
+    });
   const exited = new Promise((r) => child.once("exit", r));
   const deadline = Date.now() + 30000;
   while (!browser && Date.now() < deadline && child.exitCode === null) {
@@ -107,14 +112,32 @@ try {
     unlocked.ok,
     "Native persistent credential store and encrypted worker unlock",
   );
-  await page.evaluate(() => window.everyhint.window("overlay"));
+  const shown = await page.evaluate(() => window.everyhint.window("overlay"));
+  check(shown.ok, "Native assistant show action accepted");
   // The dashboard can accept IPC before the separate assistant finishes
   // loading. Wait for its document instead of racing its first navigation.
   const assistantDeadline = Date.now() + 15000;
   let floating;
   while (!floating && Date.now() < assistantDeadline) {
-    floating = context.pages().find((p) => p.url().includes("overlay=1"));
+    floating = browser
+      .contexts()
+      .flatMap((current) => current.pages())
+      .find((p) => p.url().includes("overlay=1"));
     if (!floating) await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  if (!floating) {
+    const debug = await browser.newBrowserCDPSession();
+    console.error(
+      JSON.stringify({
+        pages: browser.contexts().flatMap((current) =>
+          current.pages().map((candidate) => candidate.url()),
+        ),
+        targets: await debug.send("Target.getTargets"),
+        warnings: (await page.evaluate(() => window.everyhint.getSnapshot()))
+          .value.warnings,
+      }),
+    );
+    await debug.detach();
   }
   assert.ok(floating, "Native assistant document loaded");
   await floating.locator(".floating-assistant").waitFor();
@@ -157,6 +180,9 @@ try {
   console.log(
     `Native ${paths.label}/${process.arch} smoke passed: ${checks.length} assertions.`,
   );
+} catch (error) {
+  if (startupLog) console.error(startupLog);
+  throw error;
 } finally {
   if (browser) await browser.close().catch(() => {});
   if (child && child.exitCode === null) child.kill("SIGKILL");
