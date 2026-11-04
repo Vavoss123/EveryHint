@@ -7,8 +7,12 @@ import { crc32 } from "node:zlib";
 import { rm } from "node:fs/promises";
 import { updatePolicy } from "../src/main/updates-policy.ts";
 import { execFileSync } from "node:child_process";
+const powershell = join(
+  process.env.SystemRoot ?? "C:\\Windows",
+  "System32/WindowsPowerShell/v1.0",
+);
 execFileSync(
-  "powershell.exe",
+  join(powershell, "powershell.exe"),
   [
     "-NoProfile",
     "-NonInteractive",
@@ -17,7 +21,13 @@ execFileSync(
     "-File",
     "scripts/prepare-vc-runtime.ps1",
   ],
-  { stdio: "inherit", windowsHide: true },
+  {
+    stdio: "inherit",
+    windowsHide: true,
+    // PowerShell 7's inherited module path can make Windows PowerShell load
+    // the wrong Security module and break Authenticode validation on CI.
+    env: { ...process.env, PSModulePath: join(powershell, "Modules") },
+  },
 );
 const runtime = "artifacts/release-speech/runtime";
 const helper = await readFile(join(runtime, "everyhint-transcriber.exe"));
