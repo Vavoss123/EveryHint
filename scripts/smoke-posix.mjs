@@ -108,8 +108,15 @@ try {
     "Native persistent credential store and encrypted worker unlock",
   );
   await page.evaluate(() => window.everyhint.window("overlay"));
-  let floating = context.pages().find((p) => p.url().includes("overlay=1"));
-  assert.ok(floating);
+  // The dashboard can accept IPC before the separate assistant finishes
+  // loading. Wait for its document instead of racing its first navigation.
+  const assistantDeadline = Date.now() + 15000;
+  let floating;
+  while (!floating && Date.now() < assistantDeadline) {
+    floating = context.pages().find((p) => p.url().includes("overlay=1"));
+    if (!floating) await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+  assert.ok(floating, "Native assistant document loaded");
   await floating.locator(".floating-assistant").waitFor();
   check(
     (await floating.locator(".floating-assistant").count()) === 1,
