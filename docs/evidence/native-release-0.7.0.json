@@ -1,0 +1,214 @@
+{
+  "date": "2026-11-04T00:59:16.364670+00:00",
+  "version": "0.7.0",
+  "sourceBeforeDocumentation": "a813cfb90fedaebe2eb125c69116aad0acd39b53",
+  "github": {
+    "repository": "Vavoss123/EveryHint",
+    "nativeRun": "https://github.com/Vavoss123/EveryHint/actions/runs/41749449331",
+    "nativeSource": "a813cfb90fedaebe2eb125c69116aad0acd39b53",
+    "windowsRun": "https://github.com/Vavoss123/EveryHint/actions/runs/41748112375",
+    "windowsSource": "488bb697cccce42e41670c5eab26a162d95775dd",
+    "allNativeJobsPassed": true
+  },
+  "applicationAndBuildSourceMatchesBothRuns": true,
+  "sourceGate": {
+    "testsPerHost": 719,
+    "filesPerHost": 60,
+    "hosts": [
+      "Windows x64",
+      "macOS arm64",
+      "macOS x64",
+      "Linux x64"
+    ]
+  },
+  "windows": {
+    "packageAudit": "passed",
+    "installerPayloadMatchingHashes": 8,
+    "packagedAppAssertions": 13,
+    "realInstallerLifecycleChecks": 16
+  },
+  "nativePackages": [
+    {
+      "target": "mac-arm64",
+      "packageAudit": {
+        "version": "0.7.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "helper": {
+          "schema": 1,
+          "platform": "darwin",
+          "arch": "arm64",
+          "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+          "bytes": 1847824,
+          "sha256": "96b37b505579fc9180ebaba4975324d538565e2501dd472de16c2e86ca75eee0"
+        },
+        "assets": [
+          "EveryHint-0.7.0-mac-arm64.dmg",
+          "EveryHint-0.7.0-mac-arm64.zip"
+        ],
+        "asarEntries": 3068,
+        "passed": true,
+        "notarized": false,
+        "physicalCaptureTested": false
+      },
+      "packagedSmoke": {
+        "version": "0.7.0",
+        "platform": "darwin",
+        "arch": "arm64",
+        "checks": [
+          "Packaged identity matches native platform/version",
+          "Startup begins no capture",
+          "Windows content protection is not falsely advertised",
+          "Native signed/hash-bound speech helper loads",
+          "Renderer stays sandboxed",
+          "No unconfigured automatic update access",
+          "Native persistent credential store and encrypted worker unlock",
+          "Native assistant show action accepted",
+          "One native assistant renderer",
+          "Native assistant Hide control responds",
+          "Hiding grants no capture permission",
+          "Native app quits gracefully"
+        ],
+        "genuineInference": 0,
+        "physicalCapture": false
+      }
+    },
+    {
+      "target": "mac-x64",
+      "packageAudit": {
+        "version": "0.7.0",
+        "platform": "darwin",
+        "arch": "x64",
+        "helper": {
+          "schema": 1,
+          "platform": "darwin",
+          "arch": "x64",
+          "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+          "bytes": 2029680,
+          "sha256": "7bd4ed866b9ccf442fc3c864fdae84b4dc1300dfc77e4981b8613db7286ded51"
+        },
+        "assets": [
+          "EveryHint-0.7.0-mac-x64.dmg",
+          "EveryHint-0.7.0-mac-x64.zip"
+        ],
+        "asarEntries": 3068,
+        "passed": true,
+        "notarized": false,
+        "physicalCaptureTested": false
+      },
+      "packagedSmoke": {
+        "version": "0.7.0",
+        "platform": "darwin",
+        "arch": "x64",
+        "checks": [
+          "Packaged identity matches native platform/version",
+          "Startup begins no capture",
+          "Windows content protection is not falsely advertised",
+          "Native signed/hash-bound speech helper loads",
+          "Renderer stays sandboxed",
+          "No unconfigured automatic update access",
+          "Native persistent credential store and encrypted worker unlock",
+          "Native assistant show action accepted",
+          "One native assistant renderer",
+          "Native assistant Hide control responds",
+          "Hiding grants no capture permission",
+          "Native app quits gracefully"
+        ],
+        "genuineInference": 0,
+        "physicalCapture": false
+      }
+    },
+    {
+      "target": "linux-x64",
+      "packageAudit": {
+        "version": "0.7.0",
+        "platform": "linux",
+        "arch": "x64",
+        "helper": {
+          "schema": 1,
+          "platform": "linux",
+          "arch": "x64",
+          "revision": "d1be6fde11ac6e0407606b4e42fe72d34add8037",
+          "bytes": 2107160,
+          "sha256": "2e4658eb1f25f2ba6f8f6db497b2fab3bb760809993dfd457d72170c6502b71a"
+        },
+        "assets": [
+          "EveryHint-0.7.0-linux-amd64.deb",
+          "EveryHint-0.7.0-linux-x86_64.AppImage"
+        ],
+        "asarEntries": 3068,
+        "passed": true,
+        "notarized": false,
+        "physicalCaptureTested": false
+      },
+      "packagedSmoke": {
+        "version": "0.7.0",
+        "platform": "linux",
+        "arch": "x64",
+        "checks": [
+          "Packaged identity matches native platform/version",
+          "Startup begins no capture",
+          "Windows content protection is not falsely advertised",
+          "Native signed/hash-bound speech helper loads",
+          "Renderer stays sandboxed",
+          "No unconfigured automatic update access",
+          "Native persistent credential store and encrypted worker unlock",
+          "Native assistant show action accepted",
+          "One native assistant renderer",
+          "Native assistant Hide control responds",
+          "Hiding grants no capture permission",
+          "Native app quits gracefully"
+        ],
+        "genuineInference": 0,
+        "physicalCapture": false
+      }
+    }
+  ],
+  "downloads": [
+    {
+      "file": "EveryHint-0.7.0-linux-amd64.deb",
+      "bytes": 120524168,
+      "sha256": "e9cfe0eedd72ca457b61e78f7e3b8d01c9f5f2b5c3eaeb179cefadb3dfc272f9"
+    },
+    {
+      "file": "EveryHint-0.7.0-linux-x86_64.AppImage",
+      "bytes": 152731052,
+      "sha256": "98756b9e94c4f3ba6250b1f7e66227c1a0b678a0897c7c2824326102816ad809"
+    },
+    {
+      "file": "EveryHint-0.7.0-mac-arm64.dmg",
+      "bytes": 144283565,
+      "sha256": "dbee6d241bb847dd9f5c5d2fdca95c269fd61f3771683139bd317024f43c44e0"
+    },
+    {
+      "file": "EveryHint-0.7.0-mac-arm64.zip",
+      "bytes": 139830940,
+      "sha256": "e09ae5870e2ba8dea4d8c0933f9fcc7e20de7a8771f56dc3906d6fd37e69a7cd"
+    },
+    {
+      "file": "EveryHint-0.7.0-mac-x64.dmg",
+      "bytes": 151830284,
+      "sha256": "92d6b3d2f82329f7667fa6b55cf1006c78f289ed2c7a9d557fc5ef4554ed0db4"
+    },
+    {
+      "file": "EveryHint-0.7.0-mac-x64.zip",
+      "bytes": 147291930,
+      "sha256": "e6f7520e4d3c877d41da55c2a5e3c873e63860c19059e5bbd22e3191a03de9c8"
+    },
+    {
+      "file": "EveryHint-Setup-0.7.0.exe",
+      "bytes": 138812778,
+      "sha256": "9b6fcfa5fab9c42d2b3d3833d8555b34b6dbb53c6835a16abc193ba452b1a7cd"
+    }
+  ],
+  "genuineProviderRequests": 0,
+  "physicalAudioTested": false,
+  "macNotarized": false,
+  "waylandScreenContext": false,
+  "releaseUrl": "https://github.com/Vavoss123/EveryHint/releases/tag/v0.7.0",
+  "limitations": [
+    "Real audio hardware, macOS permission prompts and screen-sharing receivers still need device testing",
+    "Mac bundles are ad-hoc signed, without Developer ID notarization",
+    "Linux screen context requires X11/Xorg"
+  ]
+}

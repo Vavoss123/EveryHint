@@ -1,8 +1,8 @@
 # EveryHint product specification
 
-## Current platform contract — 0.7.0, 2026-11-03
+## Current platform contract — 0.7.0, 2026-11-04
 
-The desktop build now targets Windows x64, macOS 14.2+ Apple silicon/Intel and modern Linux x64. Mac/Linux use native bundled CPU Whisper helpers, platform-appropriate permissions, persistent OS credentials and separate GitHub package jobs. Linux system audio uses a PulseAudio/PipeWire-Pulse playback monitor; Wayland screen context is unsupported in this first port, while microphone/system audio remain available. Linux background Start minimises its dashboard so desktops without tray indicators retain recovery. Windows capture, credentials, scopes and data remain. macOS/Linux do not claim Windows content protection. Mac/Linux support is experimental until native CI and device acceptance pass. [Builds, exact limits and verification scope](CROSS_PLATFORM.md). No new installer has been published by this source change.
+The desktop build targets Windows x64, macOS 14.2+ Apple silicon/Intel and modern Linux x64. Mac/Linux use native bundled CPU Whisper helpers, platform-appropriate permissions, persistent OS credentials and separate GitHub package jobs. Linux system audio uses a PulseAudio/PipeWire-Pulse playback monitor; Wayland screen context is unsupported in this first port, while microphone/system audio remain available. Linux background Start minimises its dashboard so desktops without tray indicators retain recovery. Windows capture, credentials, scopes and data remain. macOS/Linux do not claim Windows content protection. Native builds, package audits and app-startup checks now pass on all four targets; real-device capture and permission acceptance remain separate. [Downloads, exact limits and verification scope](CROSS_PLATFORM.md), [native release evidence](evidence/native-release-0.7.0.json).
 
 ## Answer quality and Claude contract — 2026-11-03
 

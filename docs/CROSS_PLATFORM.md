@@ -1,13 +1,13 @@
 # macOS and Linux — 0.7.0
 
-EveryHint now has native macOS and Linux build targets, OS permission handling and platform-specific audio support. **The code and Windows regressions can be checked on this host; Mac/Linux packages and native smoke tests must still run on their GitHub runners before those builds are described as verified.** Nothing has been uploaded or published by this change.
+EveryHint 0.7.0 provides Windows, Apple silicon/Intel Mac and Linux downloads on [GitHub Releases](https://github.com/Vavoss123/EveryHint/releases/tag/v0.7.0). Native GitHub jobs pass the source gate, build the packages and run each packaged app with its persistent OS credential store. [Exact checks, build sources, hashes and remaining device-testing limits](evidence/native-release-0.7.0.json).
 
 | Target | Downloads | Requirements and current limits |
 | --- | --- | --- |
 | Windows x64 | `EveryHint-Setup-0.7.0.exe` | Existing per-user installer and Windows loopback path retained. |
 | Mac, Apple silicon | `EveryHint-0.7.0-mac-arm64.dmg` and `.zip` | macOS 14.2+, microphone/screen/system-audio permissions as selected. |
 | Mac, Intel | `EveryHint-0.7.0-mac-x64.dmg` and `.zip` | macOS 14.2+; separate native x64 helper/modules. |
-| Linux x64 | `EveryHint-0.7.0-linux-x64.AppImage` and `.deb` | Ubuntu 22.04/Debian 12 or compatible newer desktop; PulseAudio/PipeWire-Pulse and persistent Secret Service. Screen context currently requires X11/Xorg. |
+| Linux x64 | `EveryHint-0.7.0-linux-x86_64.AppImage` and `EveryHint-0.7.0-linux-amd64.deb` | Ubuntu 22.04/Debian 12 or compatible newer desktop; PulseAudio/PipeWire-Pulse and persistent Secret Service. Screen context currently requires X11/Xorg. |
 
 The Mac application is ad-hoc signed for local execution, **not Developer ID signed or notarized**. Gatekeeper may require approval through macOS Privacy & Security. It is not an App Store/iPhone/iPad build. Linux AppImage users need working FUSE and the Chromium sandbox on their distribution; prefer the Debian package where AppImage prerequisites are restricted. No sandbox-disabling flag is added.
 
@@ -15,7 +15,7 @@ The Mac application is ad-hoc signed for local execution, **not Developer ID sig
 
 On a Mac, choose the download for your processor, open the DMG and drag **EveryHint** to **Applications**. The ZIP contains the same app bundle. Open the app from Applications and allow only the microphone/screen/system-audio sources you select for a session. An ad-hoc testing build may require **Open Anyway** in Privacy & Security.
 
-On Ubuntu/Debian, install the downloaded package with `sudo apt install ./EveryHint-0.7.0-linux-x64.deb`; apt installs the declared dependencies. Open EveryHint from the applications menu. For an AppImage, make it executable with `chmod +x EveryHint-0.7.0-linux-x64.AppImage`, then run it on a desktop with FUSE, an unlocked Secret Service and `pulseaudio-utils`. Choose an X11/Xorg login session when you need screen context.
+On Ubuntu/Debian, install the downloaded package with `sudo apt install ./EveryHint-0.7.0-linux-amd64.deb`; apt installs the declared dependencies. Open EveryHint from the applications menu. For an AppImage, make it executable with `chmod +x EveryHint-0.7.0-linux-x86_64.AppImage`, then run it on a desktop with FUSE, an unlocked Secret Service and `pulseaudio-utils`. Choose an X11/Xorg login session when you need screen context.
 
 ## What changed
 
@@ -59,4 +59,4 @@ App users need no Node/compiler. Speech models download only after approval. Dev
 
 New tests cover OS/version capability gates, unsupported Wayland screen capture, native binary architecture checks, persistent Linux keyring selection, bounded/source-labelled Linux PCM, cancellation/late data, absent audio servers, malformed samples, macOS permission denial/cancellation and runtime OS/architecture binding. All prior unit cases are retained. Existing Windows loopback unit fixtures explicitly model Windows on every test host, preventing unit tests from accidentally recording real Linux audio.
 
-The current Windows source, native helper, provider fixtures, encrypted storage and package/installer checks are recorded in the delivery/testing reports. Native Mac/Linux workflow execution remains **pending**, since this workspace has neither a Mac nor an installed Linux subsystem. Hardware, genuine account/model use and receiver privacy are not inferred from build configuration or mocked audio tests.
+Native Windows, macOS arm64/x64 and Linux x64 GitHub jobs have now executed successfully. Each host passes 719 source tests. Windows passes its real installer lifecycle; Mac/Linux pass package integrity and renderer/credential-store smoke checks. Native package audits verify the speech helper hash and OS/CPU binding; the Mac audit also verifies app/helper signatures. Real audio hardware, macOS TCC prompts and screen-sharing receivers remain separate device checks. No physical audio capture or genuine provider inference was used by these jobs. See the [native release receipt](evidence/native-release-0.7.0.json).

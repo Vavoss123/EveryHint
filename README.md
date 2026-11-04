@@ -2,47 +2,43 @@
 
 Live transcripts, meeting notes and quick answers in a small desktop window.
 
+## Download
+
+| Your computer | Download |
+| --- | --- |
+| Windows, 64-bit | [Installer](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-Setup-0.7.0.exe) |
+| Mac with an Apple M-series chip | [DMG](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-arm64.dmg) · [ZIP](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-arm64.zip) |
+| Mac with an Intel processor | [DMG](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-x64.dmg) · [ZIP](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-x64.zip) |
+| Linux, 64-bit Intel/AMD | [Debian/Ubuntu package](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-linux-amd64.deb) · [AppImage](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-linux-x86_64.AppImage) |
+
 ## Windows
 
-**[Download EveryHint for Windows](https://github.com/Vavoss123/EveryHint/releases/download/v0.6.0/EveryHint-Setup-0.6.0.exe)**
+Open the installer, follow the setup, then launch **EveryHint** from the Start menu.
 
-Open the downloaded file, follow the setup, then launch **EveryHint** from the Start menu.
+## Mac
 
-## Mac — install from source
+Open the DMG and drag **EveryHint** into **Applications**. Then open it from Applications. Requires macOS 14.2 or newer.
 
-You'll need macOS 14.2+, Node.js 24, Git, CMake 3.24+ and Xcode Command Line Tools.
+If macOS blocks the first launch, open **System Settings → Privacy & Security → Open Anyway**.
 
-Open Terminal and run:
+## Linux
 
-```sh
-git clone --depth 1 --branch main https://github.com/Vavoss123/EveryHint.git
-cd EveryHint
-npm ci
-npm run speech:build -- --speech-home "$PWD/artifacts/release-speech"
-npm run dist:mac
-open release/EveryHint-*-mac-*.dmg
-```
-
-Drag **EveryHint** into **Applications**, then open it from there.
-
-## Linux — install from source
-
-For Ubuntu/Debian on a 64-bit Intel or AMD computer. You'll need Node.js 24 and CMake 3.24+ installed first.
-
-Open a terminal and run:
+For Ubuntu/Debian, download the `.deb` file, then run:
 
 ```sh
-sudo apt update
-sudo apt install -y git build-essential gnome-keyring pulseaudio-utils
-git clone --depth 1 --branch main https://github.com/Vavoss123/EveryHint.git
-cd EveryHint
-npm ci
-npm run speech:build -- --speech-home "$PWD/artifacts/release-speech"
-npm run dist:linux
-sudo apt install ./release/EveryHint-*-linux-x64.deb
+cd ~/Downloads
+sudo apt install ./EveryHint-0.7.0-linux-amd64.deb
 ```
 
-Open **EveryHint** from your applications menu. Use an X11/Xorg desktop session for screen capture.
+For other Linux desktops with FUSE, download the AppImage and run:
+
+```sh
+cd ~/Downloads
+chmod +x EveryHint-0.7.0-linux-x86_64.AppImage
+./EveryHint-0.7.0-linux-x86_64.AppImage
+```
+
+Open **EveryHint** from your applications menu after installing the Debian package. Use an X11/Xorg desktop session for screen capture.
 
 ## Start using EveryHint
 

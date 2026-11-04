@@ -1,3 +1,7 @@
+# Native desktop package verification — 2026-11-04
+
+Windows x64, macOS arm64/x64 and Linux x64 native GitHub jobs pass. All four hosts pass 719 source tests / 60 files. Windows additionally passes 8 installer payload hashes, 13 packaged-app assertions and 16 real installer lifecycle checks. Each Mac/Linux package passes its integrity audit and 12 renderer/native-store assertions, including the real floating assistant and graceful exit. Downloads include Windows setup, separate Mac DMG/ZIP pairs and Linux Debian/AppImage packages with individual checksums. [Build sources, complete checks and hashes](evidence/native-release-0.7.0.json). Physical audio, TCC prompts, receiving-app privacy and Mac notarization remain outside this CI evidence. Earlier reports below retain their original scope.
+
 # Windows RC verification — 2026-10-29
 
 ## Platform port — 0.7.0, 2026-11-03
