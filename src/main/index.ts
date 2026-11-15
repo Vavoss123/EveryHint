@@ -1341,6 +1341,7 @@ async function initialise(): Promise<void> {
   });
   handle("everyhint:listen-authorise", (input) => listen!.authorise(input));
   handle("everyhint:listen-ask", (input) => listen!.ask(input));
+  handle("everyhint:listen-auto", (input) => listen!.setAuto(input));
   handle("everyhint:listen-context", () => listen!.context());
   handle("everyhint:listen-revoke", () => {
     listen!.revoke();

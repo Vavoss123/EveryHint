@@ -250,6 +250,8 @@ const bridge: EveryHintBridge = {
     revoke: () => ipcRenderer.invoke("everyhint:listen-revoke"),
     ask: (input: { question: string }) =>
       ipcRenderer.invoke("everyhint:listen-ask", input),
+    auto: (input: { enabled: boolean }) =>
+      ipcRenderer.invoke("everyhint:listen-auto", input),
     context: () => ipcRenderer.invoke("everyhint:listen-context"),
     onState: (
       listener: (value: import("../shared/listen").ListenSnapshot) => void,

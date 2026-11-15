@@ -1,7 +1,15 @@
 import type { ContextReview } from "../../shared/ai";
 import { DEFAULT_CONTEXT } from "../../shared/ai";
-import type { PrepareCapture, SessionSnapshot } from "../../shared/contracts";
-import type { ListenSnapshot, SharingChoices } from "../../shared/listen";
+import type {
+  AudioSourceId,
+  PrepareCapture,
+  SessionSnapshot,
+} from "../../shared/contracts";
+import {
+  SESSION_CONTEXT,
+  type ListenSnapshot,
+  type SharingChoices,
+} from "../../shared/listen";
 import type {
   TranscriptionSnapshot,
   TranscriptEvent,
@@ -15,6 +23,16 @@ import { detectQuestion } from "../intelligence/question";
 // and provider changes still revoke it. The bound guards against a
 // forgotten session running for days.
 const lifetime = 24 * 60 * 60_000;
+/** A heard question is offered for this long after it was spoken. */
+const HEARD_WINDOW_MS = 60_000;
+/** Automatic answers are for the question just asked, not one from a while ago. */
+const AUTO_FRESH_MS = 20_000;
+const AUTO_INTERVAL_MS = 8_000;
+/** Bounds what a forgotten automatic session can spend. */
+const AUTO_LIMIT = 60;
+/** A key repeat or double press must not restart the answer it just began. */
+const REPEAT_MS = 1_500;
+
 interface Ports {
   capture(): SessionSnapshot;
   speech(): TranscriptionSnapshot;
@@ -36,6 +54,12 @@ interface Grant extends SharingChoices {
   binding: string;
   expiresAt: number;
   deadline: number;
+}
+export interface HeardQuestion {
+  id: string;
+  text: string;
+  source: AudioSourceId;
+  endMs: number;
 }
 function choices(value: unknown): SharingChoices {
   const input = record(value);
@@ -71,20 +95,37 @@ export function recentFinals(
     )
     .slice(-100);
 }
-export function latestQuestion(
+/**
+ * The newest complete question in the given lines. When the other side of a
+ * call is audible as system audio, questions the user asked themselves on the
+ * microphone are not ones they need help answering.
+ */
+export function heardQuestion(
   events: readonly TranscriptEvent[],
-): string | null {
+): HeardQuestion | null {
   const context = events
     .map((e) => e.text)
     .join(" ")
     .slice(-6000);
-  for (const event of [...events].reverse()) {
+  const theirs = events.some((e) => e.source === "systemAudio");
+  for (let index = events.length - 1; index >= 0; index--) {
+    const event = events[index]!;
+    if (theirs && event.source !== "systemAudio") continue;
     const score = detectQuestion(event.text, context);
     if (score?.complete && score.confidence >= 0.75 && score.relevance >= 0.65)
-      return score.text;
+      return {
+        id: event.id,
+        text: score.text,
+        source: event.source,
+        endMs: event.endMs,
+      };
   }
   return null;
 }
+export const latestQuestion = (
+  events: readonly TranscriptEvent[],
+): string | null => heardQuestion(events)?.text ?? null;
+
 export class ListenController {
   private managedSession: string | null = null;
   private grant: Grant | undefined;
@@ -94,12 +135,24 @@ export class ListenController {
   private inactiveEpoch = -1;
   private starting = false;
   private preparing = false;
+  /** The question of the request being prepared, to coalesce repeats. */
+  private preparingQuestion: string | undefined;
+  /** A different question asked meanwhile; it runs next and the newest wins. */
+  private queued: string | undefined;
   private message: string | null = null;
   private preview: ContextReview | null = null;
   private requestId: string | undefined;
   private timer: ReturnType<typeof setTimeout> | undefined;
   private revision = 0;
   private lastState = "";
+  /** The heard question the last conversation request already covered. */
+  private askedAbout: string | undefined;
+  private auto = false;
+  /** Present when automatic answers were turned on; never answered unasked. */
+  private autoSkip: string | undefined;
+  private autoAt = -Infinity;
+  private autoCount = 0;
+  private autoTimer: ReturnType<typeof setTimeout> | undefined;
   constructor(
     private readonly ports: Ports,
     private readonly assistant: AssistantController,
@@ -113,24 +166,7 @@ export class ListenController {
     return {
       revision: this.revision,
       managed: !!this.managedSession,
-      phase:
-        capture.state === "PAUSED"
-          ? "paused"
-          : capture.state === "ERROR" ||
-              (this.managedSession && speech.state === "ERROR")
-            ? "error"
-            : this.starting ||
-                (this.managedSession &&
-                  capture.state === "ACTIVE" &&
-                  (capture.consent?.microphone ||
-                    capture.consent?.systemAudio) &&
-                  speech.state !== "LISTENING")
-              ? speech.state === "PAUSED" && !this.starting
-                ? "transcription-paused"
-                : "starting"
-              : this.managedSession && capture.state === "ACTIVE"
-                ? "listening"
-                : "idle",
+      phase: this.phase(capture, speech),
       sharing: this.grant
         ? {
             transcript: this.grant.transcript,
@@ -140,12 +176,63 @@ export class ListenController {
         : null,
       busy: this.preparing,
       message: this.message,
-      latestQuestion: latestQuestion(
-        recentFinals(capture, speech.events, this.now()).filter((e) =>
-          this.assistant.allowsTranscript(e.id),
-        ),
-      ),
+      latestQuestion: this.heard(capture, speech.events)?.text ?? null,
+      auto: this.auto,
     };
+  }
+  private phase(
+    capture: SessionSnapshot,
+    speech: TranscriptionSnapshot,
+  ): ListenSnapshot["phase"] {
+    if (capture.state === "PAUSED") return "paused";
+    if (
+      capture.state === "ERROR" ||
+      (this.managedSession && speech.state === "ERROR")
+    )
+      return "error";
+    const awaitingSpeech =
+      this.managedSession &&
+      capture.state === "ACTIVE" &&
+      (capture.consent?.microphone || capture.consent?.systemAudio) &&
+      speech.state !== "LISTENING";
+    if (this.starting || awaitingSpeech)
+      return speech.state === "PAUSED" && !this.starting
+        ? "transcription-paused"
+        : "starting";
+    return this.managedSession && capture.state === "ACTIVE"
+      ? "listening"
+      : "idle";
+  }
+  /** The newest question just heard, whether or not it was asked about. */
+  private heardNow(
+    capture = this.ports.capture(),
+    events: readonly TranscriptEvent[] = this.ports.speech().events,
+  ): HeardQuestion | null {
+    const now = this.now();
+    return heardQuestion(
+      recentFinals(capture, events, now).filter(
+        (e) =>
+          e.endMs >= now - HEARD_WINDOW_MS &&
+          this.assistant.allowsTranscript(e.id),
+      ),
+    );
+  }
+  private heard(
+    capture?: SessionSnapshot,
+    events?: readonly TranscriptEvent[],
+  ): HeardQuestion | null {
+    const question = this.heardNow(capture, events);
+    return question && question.id !== this.askedAbout ? question : null;
+  }
+  /** A conversation request from this controller is being prepared or answered. */
+  private answering(): boolean {
+    return (
+      this.preparing ||
+      (!!this.requestId &&
+        ["sending", "generating"].includes(
+          this.assistant.requestState(this.requestId) ?? "",
+        ))
+    );
   }
   private publish(): void {
     const value = this.value,
@@ -166,6 +253,12 @@ export class ListenController {
     );
   }
   observe(): void {
+    this.reconcile();
+    this.autoAnswer();
+    this.publish();
+  }
+  /** Brings this controller in line with capture, speech and the provider. */
+  private reconcile(): void {
     const capture = this.ports.capture();
     if (
       this.managedSession &&
@@ -177,7 +270,6 @@ export class ListenController {
         "Local speech recognition stopped. Start a new session to try again.";
       this.ports.stop();
       this.message = error;
-      this.publish();
       return;
     }
     if (
@@ -200,16 +292,10 @@ export class ListenController {
       );
     if (capture.state !== "ACTIVE") {
       this.preview = null;
-      if (
-        this.inactiveEpoch !== capture.epoch &&
-        (this.preparing ||
-          (this.requestId &&
-            ["sending", "generating"].includes(
-              this.assistant.requestState(this.requestId) ?? "",
-            )))
-      ) {
+      if (this.inactiveEpoch !== capture.epoch && this.answering()) {
         this.inactiveEpoch = capture.epoch;
         this.requestEpoch++;
+        this.queued = undefined;
         this.assistant.cancel();
         this.assistant.discardReview();
       }
@@ -243,7 +329,6 @@ export class ListenController {
         this.ports.stop();
       });
     }
-    this.publish();
   }
   async start(value: unknown): Promise<void> {
     if (
@@ -364,15 +449,12 @@ export class ListenController {
     this.grant = undefined;
     this.preview = null;
     this.requestEpoch++;
+    this.queued = undefined;
+    // Automatic answers belong to the permission they were turned on under.
+    this.stopAuto();
     if (this.timer) clearTimeout(this.timer);
     this.timer = undefined;
-    if (
-      this.preparing ||
-      (this.requestId &&
-        ["sending", "generating"].includes(
-          this.assistant.requestState(this.requestId) ?? "",
-        ))
-    ) {
+    if (this.answering()) {
       this.assistant.cancel();
       this.assistant.discardReview();
     }
@@ -383,6 +465,7 @@ export class ListenController {
     this.generation++;
     this.managedSession = null;
     this.autoEpoch = -1;
+    this.askedAbout = undefined;
     this.revoke("Session stopped. Sharing permission was cleared.");
   }
   context(): ContextReview | null {
@@ -391,15 +474,83 @@ export class ListenController {
       this.preview = null;
     return this.preview ? structuredClone(this.preview) : null;
   }
-  async ask(value: unknown): Promise<void> {
+  /**
+   * Opts this session in or out of answering new questions as they are heard.
+   * It never widens what is shared: it needs the transcript permission already
+   * granted, ends with it, and is off again for the next session.
+   */
+  setAuto(value: unknown): void {
+    const input = record(value);
+    exactKeys(input, ["enabled"]);
+    if (typeof input.enabled !== "boolean")
+      throw new Error("Choose whether automatic answers are on.");
+    this.reconcile();
+    if (!input.enabled) {
+      this.stopAuto();
+      this.publish();
+      return;
+    }
+    const grant = this.grant;
+    if (!grant?.transcript || !this.valid(grant))
+      throw new Error(
+        "Automatic answers need an active session with transcript sharing allowed.",
+      );
+    this.auto = true;
+    this.autoCount = 0;
+    // Only questions heard from now on are answered without being asked.
+    this.autoSkip = this.heardNow()?.id;
+    this.message = null;
+    this.publish();
+  }
+  private stopAuto(): void {
+    this.auto = false;
+    this.autoSkip = undefined;
+    if (this.autoTimer) clearTimeout(this.autoTimer);
+    this.autoTimer = undefined;
+  }
+  private autoAnswer(): void {
+    if (this.autoTimer) clearTimeout(this.autoTimer);
+    this.autoTimer = undefined;
+    const grant = this.grant;
+    if (!this.auto || !grant?.transcript || !this.valid(grant)) return;
+    const heard = this.heard();
+    if (
+      !heard ||
+      heard.id === this.autoSkip ||
+      this.now() - heard.endMs > AUTO_FRESH_MS
+    )
+      return;
+    // An answer in progress is never interrupted. This runs again when it ends.
+    if (this.answering() || this.assistant.inFlight) return;
+    const wait = this.autoAt + AUTO_INTERVAL_MS - this.monotonic();
+    if (wait > 0) {
+      this.autoTimer = setTimeout(() => this.observe(), wait);
+      return;
+    }
+    if (this.autoCount >= AUTO_LIMIT) {
+      this.stopAuto();
+      this.message = `Automatic answers paused after ${AUTO_LIMIT} in this session. Turn them on again to continue.`;
+      return;
+    }
+    this.autoSkip = heard.id;
+    this.autoAt = this.monotonic();
+    this.autoCount++;
+    void this.ask({ question: "" }, true).catch(() => {});
+  }
+  async ask(value: unknown, automatic = false): Promise<void> {
     const input = record(value);
     exactKeys(input, ["question"]);
     if (typeof input.question !== "string" || input.question.length > 6000)
       throw new Error("Ask a question of at most 6,000 characters.");
-    this.observe();
-    if (this.preparing) return;
-    const grant = this.grant,
-      typed = input.question.trim();
+    this.reconcile();
+    const typed = input.question.trim();
+    if (this.preparing) {
+      // The same trigger twice is one request. A different question waits for
+      // the one being prepared and then replaces it.
+      if (!automatic && typed !== this.preparingQuestion) this.queued = typed;
+      return;
+    }
+    const grant = this.grant;
     // A typed question is useful on its own. Without a valid sharing grant it
     // is sent as text only, with no transcript or screen.
     const textOnly =
@@ -411,17 +562,26 @@ export class ListenController {
             ? "Resume listening before asking from the conversation."
             : "Start listening and allow ChatGPT sharing for this session.",
         );
-      if (
-        this.assistant.value.responses.some((r) =>
-          ["sending", "generating"].includes(r.status),
+      const running = this.assistant.inFlight;
+      if (running) {
+        if (automatic) return;
+        if (running.requestId !== this.requestId)
+          throw new Error(
+            "An answer is already in progress. Cancel it before asking again.",
+          );
+        if (
+          running.question === typed &&
+          this.now() - running.startedAt < REPEAT_MS
         )
-      )
-        throw new Error(
-          "An answer is already in progress. Cancel it before asking again.",
-        );
-      this.ports.interruptAutomatic();
+          return;
+      }
       this.preparing = true;
+      this.preparingQuestion = typed;
       this.message = null;
+      // The conversation has moved on: the newest request replaces the answer
+      // still being written instead of being refused.
+      if (running) this.assistant.cancel();
+      if (!automatic) this.ports.interruptAutomatic();
       const epoch = this.requestEpoch,
         captureEpoch = this.ports.capture().epoch,
         binding = this.ports.binding(false);
@@ -433,19 +593,17 @@ export class ListenController {
             epoch === this.requestEpoch &&
             captureEpoch === this.ports.capture().epoch;
       this.publish();
-      await this.ports.ready();
+      const transcript = !textOnly && grant!.transcript;
+      // Include the words just spoken, not only already-final lines. They are
+      // finalised while the provider connection is checked, not after it.
+      await Promise.all([
+        this.ports.ready(),
+        transcript ? this.ports.settleSpeech() : undefined,
+      ]);
       if (!valid())
         throw new Error(
           "Sharing or session changed. Ask again after allowing sharing.",
         );
-      if (!textOnly && grant!.transcript) {
-        // Include the words just spoken, not only already-final lines.
-        await this.ports.settleSpeech();
-        if (!valid())
-          throw new Error(
-            "Sharing or session changed. Ask again after allowing sharing.",
-          );
-      }
       const capture = this.ports.capture();
       const scope = textOnly ? { transcript: false, screen: false } : grant!;
       // The model reads the transcript itself; a heuristic detected question
@@ -457,7 +615,9 @@ export class ListenController {
           options: {
             ...DEFAULT_CONTEXT,
             history: true,
-            recentSeconds: 120,
+            recentSeconds: SESSION_CONTEXT.seconds,
+            transcriptChars: SESSION_CONTEXT.transcriptChars,
+            totalChars: SESSION_CONTEXT.totalChars,
             microphone: scope.transcript && !!capture.consent?.microphone,
             systemAudio: scope.transcript && !!capture.consent?.systemAudio,
             screenshot: scope.screen && !!capture.consent?.screen,
@@ -469,7 +629,12 @@ export class ListenController {
           this.requestId = review.requestId;
         },
       );
+      // "Help with this moment" covers the question that was just heard.
+      if (transcript && (!typed || isHelpRequest(typed)))
+        this.askedAbout = this.heardNow()?.id ?? this.askedAbout;
     } catch (error) {
+      // Nobody asked for an automatic answer, so its failure is not reported.
+      if (automatic) return;
       this.message =
         error instanceof Error
           ? error.message
@@ -477,6 +642,10 @@ export class ListenController {
       throw error;
     } finally {
       this.preparing = false;
+      this.preparingQuestion = undefined;
+      const next = this.queued;
+      this.queued = undefined;
+      if (next !== undefined) void this.ask({ question: next }).catch(() => {});
       this.publish();
     }
   }

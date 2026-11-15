@@ -49,16 +49,31 @@ export function FloatingAssistant() {
   }, []);
   const [menu, setMenu] = useState(false),
     [context, setContext] = useState<ContextReview | null>(null),
-    [view, setView] = useState(false);
+    [view, setView] = useState(false),
+    [shownId, setShownId] = useState<string | null>(null);
   const operation = useRef(false),
     composer = useRef<HTMLTextAreaElement>(null),
     menuButton = useRef<HTMLButtonElement>(null),
     menuPanel = useRef<HTMLDivElement>(null),
     answerArea = useRef<HTMLElement>(null);
   const followAnswer = useRef(true);
-  const latest = assistant?.responses.at(-1);
+  const responses = assistant?.responses ?? [];
+  const latest = responses.at(-1);
+  // Earlier answers stay reachable after a newer one replaces them.
+  const shownIndex = shownId
+    ? responses.findIndex((item) => item.requestId === shownId)
+    : -1;
+  const position = shownIndex >= 0 ? shownIndex : responses.length - 1;
+  const shown = responses[position];
   const generating =
     latest?.status === "sending" || latest?.status === "generating";
+  const showAnswer = (index: number): void => {
+    const next = responses[index];
+    setShownId(
+      !next || index === responses.length - 1 ? null : next.requestId,
+    );
+    followAnswer.current = false;
+  };
   useEffect(() => {
     let alive = true;
     const accept = (next: AppSnapshot) => {
@@ -86,6 +101,7 @@ export function FloatingAssistant() {
   }, [assistant?.sessionId]);
   useEffect(() => {
     setView(false);
+    setShownId(null);
     followAnswer.current = true;
   }, [latest?.requestId]);
   useEffect(() => {
@@ -119,12 +135,10 @@ export function FloatingAssistant() {
     [],
   );
   useEffect(() => {
-    const focus = () => {
-      if (!generating) composer.current?.focus();
-    };
+    const focus = () => composer.current?.focus();
     window.addEventListener("focus", focus);
     return () => window.removeEventListener("focus", focus);
-  }, [generating]);
+  }, []);
   useEffect(() => {
     if (menu)
       menuPanel.current?.querySelector<HTMLButtonElement>("button")?.focus();
@@ -168,14 +182,16 @@ export function FloatingAssistant() {
     setMenu(false);
     void window.everyhint.window("hide");
   }
-  function ask(): void {
+  // Asking while an answer is still streaming replaces it: in a live
+  // conversation the newest question is the one that matters.
+  function ask(text = question): void {
     void run(async () => {
-      unwrap(await window.everyhint.listen.ask({ question }));
-      setQuestion("");
+      unwrap(await window.everyhint.listen.ask({ question: text }));
+      if (text === question) setQuestion("");
       setView(false);
     });
   }
-  askLatest.current = ask;
+  askLatest.current = () => ask();
   function openDashboard(account = false): void {
     setMenu(false);
     void run(async () =>
@@ -311,6 +327,25 @@ export function FloatingAssistant() {
               Transcript
             </button>
           )}
+          {active && listen?.sharing?.transcript && (
+            <button
+              className="overlay-auto-toggle"
+              aria-pressed={!!listen.auto}
+              aria-label="Answer questions automatically"
+              title="Answer questions automatically as they are heard"
+              onClick={() =>
+                void run(async () =>
+                  unwrap(
+                    await window.everyhint.listen.auto({
+                      enabled: !listen.auto,
+                    }),
+                  ),
+                )
+              }
+            >
+              Auto
+            </button>
+          )}
           {app?.clickThrough && (
             <span className="overlay-click-through" role="status">
               Click-through · Ctrl+Alt+Space
@@ -409,13 +444,13 @@ export function FloatingAssistant() {
                 Cancel answer
               </button>
             )}
-            {latest?.text && (
+            {shown?.text && (
               <button
                 role="menuitem"
                 onClick={() => {
                   setMenu(false);
                   void run(async () =>
-                    unwrap(await window.everyhint.copyResponse(latest.text)),
+                    unwrap(await window.everyhint.copyResponse(shown.text)),
                   );
                 }}
               >
@@ -541,17 +576,49 @@ export function FloatingAssistant() {
                 {listen.message}
               </p>
             )}
-            {latest ? (
-              <article className="ai-response" aria-label="Latest AI answer">
-                <ResponseText text={latest.text} />
-                {latest.error && (
+            {responses.length > 1 && (
+              <nav
+                className="overlay-history"
+                aria-label="Answers in this conversation"
+              >
+                <button
+                  aria-label="Previous answer"
+                  disabled={position <= 0}
+                  onClick={() => showAnswer(position - 1)}
+                >
+                  ‹
+                </button>
+                <span>
+                  {position + 1} of {responses.length}
+                </span>
+                <button
+                  aria-label="Next answer"
+                  disabled={position >= responses.length - 1}
+                  onClick={() => showAnswer(position + 1)}
+                >
+                  ›
+                </button>
+              </nav>
+            )}
+            {shown ? (
+              <article
+                className="ai-response"
+                aria-label={
+                  shown === latest ? "Latest AI answer" : "Earlier AI answer"
+                }
+              >
+                {shown.question && (
+                  <p className="overlay-asked">{shown.question}</p>
+                )}
+                <ResponseText text={shown.text} />
+                {shown.error && (
                   <p className="overlay-error" role="alert">
-                    {latest.error.message}
+                    {shown.error.message}
                   </p>
                 )}
-                {!latest.text && !latest.error && (
+                {!shown.text && !shown.error && (
                   <p>
-                    {generating
+                    {shown === latest && generating
                       ? "Preparing your answer…"
                       : "Your next answer will appear here."}
                   </p>
@@ -603,24 +670,37 @@ export function FloatingAssistant() {
           ask();
         }}
       >
+        {active && listen?.latestQuestion && (
+          <div className="overlay-heard" role="status">
+            <span title={listen.latestQuestion}>
+              Heard: “{listen.latestQuestion}”
+            </span>
+            <button
+              type="button"
+              disabled={busy || !listen.sharing?.transcript}
+              title={
+                listen.sharing?.transcript
+                  ? "Answer this from the conversation"
+                  : "Allow transcript sharing in EveryHint to answer this"
+              }
+              onClick={() => ask("")}
+            >
+              Answer
+            </button>
+          </div>
+        )}
         <div className="overlay-quick" role="group" aria-label="Quick actions">
           {QUICK_ACTIONS.map(([label, request]) => (
             <button
               type="button"
               key={label}
-              disabled={busy || generating || !listen?.sharing}
+              disabled={busy || !listen?.sharing}
               title={
                 listen?.sharing
                   ? request
                   : "Start EveryHint with sharing to use quick actions"
               }
-              onClick={() =>
-                void run(async () =>
-                  unwrap(
-                    await window.everyhint.listen.ask({ question: request }),
-                  ),
-                )
-              }
+              onClick={() => ask(request)}
             >
               {label}
             </button>
@@ -636,7 +716,7 @@ export function FloatingAssistant() {
             value={question}
             maxLength={6000}
             rows={2}
-            disabled={busy || generating}
+            disabled={busy}
             onChange={(event) => setQuestion(event.target.value)}
             onKeyDown={(event) => {
               if (
@@ -645,11 +725,11 @@ export function FloatingAssistant() {
                 !event.nativeEvent.isComposing
               ) {
                 event.preventDefault();
-                if (!busy && !generating) ask();
+                if (!busy) ask();
               }
             }}
           />
-          {generating ? (
+          {generating && !question.trim() ? (
             <button
               type="button"
               className="overlay-send"

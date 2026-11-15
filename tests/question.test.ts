@@ -55,4 +55,34 @@ describe("local punctuation-independent question detection", () => {
       detectQuestion("Help me explain this function")?.automaticEligible,
     ).toBe(false);
   });
+  it.each([
+    "What experience do you have with code review",
+    "What kind of error did the compiler report",
+    "Which approach did the team use",
+    "Who was the customer for that project",
+    "Is your team happy with the design",
+    "What about the project deadline",
+  ])("recognises a wider range of question openings: %s", (text) =>
+    expect(detectQuestion(text)?.automaticEligible).toBe(true),
+  );
+  it("uses a question mark as evidence for a question phrased as a statement", () => {
+    const text = "You would use a dictionary for this";
+    expect(detectQuestion(text)).toBeNull();
+    expect(detectQuestion(`${text}?`)).toMatchObject({
+      text,
+      complete: true,
+      automaticEligible: true,
+    });
+    expect(
+      detectQuestion("We covered the plan. You would use a list here? Fine."),
+    ).toMatchObject({ text: "You would use a list here" });
+  });
+  it.each([
+    "That is the right approach, right?",
+    "We will use the list, okay?",
+    "The plan?",
+    "What a nice design?",
+  ])("does not answer agreement checks or fragments: %s", (text) =>
+    expect(detectQuestion(text)).toBeNull(),
+  );
 });
