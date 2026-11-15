@@ -1,13 +1,13 @@
-# macOS and Linux — 0.7.0
+# macOS and Linux — 0.8.0
 
-EveryHint 0.7.0 provides Windows, Apple silicon/Intel Mac and Linux downloads on [GitHub Releases](https://github.com/Vavoss123/EveryHint/releases/tag/v0.7.0). Native GitHub jobs pass the source gate, build the packages and run each packaged app with its persistent OS credential store. [Exact checks, build sources, hashes and remaining device-testing limits](evidence/native-release-0.7.0.json).
+EveryHint 0.8.0 provides Windows, Apple silicon/Intel Mac and Linux downloads on [GitHub Releases](https://github.com/Vavoss123/EveryHint/releases/tag/v0.8.0). Native GitHub jobs pass the source gate, build the packages and run each packaged app with its persistent OS credential store. [Exact checks, build sources, hashes and remaining device-testing limits](evidence/native-release-0.8.0.json).
 
 | Target | Downloads | Requirements and current limits |
 | --- | --- | --- |
-| Windows x64 | `EveryHint-Setup-0.7.0.exe` | Existing per-user installer and Windows loopback path retained. |
-| Mac, Apple silicon | `EveryHint-0.7.0-mac-arm64.dmg` and `.zip` | macOS 14.2+, microphone/screen/system-audio permissions as selected. |
-| Mac, Intel | `EveryHint-0.7.0-mac-x64.dmg` and `.zip` | macOS 14.2+; separate native x64 helper/modules. |
-| Linux x64 | `EveryHint-0.7.0-linux-x86_64.AppImage` and `EveryHint-0.7.0-linux-amd64.deb` | Ubuntu 22.04/Debian 12 or compatible newer desktop; PulseAudio/PipeWire-Pulse and persistent Secret Service. Screen context currently requires X11/Xorg. |
+| Windows x64 | `EveryHint-Setup-0.8.0.exe` | Existing per-user installer and Windows loopback path retained. |
+| Mac, Apple silicon | `EveryHint-0.8.0-mac-arm64.dmg` and `.zip` | macOS 14.2+, microphone/screen/system-audio permissions as selected. |
+| Mac, Intel | `EveryHint-0.8.0-mac-x64.dmg` and `.zip` | macOS 14.2+; separate native x64 helper/modules. |
+| Linux x64 | `EveryHint-0.8.0-linux-x86_64.AppImage` and `EveryHint-0.8.0-linux-amd64.deb` | Ubuntu 22.04/Debian 12 or compatible newer desktop; PulseAudio/PipeWire-Pulse and persistent Secret Service. Screen context currently requires X11/Xorg. |
 
 The Mac application is ad-hoc signed for local execution, **not Developer ID signed or notarized**. Gatekeeper may require approval through macOS Privacy & Security. It is not an App Store/iPhone/iPad build. Linux AppImage users need working FUSE and the Chromium sandbox on their distribution; prefer the Debian package where AppImage prerequisites are restricted. No sandbox-disabling flag is added.
 
@@ -15,7 +15,7 @@ The Mac application is ad-hoc signed for local execution, **not Developer ID sig
 
 On a Mac, choose the download for your processor, open the DMG and drag **EveryHint** to **Applications**. The ZIP contains the same app bundle. Open the app from Applications and allow only the microphone/screen/system-audio sources you select for a session. An ad-hoc testing build may require **Open Anyway** in Privacy & Security.
 
-On Ubuntu/Debian, install the downloaded package with `sudo apt install ./EveryHint-0.7.0-linux-amd64.deb`; apt installs the declared dependencies. Open EveryHint from the applications menu. For an AppImage, make it executable with `chmod +x EveryHint-0.7.0-linux-x86_64.AppImage`, then run it on a desktop with FUSE, an unlocked Secret Service and `pulseaudio-utils`. Choose an X11/Xorg login session when you need screen context.
+On Ubuntu/Debian, install the downloaded package with `sudo apt install ./EveryHint-0.8.0-linux-amd64.deb`; apt installs the declared dependencies. Open EveryHint from the applications menu. For an AppImage, make it executable with `chmod +x EveryHint-0.8.0-linux-x86_64.AppImage`, then run it on a desktop with FUSE, an unlocked Secret Service and `pulseaudio-utils`. Choose an X11/Xorg login session when you need screen context.
 
 ## What changed
 
@@ -34,7 +34,7 @@ Push the source changes, then run **Actions → macOS and Linux installers → R
 
 The Linux smoke uses a private D-Bus session, synthetic keyring and virtual X11 display. Its sandbox setup is confined to the disposable CI runner; the application sandbox stays enabled. It does not record the runner's microphone or request AI inference. Mac/Linux audio hardware, macOS TCC prompts, physical displays, Wayland behavior and sharing receivers still need real-device acceptance.
 
-Successful manual jobs provide downloadable workflow artifacts. Publishing a release tagged **`v0.7.0`** triggers both the existing Windows workflow and the native Mac/Linux matrix. Each app download gets its own SHA-256 file. Existing download/checksum pairs are preserved; partial pairs stop the upload to prevent attaching a checksum for different build bytes. No signing/notarization credentials or update feed are required for these testing builds.
+Successful manual jobs provide downloadable workflow artifacts. Publishing a release tagged **`v0.8.0`** triggers both the existing Windows workflow and the native Mac/Linux matrix. Each app download gets its own SHA-256 file. Existing download/checksum pairs are preserved; partial pairs stop the upload to prevent attaching a checksum for different build bytes. No signing/notarization credentials or update feed are required for these testing builds.
 
 ## Build locally on the target OS
 
