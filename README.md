@@ -6,10 +6,10 @@ Live transcripts, meeting notes and quick answers in a small desktop window.
 
 | Your computer | Download |
 | --- | --- |
-| Windows, 64-bit | [Installer](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-Setup-0.7.0.exe) |
-| Mac with an Apple M-series chip | [DMG](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-arm64.dmg) · [ZIP](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-arm64.zip) |
-| Mac with an Intel processor | [DMG](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-x64.dmg) · [ZIP](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-mac-x64.zip) |
-| Linux, 64-bit Intel/AMD | [Debian/Ubuntu package](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-linux-amd64.deb) · [AppImage](https://github.com/Vavoss123/EveryHint/releases/download/v0.7.0/EveryHint-0.7.0-linux-x86_64.AppImage) |
+| Windows, 64-bit | [Installer](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-Setup-0.8.0.exe) |
+| Mac with an Apple M-series chip | [DMG](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-0.8.0-mac-arm64.dmg) · [ZIP](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-0.8.0-mac-arm64.zip) |
+| Mac with an Intel processor | [DMG](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-0.8.0-mac-x64.dmg) · [ZIP](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-0.8.0-mac-x64.zip) |
+| Linux, 64-bit Intel/AMD | [Debian/Ubuntu package](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-0.8.0-linux-amd64.deb) · [AppImage](https://github.com/Vavoss123/EveryHint/releases/download/v0.8.0/EveryHint-0.8.0-linux-x86_64.AppImage) |
 
 ## Windows
 
@@ -27,15 +27,15 @@ For Ubuntu/Debian, download the `.deb` file, then run:
 
 ```sh
 cd ~/Downloads
-sudo apt install ./EveryHint-0.7.0-linux-amd64.deb
+sudo apt install ./EveryHint-0.8.0-linux-amd64.deb
 ```
 
 For other Linux desktops with FUSE, download the AppImage and run:
 
 ```sh
 cd ~/Downloads
-chmod +x EveryHint-0.7.0-linux-x86_64.AppImage
-./EveryHint-0.7.0-linux-x86_64.AppImage
+chmod +x EveryHint-0.8.0-linux-x86_64.AppImage
+./EveryHint-0.8.0-linux-x86_64.AppImage
 ```
 
 Open **EveryHint** from your applications menu after installing the Debian package. Use an X11/Xorg desktop session for screen capture.
