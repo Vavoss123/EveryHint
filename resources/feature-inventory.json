@@ -243,7 +243,7 @@
     {
       "id": "EH-018",
       "name": "Live speech transcription",
-      "description": "Existing local English Whisper automatically transcribes audio in a new authorised Listen session. New default retention is two minutes; saved retention preferences remain.",
+      "description": "Existing local English Whisper automatically transcribes audio in a new authorised Listen session. New default retention is thirty minutes, in memory only and cleared on Stop; saved retention preferences remain.",
       "workflow": "Install the checksum-verified local model once from Start; authorise audio; Start automatically transcribes.",
       "milestone": "P3",
       "status": "AUTOMATED VERIFIED",
@@ -355,8 +355,8 @@
     {
       "id": "EH-026",
       "name": "Conversation-aware AI assistance",
-      "description": "Deliberate conversation-aware responses use final source-labelled transcript from the last 120 seconds and a fresh approved screenshot, without continuous uploads.",
-      "workflow": "Start listening; separately allow session sharing; press Answer or type help. Revoke at any time.",
+      "description": "Conversation-aware responses use final source-labelled transcript from up to the last thirty minutes of the session (newest first within 24,000 characters) and a fresh approved screenshot, without continuous uploads. A newer request replaces an answer still being written. Optional automatic answers to newly heard questions are off until turned on for the session.",
+      "workflow": "Start listening; separately allow session sharing; press Answer, type help or use the heard-question prompt. Optionally turn on Auto. Revoke at any time.",
       "milestone": "P4/P6/P7",
       "status": "MANUAL VERIFIED",
       "dependencies": "Local final transcripts; P6 builder/controller; official ChatGPT plan model; separate Live grant",

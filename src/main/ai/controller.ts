@@ -16,6 +16,7 @@ import {
   buildReview,
   contextPrompt,
   imageHash,
+  trimToBudget,
   validateScreenshot,
   isHelpRequest,
 } from "./context";
@@ -129,6 +130,23 @@ export class AssistantController {
       model: status.selectedModel ?? null,
       images: status.capabilities.images,
     };
+  }
+  /** The request being sent or answered now, without cloning the snapshot. */
+  get inFlight(): {
+    requestId: string;
+    question: string;
+    startedAt: number;
+  } | null {
+    const response =
+      this.active &&
+      this.responses.find((item) => item.requestId === this.active!.id);
+    return response
+      ? {
+          requestId: response.requestId,
+          question: response.question,
+          startedAt: response.startedAt,
+        }
+      : null;
   }
   requestState(id: string): AIResponse["status"] | undefined {
     return this.responses.find((response) => response.requestId === id)?.status;
@@ -306,12 +324,19 @@ export class AssistantController {
         ),
         history,
         this.now(),
+        !!sessionPermission,
       );
       if (status.selectedModel) review.model = status.selectedModel;
       if (modeContext) {
         review.modeContext = modeContext;
-        review.prompt = contextPrompt(review);
-        review.textChars = review.prompt.length;
+        // A reviewed request fails here so the user can choose what to drop.
+        // A live conversation request gives up its oldest speech instead.
+        if (sessionPermission)
+          trimToBudget(review, input.options.totalChars, true);
+        else {
+          review.prompt = contextPrompt(review);
+          review.textChars = review.prompt.length;
+        }
         if (review.textChars > input.options.totalChars)
           throw new Error(
             "Mode instructions exceed the selected context budget. Shorten instructions or select less context.",
@@ -405,8 +430,7 @@ export class AssistantController {
             "No recent conversation or approved screenshot is available yet. Wait for speech to finish, or allow screen sharing.",
           );
         review.conversationRequest = context;
-        review.prompt = contextPrompt(review);
-        review.textChars = review.prompt.length;
+        trimToBudget(review, input.options.totalChars, true);
         if (review.textChars > input.options.totalChars)
           throw new Error("Conversation context exceeds the request limit.");
         this.sessionReviewId = review.requestId;

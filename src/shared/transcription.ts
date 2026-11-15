@@ -16,8 +16,10 @@ export const DEFAULT_TRANSCRIPTION_SETTINGS: TranscriptionSettings = {
   silenceMs: 900,
   maxSegmentMs: 12000,
   overlapMs: 400,
-  retentionMinutes: 2,
-  maxEvents: 200,
+  // Long enough for an answer to refer back to earlier in the meeting. Text
+  // stays in memory only and is cleared when the session stops.
+  retentionMinutes: 30,
+  maxEvents: 400,
 };
 export interface TranscriptEvent {
   id: string;

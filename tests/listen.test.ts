@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   ListenController,
+  heardQuestion,
   latestQuestion,
   recentFinals,
 } from "../src/main/listen/controller";
@@ -14,6 +15,8 @@ import {
   type TranscriptEvent,
 } from "../src/shared/transcription";
 import type { SessionSnapshot } from "../src/shared/contracts";
+import { defaultConfig } from "../src/shared/modes";
+import type { ModeContext } from "../src/shared/personal";
 import { backend, deferred, frame, source } from "./helpers";
 import { json, registration } from "./plan-fixtures";
 
@@ -22,7 +25,7 @@ const instances: {
   assistant: AssistantController;
 }[] = [];
 const sharing = { transcript: true, screen: true, acknowledged: true };
-function setup() {
+function setup(modeContext?: () => ModeContext) {
   let capture: SessionSnapshot = new CaptureSessionController(
     backend(),
     () => 3000,
@@ -130,6 +133,7 @@ function setup() {
     90000,
     Date.now,
     () => fresh(),
+    modeContext,
   );
   let mode = "general",
     monotonic = 0;
@@ -510,28 +514,85 @@ describe("deliberate conversation requests reuse the ChatGPT Responses transport
       },
     );
     s.speech.events = [
-      s.event("Old", "microphone", -121000),
+      s.event("Before the window", "microphone", -1_801_000),
       { ...s.event("Partial"), state: "partial" },
       { ...s.event("Wrong session"), sessionId: "other" },
       s.event("Future", "microphone", 10000),
       s.event("Not authorised", "systemAudio"),
-      ...Array.from({ length: 150 }, (_, i) =>
-        s.event(`How do we fix code ${i}?`, "microphone", -100000 + i * 500),
+      ...Array.from({ length: 400 }, (_, i) =>
+        s.event(
+          `How do we fix code ${i}? ${"detail ".repeat(12)}`,
+          "microphone",
+          -1_000_000 + i * 2500,
+        ),
       ),
     ];
     expect(
       recentFinals(s.ports.capture(), s.speech.events, Date.now()),
-    ).toHaveLength(100);
+    ).toHaveLength(48);
     await s.listen.ask({ question: "help" });
     await flush();
     const c = s.listen.context()!;
-    expect(c.prompt.length).toBeLessThanOrEqual(20000);
-    expect(
-      c.transcripts.reduce((n, e) => n + e.text.length, 0),
-    ).toBeLessThanOrEqual(6000);
+    expect(c.prompt.length).toBeLessThanOrEqual(40000);
+    const sent = c.transcripts.reduce((n, e) => n + e.text.length, 0);
+    expect(sent).toBeLessThanOrEqual(24000);
+    // The budget is used, and the newest lines are the ones kept.
+    expect(sent).toBeGreaterThan(20000);
+    expect(c.transcripts.at(-1)?.text).toContain("code 399?");
     expect(JSON.stringify(s.requests)).not.toMatch(
-      /Wrong session|Partial|Not authorised|Future|"Old"/,
+      /Wrong session|Partial|Not authorised|Future|Before the window|code 0\?/,
     );
+  });
+  it("gives up the oldest speech, not the request or the last answer, in a long session", async () => {
+    // A custom mode with long instructions, as a prepared interview mode has.
+    const s = setup(() => ({
+      mode: {
+        ...defaultConfig().modes[0]!,
+        instructions: "Prefer concrete examples from my experience. ".repeat(
+          90,
+        ),
+      },
+      outputLanguage: "default",
+    }));
+    await s.start({ transcript: true, screen: false, acknowledged: true });
+    s.speech.events = [s.event()];
+    await s.listen.ask({ question: "Explain this code" });
+    await flush();
+    // Half an hour of short lines: the labels alone overrun the text limit.
+    s.speech.events = Array.from({ length: 400 }, (_, i) =>
+      s.event(
+        `Line ${i} ${"word ".repeat(11)}`,
+        "systemAudio",
+        -1_000_000 + i * 2500,
+      ),
+    );
+    await s.listen.ask({ question: "Make that shorter" });
+    await flush();
+    expect(s.requests).toHaveLength(2);
+    const c = s.listen.context()!;
+    expect(c.prompt.length).toBeLessThanOrEqual(40000);
+    expect(c.history.map((turn) => turn.question)).toEqual([
+      "Explain this code",
+    ]);
+    expect(c.transcripts.at(-1)?.text).toContain("Line 399 ");
+    expect(c.transcripts.length).toBeLessThan(400);
+    expect(c.transcripts.length).toBeGreaterThan(200);
+    expect(c.notices).toContain(
+      "Older context was trimmed to the total text limit.",
+    );
+  });
+  it("draws on what was said earlier in the session, not only the last exchange", async () => {
+    const s = setup();
+    await s.start({ transcript: true, screen: false, acknowledged: true });
+    s.speech.events = [
+      s.event("Our budget is forty thousand pounds", "systemAudio", -600_000),
+      s.event("Remind me what the budget was", "systemAudio"),
+    ];
+    await s.listen.ask({ question: "" });
+    await flush();
+    const body = JSON.stringify(s.requests[0]);
+    expect(body).toContain("[-10:00] Them (system audio): Our budget is forty");
+    expect(body).toContain("Remind me what the budget was");
   });
   it("respects transcript removals from the existing context review", async () => {
     const s = setup();
@@ -751,5 +812,329 @@ describe("deliberate conversation requests reuse the ChatGPT Responses transport
     expect(body).not.toContain("Private conversation text");
     expect(body).not.toContain("input_image");
     expect(s.fresh).not.toHaveBeenCalled();
+  });
+  it("finalizes speech while the connection is checked, not after it", async () => {
+    const s = setup();
+    await s.start();
+    s.speech.events = [s.event()];
+    const pending = deferred<void>();
+    s.ports.ready.mockImplementationOnce(() => pending.promise);
+    const asking = s.listen.ask({ question: "" });
+    await flush();
+    expect(s.ports.settleSpeech).toHaveBeenCalledTimes(1);
+    expect(s.requests).toHaveLength(0);
+    pending.resolve();
+    await asking;
+    await flush();
+    expect(s.requests).toHaveLength(1);
+  });
+});
+
+describe("a newer request replaces the answer in progress", () => {
+  /** Leaves the next request waiting on its token, as a slow answer would. */
+  function hold(s: ReturnType<typeof setup>) {
+    const pending = deferred<string>();
+    s.account.token.mockImplementationOnce(() => pending.promise);
+    return pending;
+  }
+  it("cancels the answer being written and answers the new question", async () => {
+    const s = setup();
+    await s.start();
+    s.speech.events = [s.event()];
+    hold(s);
+    await s.listen.ask({ question: "Explain this code" });
+    await flush();
+    expect(s.assistant.value.responses.at(-1)?.status).toBe("sending");
+    await s.listen.ask({ question: "What is a mutex?" });
+    await flush();
+    expect(
+      s.assistant.value.responses.map(({ question, status }) => [
+        question,
+        status,
+      ]),
+    ).toEqual([
+      ["Explain this code", "cancelled"],
+      ["What is a mutex?", "completed"],
+    ]);
+    expect(s.requests).toHaveLength(1);
+    expect(JSON.stringify(s.requests[0])).toContain("What is a mutex?");
+    // A cancelled answer is not carried into the conversation history.
+    expect(s.listen.context()?.history).toEqual([]);
+  });
+  it("treats a repeated trigger as one request until the answer is under way", async () => {
+    const s = setup();
+    await s.start();
+    s.speech.events = [s.event()];
+    const pending = hold(s);
+    await s.listen.ask({ question: "" });
+    await flush();
+    await s.listen.ask({ question: "" });
+    await flush();
+    expect(s.assistant.value.responses).toHaveLength(1);
+    expect(s.assistant.value.responses[0]?.status).toBe("sending");
+    // Pressed again later, it means "answer what is happening now".
+    await vi.advanceTimersByTimeAsync(1600);
+    await s.listen.ask({ question: "" });
+    await flush();
+    pending.resolve("synthetic-late-token");
+    await flush();
+    expect(s.assistant.value.responses.map((r) => r.status)).toEqual([
+      "cancelled",
+      "completed",
+    ]);
+    expect(s.requests).toHaveLength(1);
+  });
+  it("runs a different question asked during preparation instead of dropping it", async () => {
+    const s = setup();
+    await s.start();
+    s.speech.events = [s.event()];
+    const pending = deferred<SessionSnapshot>();
+    s.fresh.mockReturnValueOnce(pending.promise);
+    const first = s.listen.ask({ question: "" });
+    await flush();
+    await s.listen.ask({ question: "What is a mutex?" });
+    expect(s.listen.value.busy).toBe(true);
+    pending.resolve({
+      ...s.ports.capture(),
+      frame: { ...frame, capturedAt: Date.now() },
+    });
+    await first;
+    await flush();
+    await flush();
+    const last = s.assistant.value.responses.at(-1);
+    expect(last?.question).toBe("What is a mutex?");
+    expect(last?.status).toBe("completed");
+    expect(JSON.stringify(s.requests.at(-1))).toContain("What is a mutex?");
+    expect(s.listen.value.busy).toBe(false);
+  });
+  it("does not cancel an answer that another feature started", async () => {
+    const s = setup();
+    await s.start();
+    hold(s);
+    await s.assistant.prepare({
+      question: "Explicit selection",
+      options: DEFAULT_CONTEXT,
+    });
+    await s.assistant.ask({
+      reviewId: s.assistant.value.review!.requestId,
+      acknowledged: true,
+    });
+    await expect(s.listen.ask({ question: "help" })).rejects.toThrow(
+      /already in progress/,
+    );
+    expect(s.assistant.value.responses.at(-1)?.status).toBe("sending");
+  });
+});
+
+describe("questions heard in the conversation", () => {
+  it.each([
+    "What experience do you have with distributed systems",
+    "What kind of teams have you managed",
+    "Who was your manager at that company",
+    "Is your team using feature flags today",
+    "You have led a team of this size before?",
+    "Any questions for us about the role",
+  ])("recognises '%s'", (text) => {
+    const s = setup();
+    expect(latestQuestion([s.event(text, "systemAudio")])).toBe(
+      text.replace(/\?$/, ""),
+    );
+  });
+  it.each([
+    "That is the plan for next week, right?",
+    "What a lovely office you have",
+    "We shipped the release on Friday.",
+  ])("does not treat '%s' as a question to answer", (text) => {
+    const s = setup();
+    expect(latestQuestion([s.event(text, "systemAudio")])).toBeNull();
+  });
+  it("skips the user's own question when the other side is audible", () => {
+    const s = setup();
+    expect(
+      heardQuestion([
+        s.event("Tell me about your pricing model", "systemAudio", -9000),
+        s.event("What does that include for support?", "microphone"),
+      ]),
+    ).toMatchObject({
+      source: "systemAudio",
+      text: "Tell me about your pricing model",
+    });
+    // In a room there is only the microphone, so everyone is heard on it.
+    expect(
+      heardQuestion([s.event("What does that include for support?")])?.source,
+    ).toBe("microphone");
+  });
+  it("offers the question just heard and clears it once it has been asked about", async () => {
+    const s = setup();
+    await s.start({ transcript: true, screen: false, acknowledged: true });
+    expect(s.listen.value.latestQuestion).toBeNull();
+    s.speech.events = [s.event("What is your notice period?", "systemAudio")];
+    s.listen.observe();
+    expect(s.listen.value.latestQuestion).toBe("What is your notice period");
+    expect(s.requests).toHaveLength(0);
+    await s.listen.ask({ question: "" });
+    await flush();
+    expect(s.listen.value.latestQuestion).toBeNull();
+    // A typed question about something else leaves the next one on offer.
+    s.speech.events = [
+      ...s.speech.events,
+      s.event("Why did you leave your last job?", "systemAudio", -200),
+    ];
+    await s.listen.ask({ question: "What is a notice period?" });
+    await flush();
+    expect(s.listen.value.latestQuestion).toBe("Why did you leave your last job");
+  });
+  it("stops offering a question after a minute", async () => {
+    const s = setup();
+    await s.start({ transcript: true, screen: false, acknowledged: true });
+    s.speech.events = [
+      s.event("What is your notice period?", "systemAudio", -61_000),
+    ];
+    s.listen.observe();
+    expect(s.listen.value.latestQuestion).toBeNull();
+  });
+});
+
+describe("automatic answers are an explicit, bounded opt-in", () => {
+  const audioOnly = { transcript: true, screen: false, acknowledged: true };
+  async function settle() {
+    for (let i = 0; i < 3; i++) await flush();
+  }
+  it("is off by default, and needs an active session sharing its transcript", async () => {
+    const s = setup();
+    expect(() => s.listen.setAuto({ enabled: true })).toThrow(/transcript/);
+    await s.start({ transcript: false, screen: true, acknowledged: true });
+    expect(s.listen.value.auto).toBe(false);
+    expect(() => s.listen.setAuto({ enabled: true })).toThrow(/transcript/);
+    expect(() => s.listen.setAuto({ enabled: "yes" })).toThrow();
+    expect(() => s.listen.setAuto({ enabled: true, limit: 0 })).toThrow();
+    s.speech.events = [s.event("What is your notice period?", "systemAudio")];
+    s.listen.observe();
+    await settle();
+    expect(s.requests).toHaveLength(0);
+  });
+  it("answers a newly heard question once, with no review", async () => {
+    const s = setup();
+    await s.start(audioOnly);
+    s.listen.setAuto({ enabled: true });
+    expect(s.listen.value.auto).toBe(true);
+    s.speech.events = [s.event("What is your notice period?", "systemAudio")];
+    s.listen.observe();
+    await settle();
+    expect(s.requests).toHaveLength(1);
+    expect(JSON.stringify(s.requests[0])).toContain(
+      "What is your notice period?",
+    );
+    expect(s.assistant.value.review).toBeNull();
+    expect(s.assistant.value.responses.at(-1)?.status).toBe("completed");
+    s.listen.observe();
+    await settle();
+    expect(s.requests).toHaveLength(1);
+    expect(s.ports.interruptAutomatic).not.toHaveBeenCalled();
+  });
+  it("leaves a question that was already heard when it was turned on", async () => {
+    const s = setup();
+    await s.start(audioOnly);
+    s.speech.events = [s.event("What is your notice period?", "systemAudio")];
+    s.listen.setAuto({ enabled: true });
+    s.listen.observe();
+    await settle();
+    expect(s.requests).toHaveLength(0);
+    expect(s.listen.value.latestQuestion).toBe("What is your notice period");
+  });
+  it("ignores stale questions and the user's own questions on a call", async () => {
+    const s = setup();
+    await s.start(audioOnly);
+    s.listen.setAuto({ enabled: true });
+    s.speech.events = [
+      s.event("Why did you leave your last job?", "systemAudio", -25_000),
+    ];
+    s.listen.observe();
+    await settle();
+    s.speech.events = [
+      s.event("We use a weekly release train", "systemAudio", -4000),
+      s.event("How often do you ship to production?", "microphone"),
+    ];
+    s.listen.observe();
+    await settle();
+    expect(s.requests).toHaveLength(0);
+  });
+  it("spaces answers out and then answers the newer question", async () => {
+    const s = setup();
+    await s.start(audioOnly);
+    s.listen.setAuto({ enabled: true });
+    s.speech.events = [s.event("What is your notice period?", "systemAudio")];
+    s.listen.observe();
+    await settle();
+    s.speech.events = [
+      ...s.speech.events,
+      s.event("Why did you leave your last job?", "systemAudio", -100),
+    ];
+    s.listen.observe();
+    await settle();
+    expect(s.requests).toHaveLength(1);
+    s.setMonotonic(8001);
+    await settle();
+    expect(s.requests).toHaveLength(2);
+    expect(JSON.stringify(s.requests[1])).toContain(
+      "Why did you leave your last job?",
+    );
+  });
+  it("never interrupts an answer in progress, and answers when it ends", async () => {
+    const s = setup();
+    await s.start(audioOnly);
+    s.listen.setAuto({ enabled: true });
+    s.speech.events = [s.event("We are reviewing the code together.")];
+    const pending = deferred<string>();
+    s.account.token.mockImplementationOnce(() => pending.promise);
+    await s.listen.ask({ question: "Summarise so far" });
+    await flush();
+    s.speech.events = [
+      ...s.speech.events,
+      s.event("What is your notice period?", "systemAudio", -100),
+    ];
+    s.listen.observe();
+    await settle();
+    expect(s.assistant.value.responses).toHaveLength(1);
+    expect(s.assistant.value.responses[0]?.status).toBe("sending");
+    pending.resolve("synthetic-late-token");
+    await settle();
+    expect(s.assistant.value.responses.map((r) => r.status)).toEqual([
+      "completed",
+      "completed",
+    ]);
+    expect(s.assistant.value.responses[1]?.question).toBe("");
+  });
+  it.each(["revoke", "stop", "re-authorise", "off"])(
+    "ends on %s",
+    async (change) => {
+      const s = setup();
+      await s.start(audioOnly);
+      s.listen.setAuto({ enabled: true });
+      if (change === "revoke") s.listen.revoke();
+      if (change === "stop") s.ports.stop();
+      if (change === "re-authorise") await s.listen.authorise(audioOnly);
+      if (change === "off") s.listen.setAuto({ enabled: false });
+      expect(s.listen.value.auto).toBe(false);
+      s.speech.events = [s.event("What is your notice period?", "systemAudio")];
+      s.listen.observe();
+      await settle();
+      expect(s.requests).toHaveLength(0);
+    },
+  );
+  it("pauses itself after sixty answers in a session", async () => {
+    const s = setup();
+    await s.start(audioOnly);
+    s.listen.setAuto({ enabled: true });
+    for (let i = 0; i < 62; i++) {
+      s.speech.events = [
+        s.event(`What is the answer to item ${i}?`, "systemAudio", -900 + i),
+      ];
+      s.setMonotonic((i + 1) * 8001);
+      await settle();
+    }
+    expect(s.requests).toHaveLength(60);
+    expect(s.listen.value.auto).toBe(false);
+    expect(s.listen.value.message).toMatch(/paused after 60/);
   });
 });

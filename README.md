@@ -48,6 +48,10 @@ Open **EveryHint** from your applications menu after installing the Debian packa
 4. Click **Start EveryHint**, choose your screen and audio sources, and confirm you have permission to use them.
 5. Ask a question in the floating window or press **Ctrl+Enter**.
 
+Answers use the conversation so far, up to the last 30 minutes, so you can ask about something said earlier. Asking again while an answer is still appearing replaces it with a fresh one.
+
+When EveryHint hears a question from the other side, it shows it above the box with an **Answer** button. Turn on **Auto** in the floating window to have new questions answered without pressing anything. Auto is off each time you start, and it stops when you stop the session or turn off sharing. If you use Claude with your own API key, each automatic answer is a billed request.
+
 Saved sessions are in **Meetings**. Untick **Save this session with notes** before starting if you don't want to keep one.
 
 Use **Pause** to take a break and **Stop** when you're finished. Hiding the window doesn't stop the session.

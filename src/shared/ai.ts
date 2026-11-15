@@ -134,8 +134,9 @@ export function parseReview(value: unknown): ReviewInput {
     if (typeof options[key] !== "boolean")
       throw new Error(`Invalid context choice: ${key}.`);
   const ranges: Record<string, [number, number]> = {
-    recentSeconds: [10, 600],
-    transcriptChars: [100, 12000],
+    // The upper bounds cover a whole-session conversation request.
+    recentSeconds: [10, 3600],
+    transcriptChars: [100, 30000],
     totalChars: [1000, 40000],
     imageBytes: [50000, 4000000],
   };
